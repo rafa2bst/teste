@@ -15,36 +15,35 @@
   body{font-family:'Manrope',system-ui,sans-serif;background:var(--paper);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased}
   .wrap{max-width:1100px;margin:0 auto;padding:24px 20px 80px}
 
-  /* ---- LOGIN ---- */
+  /* LOGIN */
   .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
   .login-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:34px;width:100%;max-width:380px;box-shadow:var(--shadow)}
   .login-card h1{font-family:'Fraunces',serif;font-weight:600;font-size:26px;letter-spacing:-.5px;margin-bottom:4px}
   .login-card p.sub{color:var(--ink-soft);font-size:13.5px;margin-bottom:22px}
-  .login-error{background:#f7e7e3;color:var(--danger);font-size:13px;border-radius:8px;padding:8px 12px;margin-bottom:12px;display:none}
+  .err-box{background:#f7e7e3;color:var(--danger);font-size:13px;border-radius:8px;padding:8px 12px;margin-bottom:12px;display:none}
 
-  /* ---- SESSÃO ---- */
-  .session-bar{display:flex;justify-content:flex-end;align-items:center;gap:12px;font-size:13px;color:var(--ink-soft);margin-bottom:16px}
+  .session-bar{display:flex;justify-content:flex-end;align-items:center;gap:10px;font-size:13px;color:var(--ink-soft);margin-bottom:16px;flex-wrap:wrap}
   .session-bar b{color:var(--ink);font-weight:600}
-  .btn-logout{background:transparent;border:1px solid var(--line);color:var(--ink-soft);border-radius:8px;padding:6px 12px;font-size:13px;font-weight:600;cursor:pointer}
-  .btn-logout:hover{background:#fff;color:var(--danger);border-color:var(--danger)}
+  .nav-btn{background:transparent;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:6px 12px;font-size:13px;font-weight:600;cursor:pointer}
+  .nav-btn:hover{background:#fff;border-color:var(--accent);color:var(--accent-dark)}
+  .btn-logout:hover{color:var(--danger);border-color:var(--danger)}
 
-  header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:18px;margin-bottom:28px}
-  .brand h1{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(28px,5vw,40px);letter-spacing:-.5px;line-height:1.05}
+  header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:18px;margin-bottom:24px}
+  .brand h1{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(26px,5vw,38px);letter-spacing:-.5px;line-height:1.05}
   .brand p{color:var(--ink-soft);font-size:14px;margin-top:6px}
   .counts{display:flex;gap:10px;flex-wrap:wrap}
   .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 16px;text-align:center;box-shadow:var(--shadow)}
   .stat b{display:block;font-family:'Fraunces',serif;font-size:24px;line-height:1}
   .stat span{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft)}
 
-  .layout{display:grid;grid-template-columns:380px 1fr;gap:28px;align-items:start}
-  @media(max-width:860px){.layout{grid-template-columns:1fr}}
-  .panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:var(--shadow);position:sticky;top:20px}
-  @media(max-width:860px){.panel{position:static}}
-  .panel h2{font-family:'Fraunces',serif;font-weight:600;font-size:20px;margin-bottom:4px}
-  .panel .hint{font-size:12.5px;color:var(--ink-soft);margin-bottom:18px}
+  /* TELA DE CADASTRO (centralizada) */
+  .form-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:26px;max-width:540px;margin:0 auto;box-shadow:var(--shadow)}
+  .form-card h2{font-family:'Fraunces',serif;font-weight:600;font-size:22px;margin-bottom:4px}
+  .form-card .hint{font-size:13px;color:var(--ink-soft);margin-bottom:18px}
+  .success-msg{display:none;background:var(--accent-soft);color:var(--accent-dark);border:1px solid #bcd9cd;border-radius:12px;padding:14px 16px;margin-top:18px;font-weight:600;font-size:14.5px;text-align:center}
 
   label{display:block;font-size:12px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--ink-soft);margin:14px 0 6px}
-  label:first-of-type{margin-top:0}
+  label.first{margin-top:0}
   input,select,textarea{width:100%;font-family:inherit;font-size:14.5px;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;outline:none;transition:border-color .15s,box-shadow .15s}
   input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
   textarea{resize:vertical;min-height:74px}
@@ -58,6 +57,7 @@
   .btn-ghost{background:transparent;color:var(--ink-soft);border:1px solid var(--line)}
   .btn-ghost:hover{background:#fff}
 
+  /* RELATÓRIOS */
   .toolbar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:18px}
   .search{flex:1;min-width:200px;position:relative}
   .search input{padding-left:38px}
@@ -65,7 +65,6 @@
   .filter-status{width:auto;min-width:150px}
   .btn-export{background:var(--ink);color:#fff;white-space:nowrap}
   .btn-export:hover{opacity:.85}
-
   .list{display:flex;flex-direction:column;gap:14px}
   .item{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;box-shadow:var(--shadow)}
   .item:hover{border-color:#cfc8b8}
@@ -90,45 +89,42 @@
   .empty{text-align:center;padding:60px 20px;color:var(--ink-soft);border:2px dashed var(--line);border-radius:16px}
   .empty b{font-family:'Fraunces',serif;font-size:18px;color:var(--ink);display:block;margin-bottom:6px}
   .loading{text-align:center;padding:40px;color:var(--ink-soft)}
+
+  /* MODAIS */
+  .modal{display:none;position:fixed;inset:0;background:rgba(28,28,25,.45);align-items:center;justify-content:center;padding:20px;z-index:50}
+  .modal-card{background:var(--card);border-radius:18px;padding:26px;width:100%;max-width:460px;box-shadow:var(--shadow);max-height:92vh;overflow:auto}
+  .modal-card h3{font-family:'Fraunces',serif;font-weight:600;font-size:22px;margin-bottom:6px}
+  .modal-card p.sub{font-size:13px;color:var(--ink-soft);margin-bottom:16px}
 </style>
 
-<!-- ===== TELA DE LOGIN ===== -->
+<!-- ===== LOGIN ===== -->
 <div id="login-screen" class="login-wrap" style="display:none">
   <div class="login-card">
     <h1>Controle de Notebooks</h1>
     <p class="sub">Acesso restrito à equipe. Entre com seu e-mail e senha.</p>
-    <div class="login-error" id="login-error"></div>
-    <label>E-mail</label>
+    <div class="err-box" id="login-error"></div>
+    <label class="first">E-mail</label>
     <input id="login-email" type="email" placeholder="voce@empresa.com" autocomplete="username">
     <label>Senha</label>
     <input id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password">
-    <div class="actions">
-      <button class="btn-primary" id="btn-login">Entrar</button>
-    </div>
+    <div class="actions"><button class="btn-primary" id="btn-login">Entrar</button></div>
   </div>
 </div>
 
-<!-- ===== APLICATIVO ===== -->
+<!-- ===== APP ===== -->
 <div id="app" class="wrap" style="display:none">
-  <div class="session-bar">Logado como <b id="user-email"></b><button class="btn-logout" id="btn-logout">Sair</button></div>
+  <div class="session-bar">
+    Logado como <b id="user-email"></b>
+    <button class="nav-btn" id="btn-admin">Administrador</button>
+    <button class="nav-btn btn-logout" id="btn-logout">Sair</button>
+  </div>
 
-  <header class="top">
-    <div class="brand">
-      <h1>Controle de Notebooks</h1>
-      <p>Cadastro de colaboradores, equipamentos vinculados e anotações</p>
-    </div>
-    <div class="counts">
-      <div class="stat"><b id="st-total">0</b><span>Total</span></div>
-      <div class="stat"><b id="st-uso">0</b><span>Em uso</span></div>
-      <div class="stat"><b id="st-manut">0</b><span>Manutenção</span></div>
-    </div>
-  </header>
-
-  <div class="layout">
-    <section class="panel">
-      <h2 id="form-title">Novo cadastro</h2>
-      <p class="hint" id="form-hint">Preencha os dados e clique em Salvar.</p>
-      <label>Nome do colaborador *</label>
+  <!-- TELA 1: CADASTRO -->
+  <div id="screen-cadastro">
+    <div class="form-card">
+      <h2>Cadastrar colaborador</h2>
+      <p class="hint">Preencha os dados e clique em salvar. O cadastro é enviado e a tela é limpa.</p>
+      <label class="first">Nome do colaborador *</label>
       <input id="f-nome" placeholder="Ex.: Maria Santos">
       <div class="row2">
         <div><label>Setor / Cargo</label><input id="f-setor" placeholder="Ex.: Financeiro"></div>
@@ -150,55 +146,112 @@
       <input id="f-data" type="date">
       <label>Observações / anotações</label>
       <textarea id="f-obs" placeholder="Ex.: Carregador trocado em 03/2026."></textarea>
-      <div class="actions">
-        <button class="btn-primary" id="btn-save">Salvar cadastro</button>
-        <button class="btn-ghost" id="btn-cancel" style="display:none">Cancelar</button>
-      </div>
-    </section>
+      <div class="actions"><button class="btn-primary" id="btn-save">Salvar cadastro</button></div>
+      <div class="success-msg" id="success-msg">✓ Cadastro salvo com sucesso!</div>
+    </div>
+  </div>
 
-    <section>
-      <div class="toolbar">
-        <div class="search">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-          <input id="search" placeholder="Buscar por nome, setor, tag ou patrimônio...">
-        </div>
-        <select id="filter-status" class="filter-status">
-          <option value="">Todos os status</option>
+  <!-- TELA 2: RELATÓRIOS (admin) -->
+  <div id="screen-reports" style="display:none">
+    <header class="top">
+      <div class="brand"><h1>Relatórios</h1><p>Todos os colaboradores e equipamentos cadastrados</p></div>
+      <div class="counts">
+        <div class="stat"><b id="st-total">0</b><span>Total</span></div>
+        <div class="stat"><b id="st-uso">0</b><span>Em uso</span></div>
+        <div class="stat"><b id="st-manut">0</b><span>Manutenção</span></div>
+      </div>
+    </header>
+    <div class="toolbar">
+      <button class="nav-btn" id="btn-back">← Voltar ao cadastro</button>
+      <div class="search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="search" placeholder="Buscar por nome, setor, tag ou patrimônio...">
+      </div>
+      <select id="filter-status" class="filter-status">
+        <option value="">Todos os status</option>
+        <option value="Em uso">Em uso</option>
+        <option value="Em manutenção">Em manutenção</option>
+        <option value="Devolvido">Devolvido</option>
+      </select>
+      <button class="btn-export" id="btn-export">Exportar CSV</button>
+    </div>
+    <div id="list" class="list"></div>
+  </div>
+</div>
+
+<!-- MODAL: senha de administrador -->
+<div id="admin-modal" class="modal">
+  <div class="modal-card">
+    <h3>Área do Administrador</h3>
+    <p class="sub">Digite a senha de administrador para ver os relatórios.</p>
+    <div class="err-box" id="admin-error">Senha incorreta.</div>
+    <label class="first">Senha de administrador</label>
+    <input id="admin-pass" type="password" placeholder="••••••••">
+    <div class="actions">
+      <button class="btn-primary" id="btn-admin-ok">Entrar</button>
+      <button class="btn-ghost" id="btn-admin-cancel">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: editar cadastro -->
+<div id="edit-modal" class="modal">
+  <div class="modal-card">
+    <h3>Editar cadastro</h3>
+    <label class="first">Nome do colaborador *</label>
+    <input id="e-nome">
+    <div class="row2">
+      <div><label>Setor / Cargo</label><input id="e-setor"></div>
+      <div><label>Status</label>
+        <select id="e-status">
           <option value="Em uso">Em uso</option>
           <option value="Em manutenção">Em manutenção</option>
           <option value="Devolvido">Devolvido</option>
         </select>
-        <button class="btn-export" id="btn-export">Exportar CSV</button>
       </div>
-      <div id="list" class="list"></div>
-    </section>
+    </div>
+    <label>Notebook (marca / modelo)</label>
+    <input id="e-modelo">
+    <div class="row2">
+      <div><label>Service Tag</label><input id="e-tag"></div>
+      <div><label>Patrimônio</label><input id="e-patr"></div>
+    </div>
+    <label>Data de entrega</label>
+    <input id="e-data" type="date">
+    <label>Observações / anotações</label>
+    <textarea id="e-obs"></textarea>
+    <div class="actions">
+      <button class="btn-primary" id="btn-edit-save">Salvar alterações</button>
+      <button class="btn-ghost" id="btn-edit-cancel">Cancelar</button>
+    </div>
   </div>
 </div>
 
 <script>
-// ===== Conexão Supabase =====
+// ===== Configuração =====
 const SUPA_URL = 'https://jvfewdukhgmtdieufpaf.supabase.co';
 const SUPA_KEY = 'sb_publishable_O2rf2zCnJTZ1YE5q4eJeeA_AVdukzUg';
+const ADMIN_PASS = 'Relatorios@2026';   // <<< TROQUE por uma senha sua de administrador
 const db = supabase.createClient(SUPA_URL, SUPA_KEY);
 
 let registros = [];
-let editingId = null;
+let isAdmin = false;
+let editId = null;
 const $ = id => document.getElementById(id);
 const esc = s => (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const badgeClass = s => s==='Em uso'?'b-uso':s==='Em manutenção'?'b-manut':'b-devol';
 const fmtData = d => { if(!d) return '—'; const [y,m,dd]=d.split('-'); return `${dd}/${m}/${y}`; };
 
-// ===== Autenticação =====
+// ===== Auth =====
 async function checkAuth(){
   const { data:{ session } } = await db.auth.getSession();
   if(session) showApp(session.user); else showLogin();
 }
 function showLogin(){ $('login-screen').style.display='flex'; $('app').style.display='none'; }
-async function showApp(user){
+function showApp(user){
   $('login-screen').style.display='none'; $('app').style.display='block';
   $('user-email').textContent = user.email;
-  $('list').innerHTML = '<div class="loading">Carregando...</div>';
-  await loadRegistros(); render();
+  showScreen('cadastro');
 }
 async function doLogin(){
   const email=$('login-email').value.trim(), password=$('login-pass').value;
@@ -210,14 +263,30 @@ async function doLogin(){
   if(error){ err.textContent='E-mail ou senha inválidos.'; err.style.display='block'; return; }
   showApp(data.user);
 }
-async function doLogout(){ await db.auth.signOut(); registros=[]; $('login-email').value=''; $('login-pass').value=''; showLogin(); }
+async function doLogout(){ await db.auth.signOut(); registros=[]; isAdmin=false; $('login-email').value=''; $('login-pass').value=''; showLogin(); }
 
-// ===== Dados (Supabase) =====
-async function loadRegistros(){
-  const { data, error } = await db.from('colaboradores').select('*').order('created_at',{ascending:false});
-  if(error){ console.error(error); alert('Erro ao carregar dados: '+error.message); registros=[]; return; }
-  registros = data || [];
+// ===== Navegação entre telas =====
+function showScreen(name){
+  $('screen-cadastro').style.display = name==='cadastro' ? 'block' : 'none';
+  $('screen-reports').style.display  = name==='reports'  ? 'block' : 'none';
 }
+function openAdmin(){
+  if(isAdmin){ goReports(); return; }
+  $('admin-error').style.display='none'; $('admin-pass').value='';
+  $('admin-modal').style.display='flex'; $('admin-pass').focus();
+}
+function tryAdmin(){
+  if($('admin-pass').value === ADMIN_PASS){
+    isAdmin=true; $('admin-modal').style.display='none'; goReports();
+  } else { $('admin-error').style.display='block'; }
+}
+async function goReports(){
+  showScreen('reports');
+  $('list').innerHTML='<div class="loading">Carregando...</div>';
+  await loadRegistros(); render();
+}
+
+// ===== Cadastro (só inserção) =====
 async function onSave(){
   const nome = $('f-nome').value.trim();
   if(!nome){ alert('Informe o nome do colaborador.'); $('f-nome').focus(); return; }
@@ -232,43 +301,26 @@ async function onSave(){
     obs:$('f-obs').value.trim()
   };
   $('btn-save').disabled=true;
-  let error;
-  if(editingId){ ({error}=await db.from('colaboradores').update(dados).eq('id',editingId)); }
-  else { ({error}=await db.from('colaboradores').insert(dados)); }
+  const { error } = await db.from('colaboradores').insert(dados);
   $('btn-save').disabled=false;
   if(error){ alert('Erro ao salvar: '+error.message); return; }
-  await loadRegistros(); clearForm(); render();
+  clearForm();
+  const msg=$('success-msg'); msg.style.display='block';
+  clearTimeout(window.__sucTimer);
+  window.__sucTimer=setTimeout(()=>{ msg.style.display='none'; }, 3500);
+  $('f-nome').focus();
 }
-async function onDelete(id){
-  const r = registros.find(x=>x.id===id);
-  if(!confirm('Excluir o cadastro de "'+(r?r.nome:'')+'"?')) return;
-  const { error } = await db.from('colaboradores').delete().eq('id',id);
-  if(error){ alert('Erro ao excluir: '+error.message); return; }
-  await loadRegistros(); if(editingId===id) clearForm(); render();
-}
-
-// ===== Formulário =====
 function clearForm(){
   ['f-nome','f-setor','f-modelo','f-tag','f-patr','f-data','f-obs'].forEach(i=>$(i).value='');
-  $('f-status').value='Em uso'; editingId=null;
-  $('form-title').textContent='Novo cadastro';
-  $('form-hint').textContent='Preencha os dados e clique em Salvar.';
-  $('btn-save').textContent='Salvar cadastro';
-  $('btn-cancel').style.display='none';
-}
-function loadIntoForm(r){
-  $('f-nome').value=r.nome||''; $('f-setor').value=r.setor||'';
-  $('f-modelo').value=r.modelo||''; $('f-tag').value=r.tag||''; $('f-patr').value=r.patr||'';
-  $('f-data').value=r.data||''; $('f-obs').value=r.obs||''; $('f-status').value=r.status||'Em uso';
-  editingId=r.id;
-  $('form-title').textContent='Editar cadastro';
-  $('form-hint').textContent='Alterando "'+esc(r.nome)+'".';
-  $('btn-save').textContent='Salvar alterações';
-  $('btn-cancel').style.display='inline-block';
-  window.scrollTo({top:0,behavior:'smooth'});
+  $('f-status').value='Em uso';
 }
 
-// ===== Render =====
+// ===== Relatórios =====
+async function loadRegistros(){
+  const { data, error } = await db.from('colaboradores').select('*').order('created_at',{ascending:false});
+  if(error){ console.error(error); alert('Erro ao carregar dados: '+error.message); registros=[]; return; }
+  registros = data || [];
+}
 function updateStats(){
   $('st-total').textContent=registros.length;
   $('st-uso').textContent=registros.filter(r=>r.status==='Em uso').length;
@@ -285,7 +337,7 @@ function render(){
   const list=$('list');
   if(filtered.length===0){
     list.innerHTML = registros.length===0
-      ? '<div class="empty"><b>Nenhum colaborador cadastrado ainda</b>Preencha o formulário ao lado para começar.</div>'
+      ? '<div class="empty"><b>Nenhum cadastro ainda</b>Os cadastros feitos na tela inicial aparecem aqui.</div>'
       : '<div class="empty"><b>Nada encontrado</b>Ajuste a busca ou o filtro de status.</div>';
     return;
   }
@@ -309,6 +361,35 @@ function render(){
     </div>`).join('');
 }
 
+// ===== Editar (modal) =====
+function openEdit(r){
+  editId=r.id;
+  $('e-nome').value=r.nome||''; $('e-setor').value=r.setor||'';
+  $('e-modelo').value=r.modelo||''; $('e-tag').value=r.tag||''; $('e-patr').value=r.patr||'';
+  $('e-data').value=r.data||''; $('e-obs').value=r.obs||''; $('e-status').value=r.status||'Em uso';
+  $('edit-modal').style.display='flex';
+}
+async function onEditSave(){
+  const nome=$('e-nome').value.trim();
+  if(!nome){ alert('Informe o nome do colaborador.'); return; }
+  const dados={ nome, setor:$('e-setor').value.trim(), modelo:$('e-modelo').value.trim(),
+    tag:$('e-tag').value.trim(), patr:$('e-patr').value.trim(), data:$('e-data').value||null,
+    status:$('e-status').value, obs:$('e-obs').value.trim() };
+  $('btn-edit-save').disabled=true;
+  const { error } = await db.from('colaboradores').update(dados).eq('id',editId);
+  $('btn-edit-save').disabled=false;
+  if(error){ alert('Erro ao salvar: '+error.message); return; }
+  $('edit-modal').style.display='none'; editId=null;
+  await loadRegistros(); render();
+}
+async function onDelete(id){
+  const r=registros.find(x=>x.id===id);
+  if(!confirm('Excluir o cadastro de "'+(r?r.nome:'')+'"?')) return;
+  const { error } = await db.from('colaboradores').delete().eq('id',id);
+  if(error){ alert('Erro ao excluir: '+error.message); return; }
+  await loadRegistros(); render();
+}
+
 // ===== Exportar CSV =====
 function exportCSV(){
   if(registros.length===0){ alert('Não há dados para exportar.'); return; }
@@ -326,13 +407,19 @@ $('btn-login').onclick=doLogin;
 $('login-pass').addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
 $('btn-logout').onclick=doLogout;
 $('btn-save').onclick=onSave;
-$('btn-cancel').onclick=clearForm;
+$('btn-admin').onclick=openAdmin;
+$('btn-admin-ok').onclick=tryAdmin;
+$('admin-pass').addEventListener('keydown',e=>{ if(e.key==='Enter') tryAdmin(); });
+$('btn-admin-cancel').onclick=()=>{ $('admin-modal').style.display='none'; };
+$('btn-back').onclick=()=>showScreen('cadastro');
+$('btn-edit-save').onclick=onEditSave;
+$('btn-edit-cancel').onclick=()=>{ $('edit-modal').style.display='none'; editId=null; };
 $('btn-export').onclick=exportCSV;
 $('search').oninput=render;
 $('filter-status').onchange=render;
 $('list').addEventListener('click',e=>{
   const ed=e.target.getAttribute('data-edit'), dl=e.target.getAttribute('data-del');
-  if(ed){ const r=registros.find(x=>x.id===ed); if(r) loadIntoForm(r); }
+  if(ed){ const r=registros.find(x=>x.id===ed); if(r) openEdit(r); }
   if(dl) onDelete(dl);
 });
 
