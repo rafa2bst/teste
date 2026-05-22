@@ -1,0 +1,367 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Controle de Notebooks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f4f1ea;
+    --card:#fdfcf9;
+    --ink:#1c1c19;
+    --ink-soft:#5b594f;
+    --line:#e3ddd0;
+    --accent:#1f6f5c;
+    --accent-dark:#175547;
+    --accent-soft:#e6efe9;
+    --danger:#a8412f;
+    --amber:#9a6b16;
+    --amber-soft:#f3e9d4;
+    --shadow:0 1px 2px rgba(28,28,25,.06), 0 8px 24px rgba(28,28,25,.06);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'Manrope',system-ui,sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    padding:0;
+  }
+  .wrap{max-width:1100px;margin:0 auto;padding:32px 20px 80px}
+  header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:18px;margin-bottom:28px}
+  .brand h1{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(28px,5vw,40px);letter-spacing:-.5px;line-height:1.05}
+  .brand p{color:var(--ink-soft);font-size:14px;margin-top:6px}
+  .counts{display:flex;gap:10px;flex-wrap:wrap}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 16px;text-align:center;box-shadow:var(--shadow)}
+  .stat b{display:block;font-family:'Fraunces',serif;font-size:24px;line-height:1}
+  .stat span{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft)}
+
+  .layout{display:grid;grid-template-columns:380px 1fr;gap:28px;align-items:start}
+  @media(max-width:860px){.layout{grid-template-columns:1fr}}
+
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:var(--shadow);position:sticky;top:20px}
+  @media(max-width:860px){.panel{position:static}}
+  .panel h2{font-family:'Fraunces',serif;font-weight:600;font-size:20px;margin-bottom:4px}
+  .panel .hint{font-size:12.5px;color:var(--ink-soft);margin-bottom:18px}
+
+  label{display:block;font-size:12px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--ink-soft);margin:14px 0 6px}
+  label:first-of-type{margin-top:0}
+  input,select,textarea{
+    width:100%;font-family:inherit;font-size:14.5px;color:var(--ink);
+    background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;outline:none;transition:border-color .15s,box-shadow .15s;
+  }
+  input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  textarea{resize:vertical;min-height:74px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .actions{display:flex;gap:10px;margin-top:20px}
+  button{font-family:inherit;font-weight:600;font-size:14px;cursor:pointer;border:none;border-radius:10px;padding:11px 16px;transition:transform .08s,background .15s,opacity .15s}
+  button:active{transform:translateY(1px)}
+  .btn-primary{background:var(--accent);color:#fff;flex:1}
+  .btn-primary:hover{background:var(--accent-dark)}
+  .btn-ghost{background:transparent;color:var(--ink-soft);border:1px solid var(--line)}
+  .btn-ghost:hover{background:#fff}
+
+  .toolbar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:18px}
+  .search{flex:1;min-width:200px;position:relative}
+  .search input{padding-left:38px}
+  .search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);opacity:.4}
+  .filter-status{width:auto;min-width:150px}
+  .btn-export{background:var(--ink);color:#fff;white-space:nowrap}
+  .btn-export:hover{opacity:.85}
+
+  .list{display:flex;flex-direction:column;gap:14px}
+  .item{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;box-shadow:var(--shadow);transition:border-color .15s}
+  .item:hover{border-color:#cfc8b8}
+  .item-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+  .item-name{font-family:'Fraunces',serif;font-size:20px;font-weight:600;line-height:1.1}
+  .item-sub{font-size:13px;color:var(--ink-soft);margin-top:2px}
+  .badge{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:5px 10px;border-radius:999px;white-space:nowrap}
+  .b-uso{background:var(--accent-soft);color:var(--accent-dark)}
+  .b-manut{background:var(--amber-soft);color:var(--amber)}
+  .b-devol{background:#ece9e2;color:var(--ink-soft)}
+  .grid-info{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px 20px;margin:14px 0;padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .info b{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);margin-bottom:2px}
+  .info span{font-size:14px}
+  .obs{font-size:14px;color:var(--ink);white-space:pre-wrap;background:#faf8f2;border-radius:10px;padding:10px 12px;margin-top:4px}
+  .obs-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);margin-bottom:5px;display:block}
+  .item-actions{display:flex;gap:8px;margin-top:14px}
+  .item-actions button{padding:7px 14px;font-size:13px}
+  .btn-edit{background:#fff;border:1px solid var(--line);color:var(--ink)}
+  .btn-edit:hover{border-color:var(--accent);color:var(--accent-dark)}
+  .btn-del{background:#fff;border:1px solid var(--line);color:var(--danger)}
+  .btn-del:hover{background:var(--danger);color:#fff;border-color:var(--danger)}
+
+  .empty{text-align:center;padding:60px 20px;color:var(--ink-soft);border:2px dashed var(--line);border-radius:16px}
+  .empty b{font-family:'Fraunces',serif;font-size:18px;color:var(--ink);display:block;margin-bottom:6px}
+  .footer-note{text-align:center;margin-top:40px;font-size:12px;color:var(--ink-soft)}
+  .footer-note button{background:none;color:var(--danger);text-decoration:underline;padding:0;font-size:12px}
+  .loading{text-align:center;padding:40px;color:var(--ink-soft)}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>Controle de Notebooks</h1>
+      <p>Cadastro de colaboradores, equipamentos vinculados e anotações</p>
+    </div>
+    <div class="counts">
+      <div class="stat"><b id="st-total">0</b><span>Total</span></div>
+      <div class="stat"><b id="st-uso">0</b><span>Em uso</span></div>
+      <div class="stat"><b id="st-manut">0</b><span>Manutenção</span></div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- FORMULÁRIO -->
+    <section class="panel">
+      <h2 id="form-title">Novo cadastro</h2>
+      <p class="hint" id="form-hint">Preencha os dados e clique em Salvar.</p>
+
+      <label>Nome do colaborador *</label>
+      <input id="f-nome" placeholder="Ex.: Maria Santos">
+
+      <div class="row2">
+        <div><label>Setor / Cargo</label><input id="f-setor" placeholder="Ex.: Financeiro"></div>
+        <div><label>Status</label>
+          <select id="f-status">
+            <option value="Em uso">Em uso</option>
+            <option value="Em manutenção">Em manutenção</option>
+            <option value="Devolvido">Devolvido</option>
+          </select>
+        </div>
+      </div>
+
+      <label>Notebook (marca / modelo)</label>
+      <input id="f-modelo" placeholder="Ex.: Dell Latitude 5440">
+
+      <div class="row2">
+        <div><label>Service Tag</label><input id="f-tag" placeholder="Ex.: 7XK2P3Q"></div>
+        <div><label>Patrimônio</label><input id="f-patr" placeholder="Ex.: NB-0142"></div>
+      </div>
+
+      <label>Data de entrega</label>
+      <input id="f-data" type="date">
+
+      <label>Observações / anotações</label>
+      <textarea id="f-obs" placeholder="Ex.: Carregador trocado em 03/2026. Tem trava de segurança."></textarea>
+
+      <div class="actions">
+        <button class="btn-primary" id="btn-save">Salvar cadastro</button>
+        <button class="btn-ghost" id="btn-cancel" style="display:none">Cancelar</button>
+      </div>
+    </section>
+
+    <!-- LISTA -->
+    <section>
+      <div class="toolbar">
+        <div class="search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <input id="search" placeholder="Buscar por nome, setor ou patrimônio...">
+        </div>
+        <select id="filter-status" class="filter-status">
+          <option value="">Todos os status</option>
+          <option value="Em uso">Em uso</option>
+          <option value="Em manutenção">Em manutenção</option>
+          <option value="Devolvido">Devolvido</option>
+        </select>
+        <button class="btn-export" id="btn-export">Exportar CSV</button>
+      </div>
+      <div id="list" class="list"></div>
+    </section>
+  </div>
+
+  <p class="footer-note">
+    Os dados ficam salvos automaticamente neste app. &nbsp;·&nbsp;
+    <button id="btn-reset">Apagar tudo</button>
+  </p>
+</div>
+
+<script>
+const KEY = 'registros';
+let registros = [];
+let editingId = null;
+
+// ---- Armazenamento: window.storage (Claude) > localStorage (web) > memória ----
+const store = (function(){
+  const claude = (typeof window!=='undefined' && window.storage && typeof window.storage.get==='function');
+  let ls = false;
+  try{ localStorage.setItem('__t','1'); localStorage.removeItem('__t'); ls = true; }catch(e){ ls = false; }
+  let mem = '';
+  return {
+    async get(){
+      if(claude){ try{ const r=await window.storage.get(KEY); return (r&&r.value)?r.value:''; }catch(e){ return ''; } }
+      if(ls){ return localStorage.getItem(KEY) || ''; }
+      return mem;
+    },
+    async set(v){
+      if(claude){ try{ await window.storage.set(KEY, v); return; }catch(e){} }
+      if(ls){ try{ localStorage.setItem(KEY, v); return; }catch(e){} }
+      mem = v;
+    }
+  };
+})();
+
+async function loadRegistros(){
+  const v = await store.get();
+  try{ registros = v ? JSON.parse(v) : []; }catch(e){ registros = []; }
+}
+async function saveRegistros(){
+  try{ await store.set(JSON.stringify(registros)); }
+  catch(e){ console.error('Erro ao salvar', e); alert('Não foi possível salvar. Tente novamente.'); }
+}
+
+// ---- Helpers ----
+const $ = id => document.getElementById(id);
+const esc = s => (s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function badgeClass(s){ return s==='Em uso'?'b-uso':s==='Em manutenção'?'b-manut':'b-devol'; }
+function fmtData(d){ if(!d) return '—'; const [y,m,dd]=d.split('-'); return `${dd}/${m}/${y}`; }
+
+function updateStats(){
+  $('st-total').textContent = registros.length;
+  $('st-uso').textContent = registros.filter(r=>r.status==='Em uso').length;
+  $('st-manut').textContent = registros.filter(r=>r.status==='Em manutenção').length;
+}
+
+// ---- Formulário ----
+function clearForm(){
+  ['f-nome','f-setor','f-modelo','f-tag','f-patr','f-data','f-obs'].forEach(i=>$(i).value='');
+  $('f-status').value='Em uso';
+  editingId=null;
+  $('form-title').textContent='Novo cadastro';
+  $('form-hint').textContent='Preencha os dados e clique em Salvar.';
+  $('btn-save').textContent='Salvar cadastro';
+  $('btn-cancel').style.display='none';
+}
+
+function loadIntoForm(r){
+  $('f-nome').value=r.nome||''; $('f-setor').value=r.setor||'';
+  $('f-modelo').value=r.modelo||''; $('f-tag').value=r.tag||''; $('f-patr').value=r.patr||'';
+  $('f-data').value=r.data||''; $('f-obs').value=r.obs||'';
+  $('f-status').value=r.status||'Em uso';
+  editingId=r.id;
+  $('form-title').textContent='Editar cadastro';
+  $('form-hint').textContent='Alterando "'+esc(r.nome)+'".';
+  $('btn-save').textContent='Salvar alterações';
+  $('btn-cancel').style.display='inline-block';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+async function onSave(){
+  const nome = $('f-nome').value.trim();
+  if(!nome){ alert('Informe o nome do colaborador.'); $('f-nome').focus(); return; }
+  const dados = {
+    nome,
+    setor:$('f-setor').value.trim(),
+    modelo:$('f-modelo').value.trim(),
+    tag:$('f-tag').value.trim(),
+    patr:$('f-patr').value.trim(),
+    data:$('f-data').value,
+    status:$('f-status').value,
+    obs:$('f-obs').value.trim()
+  };
+  if(editingId){
+    const i = registros.findIndex(r=>r.id===editingId);
+    if(i>-1) registros[i] = {...registros[i], ...dados};
+  }else{
+    registros.unshift({ id:'r'+Date.now()+Math.random().toString(36).slice(2,6), ...dados });
+  }
+  await saveRegistros();
+  clearForm();
+  render();
+}
+
+async function onDelete(id){
+  const r = registros.find(x=>x.id===id);
+  if(!confirm('Excluir o cadastro de "'+(r?r.nome:'')+'"?')) return;
+  registros = registros.filter(x=>x.id!==id);
+  await saveRegistros();
+  if(editingId===id) clearForm();
+  render();
+}
+
+// ---- Render da lista ----
+function render(){
+  updateStats();
+  const q = $('search').value.trim().toLowerCase();
+  const fs = $('filter-status').value;
+  const filtered = registros.filter(r=>{
+    const okStatus = !fs || r.status===fs;
+    const blob = (r.nome+' '+r.setor+' '+r.tag+' '+r.patr+' '+r.modelo).toLowerCase();
+    return okStatus && (!q || blob.includes(q));
+  });
+  const list = $('list');
+  if(filtered.length===0){
+    list.innerHTML = registros.length===0
+      ? '<div class="empty"><b>Nenhum colaborador cadastrado ainda</b>Preencha o formulário ao lado para começar.</div>'
+      : '<div class="empty"><b>Nada encontrado</b>Ajuste a busca ou o filtro de status.</div>';
+    return;
+  }
+  list.innerHTML = filtered.map(r=>`
+    <div class="item">
+      <div class="item-head">
+        <div>
+          <div class="item-name">${esc(r.nome)}</div>
+          <div class="item-sub">${esc(r.setor)||'Setor não informado'}</div>
+        </div>
+        <span class="badge ${badgeClass(r.status)}">${esc(r.status)}</span>
+      </div>
+      <div class="grid-info">
+        <div class="info"><b>Notebook</b><span>${esc(r.modelo)||'—'}</span></div>
+        <div class="info"><b>Service Tag</b><span>${esc(r.tag)||'—'}</span></div>
+        <div class="info"><b>Patrimônio</b><span>${esc(r.patr)||'—'}</span></div>
+        <div class="info"><b>Entrega</b><span>${fmtData(r.data)}</span></div>
+      </div>
+      ${r.obs?`<span class="obs-label">Observações</span><div class="obs">${esc(r.obs)}</div>`:''}
+      <div class="item-actions">
+        <button class="btn-edit" data-edit="${r.id}">Editar</button>
+        <button class="btn-del" data-del="${r.id}">Excluir</button>
+      </div>
+    </div>`).join('');
+}
+
+// ---- Exportar CSV ----
+function exportCSV(){
+  if(registros.length===0){ alert('Não há dados para exportar.'); return; }
+  const cols = [['nome','Colaborador'],['setor','Setor/Cargo'],['modelo','Notebook'],['tag','Service Tag'],['patr','Patrimônio'],['data','Data de entrega'],['status','Status'],['obs','Observações']];
+  const head = cols.map(c=>c[1]).join(';');
+  const rows = registros.map(r=>cols.map(c=>{
+    let v = (r[c[0]]||'').toString().replace(/"/g,'""');
+    return /[;"\n]/.test(v) ? '"'+v+'"' : v;
+  }).join(';'));
+  const csv = '\ufeff'+[head,...rows].join('\r\n'); // BOM p/ acentos no Excel
+  const blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'controle-notebooks.csv';
+  a.click();
+}
+
+async function resetAll(){
+  if(!confirm('Isso apaga TODOS os cadastros. Deseja continuar?')) return;
+  registros = [];
+  await saveRegistros();
+  clearForm(); render();
+}
+
+// ---- Listeners ----
+$('btn-save').onclick = onSave;
+$('btn-cancel').onclick = clearForm;
+$('btn-export').onclick = exportCSV;
+$('btn-reset').onclick = resetAll;
+$('search').oninput = render;
+$('filter-status').onchange = render;
+$('list').addEventListener('click', e=>{
+  const ed = e.target.getAttribute('data-edit');
+  const dl = e.target.getAttribute('data-del');
+  if(ed){ const r=registros.find(x=>x.id===ed); if(r) loadIntoForm(r); }
+  if(dl) onDelete(dl);
+});
+
+// ---- Início ----
+(async function init(){
+  $('list').innerHTML = '<div class="loading">Carregando...</div>';
+  await loadRegistros();
+  render();
+})();
+</script>
