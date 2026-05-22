@@ -1,6 +1,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Controle de Notebooks</title>
+<title>Controle de Patrimônio 2BST</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -9,7 +9,8 @@
   :root{
     --paper:#f4f1ea;--card:#fdfcf9;--ink:#1c1c19;--ink-soft:#5b594f;--line:#e3ddd0;
     --accent:#1f6f5c;--accent-dark:#175547;--accent-soft:#e6efe9;--danger:#a8412f;
-    --amber:#9a6b16;--amber-soft:#f3e9d4;--shadow:0 1px 2px rgba(28,28,25,.06),0 8px 24px rgba(28,28,25,.06);
+    --amber:#9a6b16;--amber-soft:#f3e9d4;--blue:#2a5d8f;--blue-soft:#e2ecf5;--gray-soft:#ece9e2;
+    --shadow:0 1px 2px rgba(28,28,25,.06),0 8px 24px rgba(28,28,25,.06);
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:'Manrope',system-ui,sans-serif;background:var(--paper);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased}
@@ -17,7 +18,7 @@
 
   .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
   .login-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:34px;width:100%;max-width:380px;box-shadow:var(--shadow)}
-  .login-card h1{font-family:'Fraunces',serif;font-weight:600;font-size:26px;letter-spacing:-.5px;margin-bottom:4px}
+  .login-card h1{font-family:'Fraunces',serif;font-weight:600;font-size:24px;letter-spacing:-.5px;margin-bottom:4px}
   .login-card p.sub{color:var(--ink-soft);font-size:13.5px;margin-bottom:22px}
   .login-error{background:#f7e7e3;color:var(--danger);font-size:13px;border-radius:8px;padding:8px 12px;margin-bottom:12px;display:none}
 
@@ -27,12 +28,15 @@
   .btn-logout:hover{background:#fff;color:var(--danger);border-color:var(--danger)}
 
   header.top{border-bottom:2px solid var(--ink);padding-bottom:18px;margin-bottom:20px}
-  .brand h1{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(28px,5vw,40px);letter-spacing:-.5px;line-height:1.05}
+  .brand h1{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(26px,5vw,38px);letter-spacing:-.5px;line-height:1.05}
   .brand p{color:var(--ink-soft);font-size:14px;margin-top:6px}
 
-  .nav{display:flex;gap:8px;margin-bottom:26px}
+  .nav{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap}
   .nav button{background:transparent;border:1px solid var(--line);color:var(--ink-soft);border-radius:999px;padding:9px 18px;font-size:14px;font-weight:600;cursor:pointer}
   .nav button.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .subnav{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+  .subnav button{background:#fff;border:1px solid var(--line);color:var(--ink-soft);border-radius:8px;padding:7px 14px;font-size:13.5px;font-weight:600;cursor:pointer}
+  .subnav button.active{background:var(--accent-soft);color:var(--accent-dark);border-color:var(--accent)}
 
   .form-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:26px;box-shadow:var(--shadow);max-width:560px;margin:0 auto}
   .form-card h2{font-family:'Fraunces',serif;font-weight:600;font-size:22px;margin-bottom:4px}
@@ -42,7 +46,7 @@
   label:first-of-type{margin-top:0}
   input,select,textarea{width:100%;font-family:inherit;font-size:14.5px;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;outline:none;transition:border-color .15s,box-shadow .15s}
   input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
-  textarea{resize:vertical;min-height:80px}
+  textarea{resize:vertical;min-height:70px}
   .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   .actions{display:flex;gap:10px;margin-top:22px}
   button{font-family:inherit;font-weight:600;font-size:14px;cursor:pointer;border:none;border-radius:10px;padding:11px 16px;transition:transform .08s,background .15s,opacity .15s}
@@ -53,43 +57,60 @@
   .btn-ghost{background:transparent;color:var(--ink-soft);border:1px solid var(--line)}
   .btn-ghost:hover{background:#fff}
 
-  .counts{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px}
-  .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 16px;text-align:center;box-shadow:var(--shadow);min-width:96px}
-  .stat b{display:block;font-family:'Fraunces',serif;font-size:24px;line-height:1}
-  .stat span{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft)}
+  .counts{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:22px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow)}
+  .stat b{display:block;font-family:'Fraunces',serif;font-size:30px;line-height:1}
+  .stat span{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft)}
+  .stat.s-uso{border-left:4px solid var(--accent)}
+  .stat.s-disp{border-left:4px solid var(--blue)}
+  .stat.s-manut{border-left:4px solid var(--amber)}
+  .stat.s-desc{border-left:4px solid var(--ink-soft)}
 
-  .toolbar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:18px}
-  .search{flex:1;min-width:200px;position:relative}
+  .search{position:relative;margin-bottom:16px}
   .search input{padding-left:38px}
   .search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);opacity:.4}
-  .filter-status{width:auto;min-width:150px}
+  .toolbar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+  .toolbar .search{flex:1;min-width:200px;margin-bottom:0}
   .btn-export{background:var(--ink);color:#fff;white-space:nowrap}
-  .btn-export:hover{opacity:.85}
 
-  .list{display:flex;flex-direction:column;gap:14px}
-  .item{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;box-shadow:var(--shadow)}
-  .item:hover{border-color:#cfc8b8}
-  .item-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
-  .item-name{font-family:'Fraunces',serif;font-size:20px;font-weight:600;line-height:1.1}
-  .item-sub{font-size:13px;color:var(--ink-soft);margin-top:2px}
-  .badge{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:5px 10px;border-radius:999px;white-space:nowrap}
+  .list{display:flex;flex-direction:column;gap:10px}
+  .row-item{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;cursor:pointer;box-shadow:var(--shadow)}
+  .row-item:hover{border-color:var(--accent)}
+  .row-item .ri-main{font-weight:600}
+  .row-item .ri-sub{font-size:13px;color:var(--ink-soft)}
+  .badge{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:5px 10px;border-radius:999px;white-space:nowrap}
   .b-uso{background:var(--accent-soft);color:var(--accent-dark)}
+  .b-disp{background:var(--blue-soft);color:var(--blue)}
   .b-manut{background:var(--amber-soft);color:var(--amber)}
-  .b-devol{background:#ece9e2;color:var(--ink-soft)}
-  .grid-info{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px 20px;margin:14px 0;padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
-  .info b{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);margin-bottom:2px}
-  .info span{font-size:14px}
-  .obs{font-size:14px;white-space:pre-wrap;background:#faf8f2;border-radius:10px;padding:10px 12px;margin-top:4px}
-  .obs-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);margin-bottom:5px;display:block}
-  .item-actions{display:flex;gap:8px;margin-top:14px}
-  .item-actions button{padding:7px 14px;font-size:13px}
+  .b-desc{background:var(--gray-soft);color:var(--ink-soft)}
+
+  .detail{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px;box-shadow:var(--shadow)}
+  .detail h3{font-family:'Fraunces',serif;font-size:24px;font-weight:600;margin-bottom:2px}
+  .detail .d-sub{color:var(--ink-soft);font-size:14px;margin-bottom:16px}
+  .d-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;padding:16px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-bottom:18px}
+  .d-grid .info b{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft)}
+  .d-grid .info span{font-size:15px}
+  .sec-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink);margin:20px 0 10px}
+  .hist{display:flex;flex-direction:column;gap:8px}
+  .hist-row{display:flex;justify-content:space-between;gap:12px;padding:10px 14px;background:#faf8f2;border-radius:10px;font-size:14px}
+  .hist-row .hr-period{color:var(--ink-soft);font-size:13px;white-space:nowrap}
+  .tag-now{font-size:10px;font-weight:700;background:var(--accent);color:#fff;padding:2px 7px;border-radius:999px;margin-left:8px}
+  .flag{display:inline-block;font-size:13px;font-weight:600;padding:6px 12px;border-radius:8px;margin-bottom:8px}
+  .flag-yes{background:var(--amber-soft);color:var(--amber)}
+  .flag-no{background:var(--gray-soft);color:var(--ink-soft)}
+  .mini-form{margin-top:14px;padding:16px;border:1px dashed var(--line);border-radius:12px;background:#fbfaf6}
+  .mini-form .row2{margin-top:8px}
+  .back{background:none;border:none;color:var(--accent-dark);font-weight:600;cursor:pointer;padding:0;margin-bottom:14px;font-size:14px}
+  .item-actions{display:flex;gap:8px}
+  .item-actions button{padding:6px 12px;font-size:13px}
   .btn-edit{background:#fff;border:1px solid var(--line);color:var(--ink)}
   .btn-edit:hover{border-color:var(--accent);color:var(--accent-dark)}
   .btn-del{background:#fff;border:1px solid var(--line);color:var(--danger)}
   .btn-del:hover{background:var(--danger);color:#fff;border-color:var(--danger)}
-  .empty{text-align:center;padding:60px 20px;color:var(--ink-soft);border:2px dashed var(--line);border-radius:16px}
-  .empty b{font-family:'Fraunces',serif;font-size:18px;color:var(--ink);display:block;margin-bottom:6px}
-  .loading{text-align:center;padding:40px;color:var(--ink-soft)}
+  .empty{text-align:center;padding:40px 20px;color:var(--ink-soft);border:2px dashed var(--line);border-radius:14px}
+  .loading{text-align:center;padding:30px;color:var(--ink-soft)}
+  .pcount{font-family:'Fraunces',serif;font-size:18px;margin:6px 0 14px}
+  .pcount b{color:var(--accent-dark)}
 
   .toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%) translateY(20px);background:var(--accent);color:#fff;padding:14px 24px;border-radius:12px;font-weight:600;font-size:15px;box-shadow:0 10px 34px rgba(0,0,0,.2);opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:50}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -98,8 +119,8 @@
 <!-- ===== LOGIN ===== -->
 <div id="login-screen" class="login-wrap" style="display:none">
   <div class="login-card">
-    <h1>Controle de Notebooks</h1>
-    <p class="sub">Acesso restrito à equipe. Entre com seu e-mail e senha.</p>
+    <h1>Controle de Patrimônio 2BST</h1>
+    <p class="sub">Acesso restrito. Entre com seu e-mail e senha.</p>
     <div class="login-error" id="login-error"></div>
     <label>E-mail</label>
     <input id="login-email" type="email" placeholder="voce@empresa.com" autocomplete="username">
@@ -112,263 +133,351 @@
 <!-- ===== APP ===== -->
 <div id="app" class="wrap" style="display:none">
   <div class="session-bar">Logado como <b id="user-email"></b><button class="btn-logout" id="btn-logout">Sair</button></div>
-
   <header class="top">
-    <div class="brand">
-      <h1>Controle de Notebooks</h1>
-      <p>Cadastro de colaboradores, equipamentos vinculados e anotações</p>
-    </div>
+    <div class="brand"><h1>Controle de Patrimônio 2BST</h1><p>Máquinas, colaboradores, histórico e manutenções</p></div>
   </header>
 
   <nav class="nav" id="nav" style="display:none">
-    <button id="nav-cad" class="active">Novo cadastro</button>
+    <button id="nav-cad" class="active">Cadastrar / Atualizar</button>
     <button id="nav-rel">Administrador / Relatórios</button>
   </nav>
 
   <!-- VIEW: CADASTRO -->
   <div id="view-cadastro">
     <div class="form-card">
-      <h2 id="form-title">Novo cadastro</h2>
-      <p class="hint" id="form-hint">Preencha os dados e clique em Salvar.</p>
-      <label>Nome do colaborador *</label>
-      <input id="f-nome" placeholder="Ex.: Maria Santos">
+      <h2 id="form-title">Cadastrar / atualizar máquina</h2>
+      <p class="hint" id="form-hint">Informe o patrimônio. Se já existir e você mudar o colaborador, o histórico é registrado automaticamente.</p>
+      <label>Patrimônio *</label>
+      <input id="f-patr" placeholder="Ex.: 530">
+      <label>Colaborador (deixe vazio se sem dono)</label>
+      <input id="f-colab" placeholder="Ex.: Maria Santos">
       <div class="row2">
-        <div><label>Setor / Cargo</label><input id="f-setor" placeholder="Ex.: Financeiro"></div>
+        <div><label>Setor</label><input id="f-setor" placeholder="Ex.: Financeiro"></div>
         <div><label>Status</label>
           <select id="f-status">
             <option value="Em uso">Em uso</option>
-            <option value="Em manutenção">Em manutenção</option>
-            <option value="Devolvido">Devolvido</option>
+            <option value="Disponível">Disponível</option>
+            <option value="Manutenção">Manutenção</option>
+            <option value="Descarte">Descarte</option>
           </select>
         </div>
       </div>
-      <label>Notebook (marca / modelo)</label>
-      <input id="f-modelo" placeholder="Ex.: Dell Latitude 5440">
       <div class="row2">
+        <div><label>Modelo</label><input id="f-modelo" placeholder="Ex.: Dell Latitude 5440"></div>
         <div><label>Service Tag</label><input id="f-tag" placeholder="Ex.: 7XK2P3Q"></div>
-        <div><label>Patrimônio</label><input id="f-patr" placeholder="Ex.: NB-0142"></div>
       </div>
-      <label>Data de entrega</label>
+      <label>Data de entrega (para o novo colaborador)</label>
       <input id="f-data" type="date">
-      <label>Observações / anotações</label>
-      <textarea id="f-obs" placeholder="Ex.: Carregador trocado em 03/2026."></textarea>
       <div class="actions">
-        <button class="btn-primary" id="btn-save">Salvar cadastro</button>
+        <button class="btn-primary" id="btn-save">Salvar</button>
         <button class="btn-ghost" id="btn-cancel" style="display:none">Cancelar</button>
       </div>
     </div>
   </div>
 
-  <!-- VIEW: RELATÓRIOS (admin) -->
+  <!-- VIEW: RELATÓRIOS -->
   <div id="view-relatorios" style="display:none">
     <div class="counts">
-      <div class="stat"><b id="st-total">0</b><span>Total</span></div>
-      <div class="stat"><b id="st-uso">0</b><span>Em uso</span></div>
-      <div class="stat"><b id="st-manut">0</b><span>Manutenção</span></div>
-      <div class="stat"><b id="st-devol">0</b><span>Devolvidos</span></div>
+      <div class="stat s-uso"><b id="st-uso">0</b><span>Em uso</span></div>
+      <div class="stat s-disp"><b id="st-disp">0</b><span>Disponíveis</span></div>
+      <div class="stat s-manut"><b id="st-manut">0</b><span>Em manutenção</span></div>
+      <div class="stat s-desc"><b id="st-desc">0</b><span>Em descarte</span></div>
     </div>
-    <div class="toolbar">
+    <div class="subnav">
+      <button id="sub-maq" class="active">Por máquina</button>
+      <button id="sub-pes">Por pessoa</button>
+      <button id="sub-todas">Todas as máquinas</button>
+    </div>
+
+    <div id="sv-maquina">
       <div class="search">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-        <input id="search" placeholder="Buscar por nome, setor, tag ou patrimônio...">
+        <input id="busca-maq" placeholder="Buscar máquina por patrimônio ou colaborador atual...">
       </div>
-      <select id="filter-status" class="filter-status">
-        <option value="">Todos os status</option>
-        <option value="Em uso">Em uso</option>
-        <option value="Em manutenção">Em manutenção</option>
-        <option value="Devolvido">Devolvido</option>
-      </select>
-      <button class="btn-export" id="btn-export">Exportar CSV</button>
+      <div id="maq-conteudo"></div>
     </div>
-    <div id="list" class="list"></div>
+
+    <div id="sv-pessoa" style="display:none">
+      <div class="search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="busca-pes" placeholder="Digite o nome do colaborador...">
+      </div>
+      <div id="pes-conteudo"></div>
+    </div>
+
+    <div id="sv-todas" style="display:none">
+      <div class="toolbar">
+        <div class="search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <input id="busca-todas" placeholder="Buscar...">
+        </div>
+        <select id="filtro-status" style="width:auto;min-width:150px">
+          <option value="">Todos os status</option>
+          <option value="Em uso">Em uso</option>
+          <option value="Disponível">Disponível</option>
+          <option value="Manutenção">Manutenção</option>
+          <option value="Descarte">Descarte</option>
+        </select>
+        <button class="btn-export" id="btn-export">Exportar CSV</button>
+      </div>
+      <div id="todas-conteudo" class="list"></div>
+    </div>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
-// ===== Conexão Supabase =====
-const SUPA_URL = 'https://jvfewdukhgmtdieufpaf.supabase.co';
-const SUPA_KEY = 'sb_publishable_O2rf2zCnJTZ1YE5q4eJeeA_AVdukzUg';
-const db = supabase.createClient(SUPA_URL, SUPA_KEY);
+const SUPA_URL='https://jvfewdukhgmtdieufpaf.supabase.co';
+const SUPA_KEY='sb_publishable_O2rf2zCnJTZ1YE5q4eJeeA_AVdukzUg';
+const db=supabase.createClient(SUPA_URL,SUPA_KEY);
+const ADMIN_EMAILS=['rafael.andrade.sa@gmail.com'];
+const isAdmin=u=>!!u&&ADMIN_EMAILS.includes((u.email||'').toLowerCase());
 
-// ===== Administradores (acesso aos relatórios) =====
-const ADMIN_EMAILS = ['rafael.andrade.sa@gmail.com'];
-const isAdmin = u => !!u && ADMIN_EMAILS.includes((u.email||'').toLowerCase());
-
-let registros = [];
-let editingId = null;
-let isAdminUser = false;
-const $ = id => document.getElementById(id);
-const esc = s => (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const badgeClass = s => s==='Em uso'?'b-uso':s==='Em manutenção'?'b-manut':'b-devol';
-const fmtData = d => { if(!d) return '—'; const [y,m,dd]=d.split('-'); return `${dd}/${m}/${y}`; };
+let maquinas=[],atribuicoes=[],manutencoes=[],isAdminUser=false,editingPatr=null;
+const $=id=>document.getElementById(id);
+const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const hoje=()=>new Date().toISOString().slice(0,10);
+const fmt=d=>{if(!d)return'';const[y,m,dd]=String(d).split('-');return`${dd}/${m}/${y}`;};
+const stClass=s=>s==='Em uso'?'b-uso':s==='Disponível'?'b-disp':s==='Manutenção'?'b-manut':'b-desc';
 let toastTimer;
-function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2600); }
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2600);}
 
-// ===== Autenticação =====
-async function checkAuth(){
-  const { data:{ session } } = await db.auth.getSession();
-  if(session) showApp(session.user); else showLogin();
-}
-function showLogin(){ $('login-screen').style.display='flex'; $('app').style.display='none'; }
+// ===== Auth =====
+async function checkAuth(){const{data:{session}}=await db.auth.getSession();session?showApp(session.user):showLogin();}
+function showLogin(){$('login-screen').style.display='flex';$('app').style.display='none';}
 async function showApp(user){
-  $('login-screen').style.display='none'; $('app').style.display='block';
-  $('user-email').textContent = user.email;
-  isAdminUser = isAdmin(user);
-  $('nav').style.display = isAdminUser ? 'flex' : 'none';
-  if(isAdminUser){ await loadRegistros(); }
+  $('login-screen').style.display='none';$('app').style.display='block';
+  $('user-email').textContent=user.email;isAdminUser=isAdmin(user);
+  $('nav').style.display=isAdminUser?'flex':'none';
+  if(isAdminUser)await loadAll();
   showView('cadastro');
 }
 async function doLogin(){
-  const email=$('login-email').value.trim(), password=$('login-pass').value;
-  const err=$('login-error'); err.style.display='none';
-  if(!email||!password){ err.textContent='Preencha e-mail e senha.'; err.style.display='block'; return; }
-  $('btn-login').disabled=true; $('btn-login').textContent='Entrando...';
-  const { data, error } = await db.auth.signInWithPassword({ email, password });
-  $('btn-login').disabled=false; $('btn-login').textContent='Entrar';
-  if(error){ err.textContent='E-mail ou senha inválidos.'; err.style.display='block'; return; }
+  const email=$('login-email').value.trim(),password=$('login-pass').value,err=$('login-error');err.style.display='none';
+  if(!email||!password){err.textContent='Preencha e-mail e senha.';err.style.display='block';return;}
+  $('btn-login').disabled=true;$('btn-login').textContent='Entrando...';
+  const{data,error}=await db.auth.signInWithPassword({email,password});
+  $('btn-login').disabled=false;$('btn-login').textContent='Entrar';
+  if(error){err.textContent='E-mail ou senha inválidos.';err.style.display='block';return;}
   showApp(data.user);
 }
-async function doLogout(){ await db.auth.signOut(); registros=[]; isAdminUser=false; $('login-email').value=''; $('login-pass').value=''; showLogin(); }
+async function doLogout(){await db.auth.signOut();maquinas=[];atribuicoes=[];manutencoes=[];isAdminUser=false;$('login-email').value='';$('login-pass').value='';showLogin();}
 
-// ===== Navegação entre telas =====
-function showView(v){
-  if(v==='relatorios' && !isAdminUser) v='cadastro';
-  $('view-cadastro').style.display = v==='cadastro'?'block':'none';
-  $('view-relatorios').style.display = v==='relatorios'?'block':'none';
-  $('nav-cad').classList.toggle('active', v==='cadastro');
-  $('nav-rel').classList.toggle('active', v==='relatorios');
-  if(v==='relatorios') render();
+// ===== Carregar dados =====
+async function loadAll(){
+  const[m,a,mt]=await Promise.all([
+    db.from('maquinas').select('*').order('patrimonio'),
+    db.from('atribuicoes').select('*').order('created_at',{ascending:true}),
+    db.from('manutencoes').select('*').order('data',{ascending:false})
+  ]);
+  if(m.error){alert('Erro ao carregar máquinas: '+m.error.message);}
+  maquinas=m.data||[];atribuicoes=a.data||[];manutencoes=mt.data||[];
 }
 
-// ===== Dados =====
-async function loadRegistros(){
-  const { data, error } = await db.from('colaboradores').select('*').order('created_at',{ascending:false});
-  if(error){ console.error(error); alert('Erro ao carregar dados: '+error.message); registros=[]; return; }
-  registros = data || [];
-}
+// ===== Cadastro / reatribuição =====
 async function onSave(){
-  const nome = $('f-nome').value.trim();
-  if(!nome){ alert('Informe o nome do colaborador.'); $('f-nome').focus(); return; }
-  const dados = {
-    nome, setor:$('f-setor').value.trim(), modelo:$('f-modelo').value.trim(),
-    tag:$('f-tag').value.trim(), patr:$('f-patr').value.trim(),
-    data:$('f-data').value||null, status:$('f-status').value, obs:$('f-obs').value.trim()
-  };
-  const wasEditing = !!editingId;
+  const patr=$('f-patr').value.trim();
+  if(!patr){alert('Informe o patrimônio.');$('f-patr').focus();return;}
+  const colNew=$('f-colab').value.trim(),setor=$('f-setor').value.trim();
+  const dados={modelo:$('f-modelo').value.trim(),service_tag:$('f-tag').value.trim(),setor,status:$('f-status').value,colaborador:colNew||null};
+  const dataIni=$('f-data').value||hoje();
   $('btn-save').disabled=true;
-  let error;
-  if(wasEditing){ ({error}=await db.from('colaboradores').update(dados).eq('id',editingId)); }
-  else { ({error}=await db.from('colaboradores').insert(dados)); }
+  try{
+    const{data:ex}=await db.from('maquinas').select('*').eq('patrimonio',patr).maybeSingle();
+    if(!ex){
+      const{error}=await db.from('maquinas').insert({patrimonio:patr,...dados});
+      if(error)throw error;
+      if(colNew)await db.from('atribuicoes').insert({patrimonio:patr,colaborador:colNew,setor,data_inicio:dataIni,data_fim:null});
+      toast('Máquina cadastrada ✓');
+    }else{
+      const colOld=(ex.colaborador||'');
+      if(colNew.toLowerCase()!==colOld.toLowerCase()){
+        if(colOld)await db.from('atribuicoes').update({data_fim:hoje()}).eq('patrimonio',patr).is('data_fim',null);
+        if(colNew)await db.from('atribuicoes').insert({patrimonio:patr,colaborador:colNew,setor,data_inicio:dataIni,data_fim:null});
+      }
+      const{error}=await db.from('maquinas').update(dados).eq('patrimonio',patr);
+      if(error)throw error;
+      toast(colNew.toLowerCase()!==colOld.toLowerCase()&&colNew?'Máquina reatribuída ✓':'Máquina atualizada ✓');
+    }
+    clearForm();
+    if(isAdminUser)await loadAll();
+  }catch(e){alert('Erro ao salvar: '+(e.message||e));}
   $('btn-save').disabled=false;
-  if(error){ alert('Erro ao salvar: '+error.message); return; }
-  if(wasEditing){
-    await loadRegistros(); clearForm(); toast('Alterações salvas ✓'); showView('relatorios');
-  } else {
-    clearForm(); toast('Salvo com sucesso ✓');
-    if(isAdminUser){ await loadRegistros(); }
-  }
 }
-async function onDelete(id){
-  const r = registros.find(x=>x.id===id);
-  if(!confirm('Excluir o cadastro de "'+(r?r.nome:'')+'"?')) return;
-  const { error } = await db.from('colaboradores').delete().eq('id',id);
-  if(error){ alert('Erro ao excluir: '+error.message); return; }
-  await loadRegistros(); if(editingId===id) clearForm(); render(); toast('Cadastro excluído');
-}
-
-// ===== Formulário =====
 function clearForm(){
-  ['f-nome','f-setor','f-modelo','f-tag','f-patr','f-data','f-obs'].forEach(i=>$(i).value='');
-  $('f-status').value='Em uso'; editingId=null;
-  $('form-title').textContent='Novo cadastro';
-  $('form-hint').textContent='Preencha os dados e clique em Salvar.';
-  $('btn-save').textContent='Salvar cadastro';
-  $('btn-cancel').style.display='none';
+  ['f-patr','f-colab','f-setor','f-modelo','f-tag','f-data'].forEach(i=>$(i).value='');
+  $('f-status').value='Em uso';editingPatr=null;$('f-patr').disabled=false;
+  $('form-title').textContent='Cadastrar / atualizar máquina';
+  $('btn-save').textContent='Salvar';$('btn-cancel').style.display='none';
 }
-function loadIntoForm(r){
-  $('f-nome').value=r.nome||''; $('f-setor').value=r.setor||'';
-  $('f-modelo').value=r.modelo||''; $('f-tag').value=r.tag||''; $('f-patr').value=r.patr||'';
-  $('f-data').value=r.data||''; $('f-obs').value=r.obs||''; $('f-status').value=r.status||'Em uso';
-  editingId=r.id;
-  $('form-title').textContent='Editar cadastro';
-  $('form-hint').textContent='Alterando "'+esc(r.nome)+'".';
-  $('btn-save').textContent='Salvar alterações';
-  $('btn-cancel').style.display='inline-block';
-  showView('cadastro'); window.scrollTo({top:0,behavior:'smooth'});
+function editMachine(patr){
+  const m=maquinas.find(x=>x.patrimonio===patr);if(!m)return;
+  $('f-patr').value=m.patrimonio;$('f-patr').disabled=true;
+  $('f-colab').value=m.colaborador||'';$('f-setor').value=m.setor||'';
+  $('f-modelo').value=m.modelo||'';$('f-tag').value=m.service_tag||'';$('f-status').value=m.status||'Em uso';$('f-data').value='';
+  editingPatr=patr;$('form-title').textContent='Editar máquina '+esc(patr);
+  $('btn-save').textContent='Salvar alterações';$('btn-cancel').style.display='inline-block';
+  showView('cadastro');window.scrollTo({top:0,behavior:'smooth'});
 }
-
-// ===== Render (Relatórios) =====
-function updateStats(){
-  $('st-total').textContent=registros.length;
-  $('st-uso').textContent=registros.filter(r=>r.status==='Em uso').length;
-  $('st-manut').textContent=registros.filter(r=>r.status==='Em manutenção').length;
-  $('st-devol').textContent=registros.filter(r=>r.status==='Devolvido').length;
-}
-function render(){
-  updateStats();
-  const q=$('search').value.trim().toLowerCase(), fs=$('filter-status').value;
-  const filtered=registros.filter(r=>{
-    const okStatus=!fs||r.status===fs;
-    const blob=((r.nome||'')+' '+(r.setor||'')+' '+(r.tag||'')+' '+(r.patr||'')+' '+(r.modelo||'')).toLowerCase();
-    return okStatus&&(!q||blob.includes(q));
-  });
-  const list=$('list');
-  if(filtered.length===0){
-    list.innerHTML = registros.length===0
-      ? '<div class="empty"><b>Nenhum colaborador cadastrado ainda</b>Os cadastros feitos pela equipe aparecem aqui.</div>'
-      : '<div class="empty"><b>Nada encontrado</b>Ajuste a busca ou o filtro de status.</div>';
-    return;
-  }
-  list.innerHTML = filtered.map(r=>`
-    <div class="item">
-      <div class="item-head">
-        <div><div class="item-name">${esc(r.nome)}</div><div class="item-sub">${esc(r.setor)||'Setor não informado'}</div></div>
-        <span class="badge ${badgeClass(r.status)}">${esc(r.status)}</span>
-      </div>
-      <div class="grid-info">
-        <div class="info"><b>Notebook</b><span>${esc(r.modelo)||'—'}</span></div>
-        <div class="info"><b>Service Tag</b><span>${esc(r.tag)||'—'}</span></div>
-        <div class="info"><b>Patrimônio</b><span>${esc(r.patr)||'—'}</span></div>
-        <div class="info"><b>Entrega</b><span>${fmtData(r.data)}</span></div>
-      </div>
-      ${r.obs?`<span class="obs-label">Observações</span><div class="obs">${esc(r.obs)}</div>`:''}
-      <div class="item-actions">
-        <button class="btn-edit" data-edit="${r.id}">Editar</button>
-        <button class="btn-del" data-del="${r.id}">Excluir</button>
-      </div>
-    </div>`).join('');
+async function deleteMachine(patr){
+  if(!confirm('Excluir a máquina '+patr+' e todo o seu histórico?'))return;
+  const{error}=await db.from('maquinas').delete().eq('patrimonio',patr);
+  if(error){alert('Erro: '+error.message);return;}
+  await loadAll();renderRelatorios();toast('Máquina excluída');
 }
 
-// ===== Exportar CSV =====
+// ===== Manutenção =====
+async function registrarManutencao(patr){
+  const desc=$('mt-desc').value.trim(),data=$('mt-data').value||hoje(),marcar=$('mt-marcar').checked;
+  if(!desc){alert('Descreva a manutenção.');return;}
+  const{error}=await db.from('manutencoes').insert({patrimonio:patr,descricao:desc,data});
+  if(error){alert('Erro: '+error.message);return;}
+  if(marcar)await db.from('maquinas').update({status:'Manutenção'}).eq('patrimonio',patr);
+  await loadAll();renderMaquinaDetalhe(patr);toast('Manutenção registrada ✓');
+}
+
+// ===== Views =====
+function showView(v){
+  if(v==='relatorios'&&!isAdminUser)v='cadastro';
+  $('view-cadastro').style.display=v==='cadastro'?'block':'none';
+  $('view-relatorios').style.display=v==='relatorios'?'block':'none';
+  $('nav-cad').classList.toggle('active',v==='cadastro');
+  $('nav-rel').classList.toggle('active',v==='relatorios');
+  if(v==='relatorios')renderRelatorios();
+}
+function showSub(s){
+  $('sv-maquina').style.display=s==='maq'?'block':'none';
+  $('sv-pessoa').style.display=s==='pes'?'block':'none';
+  $('sv-todas').style.display=s==='todas'?'block':'none';
+  $('sub-maq').classList.toggle('active',s==='maq');
+  $('sub-pes').classList.toggle('active',s==='pes');
+  $('sub-todas').classList.toggle('active',s==='todas');
+  if(s==='maq')renderMaquinaLista();
+  if(s==='pes')renderPessoa();
+  if(s==='todas')renderTodas();
+}
+function renderRelatorios(){
+  $('st-uso').textContent=maquinas.filter(m=>m.status==='Em uso').length;
+  $('st-disp').textContent=maquinas.filter(m=>m.status==='Disponível').length;
+  $('st-manut').textContent=maquinas.filter(m=>m.status==='Manutenção').length;
+  $('st-desc').textContent=maquinas.filter(m=>m.status==='Descarte').length;
+  const active=$('sub-pes').classList.contains('active')?'pes':$('sub-todas').classList.contains('active')?'todas':'maq';
+  showSub(active);
+}
+
+// --- Por máquina ---
+function renderMaquinaLista(){
+  const q=$('busca-maq').value.trim().toLowerCase();
+  const arr=maquinas.filter(m=>!q||(m.patrimonio+' '+(m.colaborador||'')+' '+(m.setor||'')).toLowerCase().includes(q));
+  $('maq-conteudo').innerHTML='<div class="list">'+(arr.length?arr.slice(0,80).map(m=>`
+    <div class="row-item" data-maq="${esc(m.patrimonio)}">
+      <div><div class="ri-main">Patrimônio ${esc(m.patrimonio)}</div><div class="ri-sub">${esc(m.colaborador||'Sem colaborador')} · ${esc(m.setor||'—')}</div></div>
+      <span class="badge ${stClass(m.status)}">${esc(m.status)}</span>
+    </div>`).join(''):'<div class="empty">Nenhuma máquina encontrada.</div>')+'</div>';
+}
+function renderMaquinaDetalhe(patr){
+  const m=maquinas.find(x=>x.patrimonio===patr);if(!m){renderMaquinaLista();return;}
+  const hist=atribuicoes.filter(a=>a.patrimonio===patr).sort((a,b)=>(a.created_at>b.created_at?1:-1));
+  const mans=manutencoes.filter(x=>x.patrimonio===patr).sort((a,b)=>((a.data||'')<(b.data||'')?1:-1));
+  const passou=mans.length>0;
+  $('maq-conteudo').innerHTML=`
+    <button class="back" id="maq-back">← Voltar para a lista</button>
+    <div class="detail">
+      <h3>Patrimônio ${esc(patr)}</h3>
+      <div class="d-sub">${esc(m.modelo||'Modelo não informado')}</div>
+      <div class="d-grid">
+        <div class="info"><b>Status</b><span><span class="badge ${stClass(m.status)}">${esc(m.status)}</span></span></div>
+        <div class="info"><b>Colaborador atual</b><span>${esc(m.colaborador||'—')}</span></div>
+        <div class="info"><b>Setor</b><span>${esc(m.setor||'—')}</span></div>
+        <div class="info"><b>Service Tag</b><span>${esc(m.service_tag||'—')}</span></div>
+      </div>
+      <div class="flag ${passou?'flag-yes':'flag-no'}">${passou?'⚙ Já passou por manutenção ('+mans.length+')':'Nunca passou por manutenção'}</div>
+
+      <div class="sec-title">Histórico de colaboradores (${hist.length})</div>
+      <div class="hist">${hist.length?hist.map(a=>`
+        <div class="hist-row"><span>${esc(a.colaborador)}${!a.data_fim?'<span class="tag-now">atual</span>':''}</span>
+        <span class="hr-period">${a.data_inicio?fmt(a.data_inicio):'início n/d'} → ${a.data_fim?fmt(a.data_fim):'hoje'}</span></div>`).join(''):'<div class="empty">Sem histórico de atribuição.</div>'}</div>
+
+      <div class="sec-title">Manutenções (${mans.length})</div>
+      <div class="hist">${mans.length?mans.map(x=>`
+        <div class="hist-row"><span>${esc(x.descricao)}</span><span class="hr-period">${x.data?fmt(x.data):''}</span></div>`).join(''):'<div class="empty">Nenhuma manutenção registrada.</div>'}</div>
+
+      <div class="mini-form">
+        <div class="sec-title" style="margin-top:0">Registrar manutenção / ticket</div>
+        <input id="mt-desc" placeholder="Ex.: Colocada memória de 8GB">
+        <div class="row2">
+          <input id="mt-data" type="date">
+          <button class="btn-primary" id="mt-save" style="flex:none">Registrar</button>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;margin-top:10px;font-weight:500;color:var(--ink)">
+          <input type="checkbox" id="mt-marcar" style="width:auto"> Marcar esta máquina como "Em manutenção"
+        </label>
+      </div>
+    </div>`;
+  $('maq-back').onclick=()=>renderMaquinaLista();
+  $('mt-save').onclick=()=>registrarManutencao(patr);
+}
+
+// --- Por pessoa ---
+function renderPessoa(){
+  const q=$('busca-pes').value.trim().toLowerCase();
+  if(!q){$('pes-conteudo').innerHTML='<div class="empty">Digite um nome para ver as máquinas que já passaram por essa pessoa.</div>';return;}
+  const reg=atribuicoes.filter(a=>(a.colaborador||'').toLowerCase().includes(q)).sort((a,b)=>(a.created_at>b.created_at?-1:1));
+  const patrs=[...new Set(reg.map(a=>a.patrimonio))];
+  if(!reg.length){$('pes-conteudo').innerHTML='<div class="empty">Nenhum registro para esse nome.</div>';return;}
+  $('pes-conteudo').innerHTML=`<div class="pcount"><b>${patrs.length}</b> máquina(s) já passaram por essa busca</div>`+
+    '<div class="list">'+reg.map(a=>{
+      const m=maquinas.find(x=>x.patrimonio===a.patrimonio)||{};
+      return `<div class="row-item" data-maq="${esc(a.patrimonio)}">
+        <div><div class="ri-main">Patrimônio ${esc(a.patrimonio)} — ${esc(a.colaborador)}</div>
+        <div class="ri-sub">${a.data_inicio?fmt(a.data_inicio):'início n/d'} → ${a.data_fim?fmt(a.data_fim):'atual'} · ${esc(m.modelo||'')}</div></div>
+        <span class="badge ${stClass(m.status||'')}">${esc(m.status||'')}</span></div>`;
+    }).join('')+'</div>';
+}
+
+// --- Todas ---
+function renderTodas(){
+  const q=$('busca-todas').value.trim().toLowerCase(),fs=$('filtro-status').value;
+  const arr=maquinas.filter(m=>(!fs||m.status===fs)&&(!q||(m.patrimonio+' '+(m.colaborador||'')+' '+(m.setor||'')+' '+(m.modelo||'')).toLowerCase().includes(q)));
+  $('todas-conteudo').innerHTML=arr.length?arr.map(m=>`
+    <div class="row-item" style="cursor:default">
+      <div><div class="ri-main">Patrimônio ${esc(m.patrimonio)} · ${esc(m.colaborador||'Sem colaborador')}</div>
+      <div class="ri-sub">${esc(m.setor||'—')} · ${esc(m.modelo||'—')}</div></div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="badge ${stClass(m.status)}">${esc(m.status)}</span>
+        <div class="item-actions"><button class="btn-edit" data-edit="${esc(m.patrimonio)}">Editar</button><button class="btn-del" data-del="${esc(m.patrimonio)}">Excluir</button></div>
+      </div>
+    </div>`).join(''):'<div class="empty">Nenhuma máquina encontrada.</div>';
+}
 function exportCSV(){
-  if(registros.length===0){ alert('Não há dados para exportar.'); return; }
-  const cols=[['nome','Colaborador'],['setor','Setor/Cargo'],['modelo','Notebook'],['tag','Service Tag'],['patr','Patrimônio'],['data','Data de entrega'],['status','Status'],['obs','Observações']];
+  if(!maquinas.length){alert('Sem dados.');return;}
+  const cols=[['patrimonio','Patrimônio'],['colaborador','Colaborador'],['setor','Setor'],['modelo','Modelo'],['service_tag','Service Tag'],['status','Status']];
   const head=cols.map(c=>c[1]).join(';');
-  const rows=registros.map(r=>cols.map(c=>{let v=(r[c[0]]||'').toString().replace(/"/g,'""');return /[;"\n]/.test(v)?'"'+v+'"':v;}).join(';'));
+  const rows=maquinas.map(m=>cols.map(c=>{let v=(m[c[0]]||'').toString().replace(/"/g,'""');return /[;"\n]/.test(v)?'"'+v+'"':v;}).join(';'));
   const csv='\ufeff'+[head,...rows].join('\r\n');
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
-  a.download='controle-notebooks.csv'; a.click();
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));a.download='patrimonio-2bst.csv';a.click();
 }
 
 // ===== Listeners =====
 $('btn-login').onclick=doLogin;
-$('login-pass').addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
+$('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
 $('btn-logout').onclick=doLogout;
 $('btn-save').onclick=onSave;
-$('btn-cancel').onclick=()=>{ clearForm(); showView(isAdminUser?'relatorios':'cadastro'); };
-$('btn-export').onclick=exportCSV;
-$('search').oninput=render;
-$('filter-status').onchange=render;
+$('btn-cancel').onclick=()=>{clearForm();showView(isAdminUser?'relatorios':'cadastro');};
 $('nav-cad').onclick=()=>showView('cadastro');
 $('nav-rel').onclick=()=>showView('relatorios');
-$('list').addEventListener('click',e=>{
-  const ed=e.target.getAttribute('data-edit'), dl=e.target.getAttribute('data-del');
-  if(ed){ const r=registros.find(x=>x.id===ed); if(r) loadIntoForm(r); }
-  if(dl) onDelete(dl);
-});
+$('sub-maq').onclick=()=>showSub('maq');
+$('sub-pes').onclick=()=>showSub('pes');
+$('sub-todas').onclick=()=>showSub('todas');
+$('busca-maq').oninput=renderMaquinaLista;
+$('busca-pes').oninput=renderPessoa;
+$('busca-todas').oninput=renderTodas;
+$('filtro-status').onchange=renderTodas;
+$('btn-export').onclick=exportCSV;
+$('maq-conteudo').addEventListener('click',e=>{const el=e.target.closest('[data-maq]');if(el)renderMaquinaDetalhe(el.getAttribute('data-maq'));});
+$('pes-conteudo').addEventListener('click',e=>{const el=e.target.closest('[data-maq]');if(el){showSub('maq');renderMaquinaDetalhe(el.getAttribute('data-maq'));}});
+$('todas-conteudo').addEventListener('click',e=>{const ed=e.target.getAttribute('data-edit'),dl=e.target.getAttribute('data-del');if(ed)editMachine(ed);if(dl)deleteMachine(dl);});
 
 checkAuth();
 </script>
