@@ -419,8 +419,8 @@
     <div class="form-card">
       <h2 id="an-title">Aniversário</h2>
       <p class="hint">Lista importada da planilha. Você pode adicionar ou editar abaixo.</p>
-      <label>Colaborador *</label>
-      <input id="an-colab" placeholder="Nome">
+      <label>Colaborador (Área Técnica) *</label>
+      <select id="an-colab"><option value="">— selecione —</option></select>
       <label>Data de nascimento *</label>
       <input id="an-data" type="date">
       <div class="actions">
@@ -977,7 +977,15 @@ async function deleteAtest(id){const a=atestados.find(x=>x.id===id);if(!confirm(
 // ===== Aniversários =====
 function anivMarks(y,m){const mk={};anivs.forEach(a=>{if(!a.data_nascimento)return;const p=a.data_nascimento.split('-');if((+p[1]-1)===m){const k=dstr(y,m,+p[2]);(mk[k]=mk[k]||[]).push(a.colaborador);}});return mk;}
 function renderAnivCalendar(){if(!anCal)anCal=curYM();renderCal('an-cal','an-cal-detail',anCal,anivMarks,'an',d=>{anCal=shiftMonth(anCal,d);renderAnivCalendar();});}
-async function openAniv(){const{data,error}=await db.from('aniversarios').select('*');if(error){anivs=[];$('an-lista').innerHTML='<div class="empty"><b>Tabela de aniversários ainda não existe</b>Rode o SQL e recarregue a página.</div>';return;}anivs=(data||[]).sort((a,b)=>((a.data_nascimento||'').slice(5)<(b.data_nascimento||'').slice(5)?-1:1));renderAniv();renderAnivCalendar();}
+function fillAnivColab(){
+  const nomes=new Set();
+  maquinas.forEach(m=>{if(m.colaborador&&norm(m.setor)==='area tecnica')nomes.add(m.colaborador);});
+  anivs.forEach(a=>{if(a.colaborador)nomes.add(a.colaborador);});
+  const sel=$('an-colab'),cur=sel.value;
+  sel.innerHTML='<option value="">— selecione —</option>'+[...nomes].sort().map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  if(cur)sel.value=cur;
+}
+async function openAniv(){const{data,error}=await db.from('aniversarios').select('*');if(error){anivs=[];$('an-lista').innerHTML='<div class="empty"><b>Tabela de aniversários ainda não existe</b>Rode o SQL e recarregue a página.</div>';return;}anivs=(data||[]).sort((a,b)=>((a.data_nascimento||'').slice(5)<(b.data_nascimento||'').slice(5)?-1:1));fillAnivColab();renderAniv();renderAnivCalendar();}
 function renderAniv(){
   const q=$('an-busca').value.trim().toLowerCase();
   const arr=anivs.filter(a=>!q||(a.colaborador||'').toLowerCase().includes(q));
