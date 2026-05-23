@@ -140,6 +140,7 @@
   <nav class="nav" id="nav" style="display:none">
     <button id="nav-cad" class="active">Cadastrar / Atualizar</button>
     <button id="nav-rel">Administrador / Relatórios</button>
+    <button id="nav-fer">Férias</button>
   </nav>
 
   <!-- VIEW: CADASTRO -->
@@ -223,6 +224,40 @@
       <div id="todas-conteudo" class="list"></div>
     </div>
   </div>
+
+  <!-- VIEW: FÉRIAS (somente admin) -->
+  <div id="view-ferias" style="display:none">
+    <div class="form-card">
+      <h2 id="fe-title">Lançar férias</h2>
+      <p class="hint" id="fe-hint">Registre o período de férias de um colaborador.</p>
+      <label>Colaborador *</label>
+      <input id="fe-colab" placeholder="Ex.: Maria Santos" list="colab-list">
+      <datalist id="colab-list"></datalist>
+      <div class="row2">
+        <div><label>Início *</label><input id="fe-ini" type="date"></div>
+        <div><label>Fim *</label><input id="fe-fim" type="date"></div>
+      </div>
+      <label>Observação</label>
+      <textarea id="fe-obs" placeholder="Ex.: 15 dias; vendeu 10 dias; etc."></textarea>
+      <div class="actions">
+        <button class="btn-primary" id="fe-save">Lançar férias</button>
+        <button class="btn-ghost" id="fe-cancel" style="display:none">Cancelar</button>
+      </div>
+    </div>
+
+    <div style="margin-top:28px">
+      <div class="counts">
+        <div class="stat s-uso"><b id="fe-c-agora">0</b><span>Em férias agora</span></div>
+        <div class="stat s-disp"><b id="fe-c-agend">0</b><span>Agendadas</span></div>
+        <div class="stat s-desc"><b id="fe-c-conc">0</b><span>Concluídas</span></div>
+      </div>
+      <div class="search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="fe-busca" placeholder="Buscar por colaborador...">
+      </div>
+      <div id="fe-lista" class="list"></div>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -234,7 +269,7 @@ const db=supabase.createClient(SUPA_URL,SUPA_KEY);
 const ADMIN_EMAILS=['rafael.andrade.sa@gmail.com'];
 const isAdmin=u=>!!u&&ADMIN_EMAILS.includes((u.email||'').toLowerCase());
 
-let maquinas=[],atribuicoes=[],manutencoes=[],isAdminUser=false,editingPatr=null;
+let maquinas=[],atribuicoes=[],manutencoes=[],isAdminUser=false,editingPatr=null,ferias=[],editingFeria=null;
 const $=id=>document.getElementById(id);
 const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const hoje=()=>new Date().toISOString().slice(0,10);
@@ -339,12 +374,15 @@ async function registrarManutencao(patr){
 
 // ===== Views =====
 function showView(v){
-  if(v==='relatorios'&&!isAdminUser)v='cadastro';
+  if((v==='relatorios'||v==='ferias')&&!isAdminUser)v='cadastro';
   $('view-cadastro').style.display=v==='cadastro'?'block':'none';
   $('view-relatorios').style.display=v==='relatorios'?'block':'none';
+  $('view-ferias').style.display=v==='ferias'?'block':'none';
   $('nav-cad').classList.toggle('active',v==='cadastro');
   $('nav-rel').classList.toggle('active',v==='relatorios');
+  $('nav-fer').classList.toggle('active',v==='ferias');
   if(v==='relatorios')renderRelatorios();
+  if(v==='ferias')openFerias();
 }
 function showSub(s){
   $('sv-maquina').style.display=s==='maq'?'block':'none';
@@ -459,6 +497,54 @@ function exportCSV(){
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));a.download='patrimonio-2bst.csv';a.click();
 }
 
+// ===== Férias =====
+const statusFeria=f=>{const t=hoje();if(f.data_fim&&f.data_fim<t)return'Concluída';if(f.data_inicio&&f.data_inicio>t)return'Agendada';return'Em férias';};
+const feClass=s=>s==='Em férias'?'b-uso':s==='Agendada'?'b-disp':'b-desc';
+function diasFeria(f){if(!f.data_inicio||!f.data_fim)return'';const d=Math.round((new Date(f.data_fim)-new Date(f.data_inicio))/86400000)+1;return d>0?d+' dia(s)':'';}
+function fillColabList(){
+  const nomes=new Set();maquinas.forEach(m=>{if(m.colaborador)nomes.add(m.colaborador);});ferias.forEach(f=>{if(f.colaborador)nomes.add(f.colaborador);});
+  $('colab-list').innerHTML=[...nomes].sort().map(n=>`<option value="${esc(n)}">`).join('');
+}
+async function openFerias(){
+  const{data,error}=await db.from('ferias').select('*').order('data_inicio',{ascending:false});
+  if(error){ferias=[];$('fe-lista').innerHTML='<div class="empty"><b>Tabela de férias ainda não existe</b>Rode o SQL de férias no Supabase e recarregue a página.</div>';$('fe-c-agora').textContent=$('fe-c-agend').textContent=$('fe-c-conc').textContent='0';return;}
+  ferias=data||[];fillColabList();renderFerias();
+}
+function renderFerias(){
+  $('fe-c-agora').textContent=ferias.filter(f=>statusFeria(f)==='Em férias').length;
+  $('fe-c-agend').textContent=ferias.filter(f=>statusFeria(f)==='Agendada').length;
+  $('fe-c-conc').textContent=ferias.filter(f=>statusFeria(f)==='Concluída').length;
+  const q=$('fe-busca').value.trim().toLowerCase();
+  const arr=ferias.filter(f=>!q||(f.colaborador||'').toLowerCase().includes(q));
+  $('fe-lista').innerHTML=arr.length?arr.map(f=>{const st=statusFeria(f);return`
+    <div class="row-item" style="cursor:default;align-items:flex-start">
+      <div><div class="ri-main">${esc(f.colaborador)}</div>
+      <div class="ri-sub">${f.data_inicio?fmt(f.data_inicio):'?'} → ${f.data_fim?fmt(f.data_fim):'?'}${diasFeria(f)?' · '+diasFeria(f):''}</div>
+      ${f.observacao?`<div class="ri-sub" style="margin-top:4px">${esc(f.observacao)}</div>`:''}</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="badge ${feClass(st)}">${st}</span>
+        <div class="item-actions"><button class="btn-edit" data-fe-edit="${f.id}">Editar</button><button class="btn-del" data-fe-del="${f.id}">Excluir</button></div>
+      </div>
+    </div>`;}).join(''):'<div class="empty">Nenhuma férias lançada ainda.</div>';
+}
+async function onSaveFeria(){
+  const colaborador=$('fe-colab').value.trim(),di=$('fe-ini').value,df=$('fe-fim').value;
+  if(!colaborador){alert('Informe o colaborador.');return;}
+  if(!di||!df){alert('Informe início e fim.');return;}
+  if(df<di){alert('A data fim não pode ser antes do início.');return;}
+  const dados={colaborador,data_inicio:di,data_fim:df,observacao:$('fe-obs').value.trim()};
+  $('fe-save').disabled=true;
+  let error;
+  if(editingFeria){({error}=await db.from('ferias').update(dados).eq('id',editingFeria));}
+  else{({error}=await db.from('ferias').insert(dados));}
+  $('fe-save').disabled=false;
+  if(error){alert('Erro ao salvar: '+error.message);return;}
+  clearFeria();toast(editingFeria?'Férias atualizadas ✓':'Férias lançadas ✓');await openFerias();
+}
+function clearFeria(){['fe-colab','fe-ini','fe-fim','fe-obs'].forEach(i=>$(i).value='');editingFeria=null;$('fe-title').textContent='Lançar férias';$('fe-save').textContent='Lançar férias';$('fe-cancel').style.display='none';}
+function editFeria(id){const f=ferias.find(x=>x.id===id);if(!f)return;$('fe-colab').value=f.colaborador||'';$('fe-ini').value=f.data_inicio||'';$('fe-fim').value=f.data_fim||'';$('fe-obs').value=f.observacao||'';editingFeria=id;$('fe-title').textContent='Editar férias';$('fe-save').textContent='Salvar alterações';$('fe-cancel').style.display='inline-block';window.scrollTo({top:0,behavior:'smooth'});}
+async function deleteFeria(id){const f=ferias.find(x=>x.id===id);if(!confirm('Excluir as férias de "'+(f?f.colaborador:'')+'"?'))return;const{error}=await db.from('ferias').delete().eq('id',id);if(error){alert('Erro: '+error.message);return;}await openFerias();toast('Férias excluídas');}
+
 // ===== Listeners =====
 $('btn-login').onclick=doLogin;
 $('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
@@ -467,6 +553,11 @@ $('btn-save').onclick=onSave;
 $('btn-cancel').onclick=()=>{clearForm();showView(isAdminUser?'relatorios':'cadastro');};
 $('nav-cad').onclick=()=>showView('cadastro');
 $('nav-rel').onclick=()=>showView('relatorios');
+$('nav-fer').onclick=()=>showView('ferias');
+$('fe-save').onclick=onSaveFeria;
+$('fe-cancel').onclick=clearFeria;
+$('fe-busca').oninput=renderFerias;
+$('fe-lista').addEventListener('click',e=>{const ed=e.target.getAttribute('data-fe-edit'),dl=e.target.getAttribute('data-fe-del');if(ed)editFeria(ed);if(dl)deleteFeria(dl);});
 $('sub-maq').onclick=()=>showSub('maq');
 $('sub-pes').onclick=()=>showSub('pes');
 $('sub-todas').onclick=()=>showSub('todas');
