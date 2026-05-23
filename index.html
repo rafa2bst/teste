@@ -1,6 +1,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Controle de Patrimônio 2BST</title>
+<title>Área de Gestão Área Técnica</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -114,25 +114,26 @@
 
   .toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%) translateY(20px);background:var(--accent);color:#fff;padding:14px 24px;border-radius:12px;font-weight:600;font-size:15px;box-shadow:0 10px 34px rgba(0,0,0,.2);opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:50}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-  .cal{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:var(--shadow);max-width:380px;margin-bottom:8px}
-  .cal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-  .cal-head b{font-family:'Fraunces',serif;font-size:16px}
-  .cal-nav{background:#fff;border:1px solid var(--line);border-radius:8px;width:30px;height:30px;padding:0;cursor:pointer;font-weight:700;color:var(--ink)}
-  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
-  .cal-wd{text-align:center;font-size:11px;font-weight:700;color:var(--ink-soft);padding:2px 0}
-  .cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:13px;border-radius:8px}
+  .cal{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;box-shadow:var(--shadow);max-width:268px;margin-bottom:10px}
+  .cal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .cal-head b{font-family:'Manrope',sans-serif;font-weight:700;font-size:14px}
+  .cal-nav{background:#fff;border:1px solid var(--line);border-radius:6px;width:24px;height:24px;padding:0;cursor:pointer;font-weight:700;color:var(--ink);line-height:1}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+  .cal-wd{text-align:center;font-size:10px;font-weight:700;color:var(--ink-soft);padding:1px 0}
+  .cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:12px;border-radius:6px}
   .cal-day.empty{visibility:hidden}
-  .cal-day.marked{background:var(--accent-soft);color:var(--accent-dark);font-weight:700;cursor:pointer;border:1px solid var(--accent)}
+  .cal-day.marked{background:var(--accent-soft);color:var(--accent-dark);font-weight:700;border:1px solid var(--accent)}
   .cal-day.fo.marked{background:var(--amber-soft);color:var(--amber);border-color:var(--amber)}
+  .cal-day.at.marked{background:#f7e7e3;color:var(--danger);border-color:var(--danger)}
   .cal-day.today{outline:2px solid var(--ink);outline-offset:-2px}
-  .cal-names{font-size:13px;color:var(--ink-soft);margin-bottom:18px;min-height:18px}
+  .cal-names{font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;line-height:1.7}
   .cal-names b{color:var(--ink)}
 </style>
 
 <!-- ===== LOGIN ===== -->
 <div id="login-screen" class="login-wrap" style="display:none">
   <div class="login-card">
-    <h1>Controle de Patrimônio 2BST</h1>
+    <h1>Área de Gestão Área Técnica</h1>
     <p class="sub">Acesso restrito. Entre com seu e-mail e senha.</p>
     <div class="login-error" id="login-error"></div>
     <label>E-mail</label>
@@ -147,7 +148,7 @@
 <div id="app" class="wrap" style="display:none">
   <div class="session-bar">Logado como <b id="user-email"></b><button class="btn-logout" id="btn-logout">Sair</button></div>
   <header class="top">
-    <div class="brand"><h1>Controle de Patrimônio 2BST</h1><p>Máquinas, colaboradores, histórico e manutenções</p></div>
+    <div class="brand"><h1>Área de Gestão Área Técnica</h1><p>Máquinas, colaboradores, histórico e manutenções</p></div>
   </header>
 
   <nav class="nav" id="nav" style="display:none">
@@ -389,6 +390,9 @@
         <div class="stat s-disp"><b id="at-c-con">0</b><span>Consulta</span></div>
         <div class="stat s-manut"><b id="at-c-den">0</b><span>Dentista</span></div>
       </div>
+      <div class="sec-title" style="margin-top:0">Calendário de atestados</div>
+      <div class="cal" id="at-cal"></div>
+      <div class="cal-names" id="at-cal-detail"></div>
       <div class="toolbar">
         <div class="search">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
@@ -415,7 +419,7 @@ const db=supabase.createClient(SUPA_URL,SUPA_KEY);
 const ADMIN_EMAILS=['rafael.andrade.sa@gmail.com'];
 const isAdmin=u=>!!u&&ADMIN_EMAILS.includes((u.email||'').toLowerCase());
 
-let maquinas=[],atribuicoes=[],manutencoes=[],isAdminUser=false,editingPatr=null,ferias=[],editingFeria=null,folgas=[],editingFolga=null,atestados=[],editingAtest=null,feCal=null,foCal=null;
+let maquinas=[],atribuicoes=[],manutencoes=[],isAdminUser=false,editingPatr=null,ferias=[],editingFeria=null,folgas=[],editingFolga=null,atestados=[],editingAtest=null,feCal=null,foCal=null,atCal=null;
 const $=id=>document.getElementById(id);
 const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const hoje=()=>new Date().toISOString().slice(0,10);
@@ -765,7 +769,7 @@ function calHTML(y,m,marks,cls){
   const fdow=new Date(y,m,1).getDay(),days=new Date(y,m+1,0).getDate(),t=hoje();
   let cells='';
   for(let i=0;i<fdow;i++)cells+='<div class="cal-day empty"></div>';
-  for(let d=1;d<=days;d++){const k=dstr(y,m,d),mk=marks[k];const c=['cal-day'];if(mk){c.push('marked');if(cls)c.push(cls);}if(k===t)c.push('today');cells+=`<div class="${c.join(' ')}"${mk?` data-day="${k}"`:''}>${d}</div>`;}
+  for(let d=1;d<=days;d++){const k=dstr(y,m,d),mk=marks[k];const c=['cal-day'];if(mk){c.push('marked');if(cls)c.push(cls);}if(k===t)c.push('today');cells+=`<div class="${c.join(' ')}"${mk?` title="${esc(mk.join(', '))}"`:''}>${d}</div>`;}
   return `<div class="cal-head"><button class="cal-nav" data-cal-prev>‹</button><b>${MESES[m]} ${y}</b><button class="cal-nav" data-cal-next>›</button></div>
   <div class="cal-grid">${['D','S','T','Q','Q','S','S'].map(w=>`<div class="cal-wd">${w}</div>`).join('')}${cells}</div>`;
 }
@@ -774,10 +778,13 @@ function renderCal(boxId,detailId,ym,marksFn,cls,onShift){
   box.innerHTML=calHTML(ym.y,ym.m,marks,cls);
   box.querySelector('[data-cal-prev]').onclick=()=>onShift(-1);
   box.querySelector('[data-cal-next]').onclick=()=>onShift(1);
-  box.querySelectorAll('[data-day]').forEach(el=>el.onclick=()=>{const k=el.getAttribute('data-day');$(detailId).innerHTML='<b>'+fmt(k)+':</b> '+(marks[k]||[]).map(esc).join(', ');});
+  const keys=Object.keys(marks).sort();
+  $(detailId).innerHTML=keys.length?keys.map(k=>`<div><b>${fmt(k).slice(0,5)}</b> — ${marks[k].map(esc).join(', ')}</div>`).join(''):'<span style="opacity:.55">Nada neste mês.</span>';
 }
 function renderFeriasCalendar(){if(!feCal)feCal=curYM();renderCal('fe-cal','fe-cal-detail',feCal,feriasMarks,'',d=>{feCal=shiftMonth(feCal,d);renderFeriasCalendar();});}
 function renderFolgasCalendar(){if(!foCal)foCal=curYM();renderCal('fo-cal','fo-cal-detail',foCal,folgasMarks,'fo',d=>{foCal=shiftMonth(foCal,d);renderFolgasCalendar();});}
+function atestadosMarks(y,m){const mk={};atestados.forEach(a=>{if(!a.data)return;const p=a.data.split('-');if(+p[0]===y&&(+p[1]-1)===m){const tp=a.tipo==='Atestado médico'?'Médico':(a.tipo||'');(mk[a.data]=mk[a.data]||[]).push(a.colaborador+(tp?' ('+tp+')':''));}});return mk;}
+function renderAtestCalendar(){if(!atCal)atCal=curYM();renderCal('at-cal','at-cal-detail',atCal,atestadosMarks,'at',d=>{atCal=shiftMonth(atCal,d);renderAtestCalendar();});}
 
 // ===== Atestados =====
 const AT_BADGE={'Atestado médico':'b-uso','Consulta':'b-disp','Dentista':'b-manut'};
@@ -798,7 +805,7 @@ function updateAtestFields(){
 async function openAtest(){
   const{data,error}=await db.from('atestados').select('*').order('data',{ascending:false});
   if(error){atestados=[];$('at-lista').innerHTML='<div class="empty"><b>Tabela de atestados ainda não existe</b>Rode o SQL de atestados no Supabase e recarregue a página.</div>';['at-c-med','at-c-con','at-c-den'].forEach(i=>$(i).textContent='0');return;}
-  atestados=data||[];fillAtestColab();renderAtest();
+  atestados=data||[];fillAtestColab();renderAtest();renderAtestCalendar();
 }
 function detAtest(a){
   if(a.tipo==='Atestado médico')return a.motivo?'Motivo: '+esc(a.motivo):'';
