@@ -128,6 +128,8 @@
   .cal-day.today{outline:2px solid var(--ink);outline-offset:-2px}
   .cal-names{font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;line-height:1.7}
   .cal-names b{color:var(--ink)}
+  .cal-day.an.marked{background:#f0e6f5;color:#7a3d8f;border-color:#a86bbf}
+  .lnk{color:var(--accent-dark);font-weight:600;text-decoration:underline;font-size:13px}
 </style>
 
 <!-- ===== LOGIN ===== -->
@@ -157,6 +159,9 @@
     <button id="nav-fer">Férias</button>
     <button id="nav-fol">Folgas</button>
     <button id="nav-ate">Atestados</button>
+    <button id="nav-aniv">Aniversários</button>
+    <button id="nav-ocor">Ocorrências</button>
+    <button id="nav-prob">Problemas</button>
   </nav>
 
   <!-- VIEW: CADASTRO -->
@@ -408,6 +413,118 @@
       <div id="at-lista" class="list"></div>
     </div>
   </div>
+
+  <!-- VIEW: ANIVERSÁRIOS -->
+  <div id="view-aniv" style="display:none">
+    <div class="form-card">
+      <h2 id="an-title">Aniversário</h2>
+      <p class="hint">Lista importada da planilha. Você pode adicionar ou editar abaixo.</p>
+      <label>Colaborador *</label>
+      <input id="an-colab" placeholder="Nome">
+      <label>Data de nascimento *</label>
+      <input id="an-data" type="date">
+      <div class="actions">
+        <button class="btn-primary" id="an-save">Salvar</button>
+        <button class="btn-ghost" id="an-cancel" style="display:none">Cancelar</button>
+      </div>
+    </div>
+    <div style="margin-top:28px">
+      <div class="sec-title" style="margin-top:0">Calendário de aniversários</div>
+      <div class="cal" id="an-cal"></div>
+      <div class="cal-names" id="an-cal-detail"></div>
+      <div class="search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="an-busca" placeholder="Buscar por colaborador...">
+      </div>
+      <div id="an-lista" class="list"></div>
+    </div>
+  </div>
+
+  <!-- VIEW: OCORRÊNCIAS -->
+  <div id="view-ocor" style="display:none">
+    <div class="form-card">
+      <h2 id="oc-title">Registrar ocorrência</h2>
+      <p class="hint">Ocorrências do setor da Área Técnica.</p>
+      <label>Técnico (Área Técnica) *</label>
+      <select id="oc-tecnico"><option value="">— selecione —</option></select>
+      <div class="row2">
+        <div><label>Data *</label><input id="oc-data" type="date"></div>
+        <div><label>Dia da semana</label><input id="oc-dia" readonly placeholder="—"></div>
+      </div>
+      <label>Motivo *</label>
+      <select id="oc-motivo">
+        <option value="">— selecione —</option>
+        <option>Apoio Fone</option><option>Apoio Web</option><option>Apoio Chat</option>
+        <option>Treinamento</option><option>Motivos pessoais</option><option>Queda de Energia</option>
+        <option>Queda de Internet</option><option>Ações RH</option><option>Feedback</option>
+        <option>Apoio da equipe</option><option>Problemas técnicos</option><option>Outros</option>
+      </select>
+      <label>Tempo *</label>
+      <select id="oc-tempo"><option value="">— selecione —</option><option>Integral</option><option>Parcial</option><option>Fracionado</option></select>
+      <label>Observação</label>
+      <textarea id="oc-obs" placeholder="Opcional"></textarea>
+      <div class="actions">
+        <button class="btn-primary" id="oc-save">Registrar</button>
+        <button class="btn-ghost" id="oc-cancel" style="display:none">Cancelar</button>
+      </div>
+    </div>
+    <div style="margin-top:28px">
+      <div class="toolbar">
+        <div class="search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <input id="oc-busca" placeholder="Buscar por técnico...">
+        </div>
+        <select id="oc-filtro" style="width:auto;min-width:170px">
+          <option value="">Todos os motivos</option>
+          <option>Apoio Fone</option><option>Apoio Web</option><option>Apoio Chat</option>
+          <option>Treinamento</option><option>Motivos pessoais</option><option>Queda de Energia</option>
+          <option>Queda de Internet</option><option>Ações RH</option><option>Feedback</option>
+          <option>Apoio da equipe</option><option>Problemas técnicos</option><option>Outros</option>
+        </select>
+      </div>
+      <div id="oc-lista" class="list"></div>
+    </div>
+  </div>
+
+  <!-- VIEW: PROBLEMAS DE SISTEMA -->
+  <div id="view-prob" style="display:none">
+    <div class="form-card">
+      <h2 id="pr-title">Registrar problema de sistema</h2>
+      <p class="hint">O chamado fica em aberto até você finalizar informando a hora final.</p>
+      <div class="row2">
+        <div><label>Data *</label><input id="pr-data" type="date"></div>
+        <div><label>Hora de início</label><input id="pr-ini" type="time"></div>
+      </div>
+      <label>Motivo *</label>
+      <input id="pr-motivo" placeholder="Ex.: sistema fora do ar">
+      <div class="row2">
+        <div><label>Link da SS</label><input id="pr-ss" placeholder="https://..."></div>
+        <div><label>Link da SANE</label><input id="pr-sane" placeholder="https://..."></div>
+      </div>
+      <label>Hora final (preencha para finalizar)</label>
+      <input id="pr-fim" type="time">
+      <div class="actions">
+        <button class="btn-primary" id="pr-save">Salvar</button>
+        <button class="btn-ghost" id="pr-cancel" style="display:none">Cancelar</button>
+      </div>
+    </div>
+    <div style="margin-top:28px">
+      <div class="counts">
+        <div class="stat s-manut"><b id="pr-c-ab">0</b><span>Em aberto</span></div>
+        <div class="stat s-uso"><b id="pr-c-fin">0</b><span>Finalizados</span></div>
+      </div>
+      <div class="toolbar">
+        <div class="search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <input id="pr-busca" placeholder="Buscar por motivo...">
+        </div>
+        <select id="pr-filtro" style="width:auto;min-width:150px">
+          <option value="">Todos</option><option>Aberto</option><option>Finalizado</option>
+        </select>
+      </div>
+      <div id="pr-lista" class="list"></div>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -419,7 +536,7 @@ const db=supabase.createClient(SUPA_URL,SUPA_KEY);
 const ADMIN_EMAILS=['rafael.andrade.sa@gmail.com'];
 const isAdmin=u=>!!u&&ADMIN_EMAILS.includes((u.email||'').toLowerCase());
 
-let maquinas=[],atribuicoes=[],manutencoes=[],isAdminUser=false,editingPatr=null,ferias=[],editingFeria=null,folgas=[],editingFolga=null,atestados=[],editingAtest=null,feCal=null,foCal=null,atCal=null;
+let maquinas=[],atribuicoes=[],manutencoes=[],isAdminUser=false,editingPatr=null,ferias=[],editingFeria=null,folgas=[],editingFolga=null,atestados=[],editingAtest=null,feCal=null,foCal=null,atCal=null,anivs=[],editingAniv=null,ocors=[],editingOcor=null,probs=[],editingProb=null,anCal=null;
 const $=id=>document.getElementById(id);
 const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const hoje=()=>new Date().toISOString().slice(0,10);
@@ -524,21 +641,31 @@ async function registrarManutencao(patr){
 
 // ===== Views =====
 function showView(v){
-  if((v==='relatorios'||v==='ferias'||v==='folgas'||v==='atestados')&&!isAdminUser)v='cadastro';
+  const adminViews=['relatorios','ferias','folgas','atestados','aniv','ocor','prob'];
+  if(adminViews.includes(v)&&!isAdminUser)v='cadastro';
   $('view-cadastro').style.display=v==='cadastro'?'block':'none';
   $('view-relatorios').style.display=v==='relatorios'?'block':'none';
   $('view-ferias').style.display=v==='ferias'?'block':'none';
   $('view-folgas').style.display=v==='folgas'?'block':'none';
   $('view-atestados').style.display=v==='atestados'?'block':'none';
+  $('view-aniv').style.display=v==='aniv'?'block':'none';
+  $('view-ocor').style.display=v==='ocor'?'block':'none';
+  $('view-prob').style.display=v==='prob'?'block':'none';
   $('nav-cad').classList.toggle('active',v==='cadastro');
   $('nav-rel').classList.toggle('active',v==='relatorios');
   $('nav-fer').classList.toggle('active',v==='ferias');
   $('nav-fol').classList.toggle('active',v==='folgas');
   $('nav-ate').classList.toggle('active',v==='atestados');
+  $('nav-aniv').classList.toggle('active',v==='aniv');
+  $('nav-ocor').classList.toggle('active',v==='ocor');
+  $('nav-prob').classList.toggle('active',v==='prob');
   if(v==='relatorios')renderRelatorios();
   if(v==='ferias')openFerias();
   if(v==='folgas')openFolgas();
   if(v==='atestados')openAtest();
+  if(v==='aniv')openAniv();
+  if(v==='ocor')openOcor();
+  if(v==='prob')openProb();
 }
 function showSub(s){
   $('sv-maquina').style.display=s==='maq'?'block':'none';
@@ -847,6 +974,73 @@ function clearAtest(){['at-colab','at-tipo','at-data','at-motivo','at-modalidade
 function editAtest(id){const a=atestados.find(x=>x.id===id);if(!a)return;$('at-colab').value=a.colaborador||'';$('at-tipo').value=a.tipo||'';$('at-data').value=a.data||'';$('at-motivo').value=a.motivo||'';$('at-modalidade').value=a.modalidade||'';$('at-fracao').value=a.fracao||'';$('at-obs').value=a.observacao||'';updateAtestFields();editingAtest=id;$('at-title').textContent='Editar atestado';$('at-save').textContent='Salvar alterações';$('at-cancel').style.display='inline-block';window.scrollTo({top:0,behavior:'smooth'});}
 async function deleteAtest(id){const a=atestados.find(x=>x.id===id);if(!confirm('Excluir o atestado de "'+(a?a.colaborador:'')+'"?'))return;const{error}=await db.from('atestados').delete().eq('id',id);if(error){alert('Erro: '+error.message);return;}await openAtest();toast('Atestado excluído');}
 
+// ===== Aniversários =====
+function anivMarks(y,m){const mk={};anivs.forEach(a=>{if(!a.data_nascimento)return;const p=a.data_nascimento.split('-');if((+p[1]-1)===m){const k=dstr(y,m,+p[2]);(mk[k]=mk[k]||[]).push(a.colaborador);}});return mk;}
+function renderAnivCalendar(){if(!anCal)anCal=curYM();renderCal('an-cal','an-cal-detail',anCal,anivMarks,'an',d=>{anCal=shiftMonth(anCal,d);renderAnivCalendar();});}
+async function openAniv(){const{data,error}=await db.from('aniversarios').select('*');if(error){anivs=[];$('an-lista').innerHTML='<div class="empty"><b>Tabela de aniversários ainda não existe</b>Rode o SQL e recarregue a página.</div>';return;}anivs=(data||[]).sort((a,b)=>((a.data_nascimento||'').slice(5)<(b.data_nascimento||'').slice(5)?-1:1));renderAniv();renderAnivCalendar();}
+function renderAniv(){
+  const q=$('an-busca').value.trim().toLowerCase();
+  const arr=anivs.filter(a=>!q||(a.colaborador||'').toLowerCase().includes(q));
+  $('an-lista').innerHTML=arr.length?arr.map(a=>{const p=a.data_nascimento?a.data_nascimento.split('-'):null;const dia=p?p[2]+'/'+p[1]:'—';return`
+    <div class="row-item" style="cursor:default;align-items:flex-start">
+      <div><div class="ri-main">${esc(a.colaborador)}</div>
+      <div class="ri-sub">🎂 ${dia}</div>
+      <label class="ri-sub" style="display:flex;align-items:center;gap:6px;margin-top:6px;cursor:pointer">
+        <input type="checkbox" data-aniv-folga="${a.id}" ${a.folga_tirada?'checked':''} style="width:auto"> Folga aniversário tirada${a.folga_tirada&&a.folga_ano?' ('+a.folga_ano+')':''}
+      </label></div>
+      <div class="item-actions"><button class="btn-edit" data-an-edit="${a.id}">Editar</button><button class="btn-del" data-an-del="${a.id}">Excluir</button></div>
+    </div>`;}).join(''):'<div class="empty">Nenhum aniversário cadastrado.</div>';
+}
+async function toggleFolgaAniv(id,checked){const dados=checked?{folga_tirada:true,folga_ano:new Date().getFullYear()}:{folga_tirada:false,folga_ano:null};const{error}=await db.from('aniversarios').update(dados).eq('id',id);if(error){alert('Erro: '+error.message);return;}await openAniv();toast(checked?'Folga marcada ✓':'Folga desmarcada');}
+async function onSaveAniv(){const colaborador=$('an-colab').value.trim(),data=$('an-data').value;if(!colaborador){alert('Informe o colaborador.');return;}if(!data){alert('Informe a data de nascimento.');return;}$('an-save').disabled=true;let error;if(editingAniv){({error}=await db.from('aniversarios').update({colaborador,data_nascimento:data}).eq('id',editingAniv));}else{({error}=await db.from('aniversarios').insert({colaborador,data_nascimento:data}));}$('an-save').disabled=false;if(error){alert('Erro: '+error.message);return;}clearAniv();toast(editingAniv?'Atualizado ✓':'Aniversário salvo ✓');await openAniv();}
+function clearAniv(){$('an-colab').value='';$('an-data').value='';editingAniv=null;$('an-title').textContent='Aniversário';$('an-save').textContent='Salvar';$('an-cancel').style.display='none';}
+function editAniv(id){const a=anivs.find(x=>x.id===id);if(!a)return;$('an-colab').value=a.colaborador||'';$('an-data').value=a.data_nascimento||'';editingAniv=id;$('an-title').textContent='Editar aniversário';$('an-save').textContent='Salvar alterações';$('an-cancel').style.display='inline-block';window.scrollTo({top:0,behavior:'smooth'});}
+async function deleteAniv(id){if(!confirm('Excluir este aniversário?'))return;const{error}=await db.from('aniversarios').delete().eq('id',id);if(error){alert('Erro: '+error.message);return;}await openAniv();toast('Excluído');}
+
+// ===== Ocorrências =====
+const DIAS_SEM=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+function diaSemana(s){if(!s)return'';return DIAS_SEM[new Date(s+'T12:00:00').getDay()];}
+function fillOcorTecnico(){const nomes=new Set();maquinas.forEach(m=>{if(m.colaborador&&norm(m.setor)==='area tecnica')nomes.add(m.colaborador);});ocors.forEach(o=>{if(o.tecnico)nomes.add(o.tecnico);});const sel=$('oc-tecnico'),cur=sel.value;sel.innerHTML='<option value="">— selecione —</option>'+[...nomes].sort().map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');if(cur)sel.value=cur;}
+async function openOcor(){const{data,error}=await db.from('ocorrencias').select('*').order('data',{ascending:false});if(error){ocors=[];$('oc-lista').innerHTML='<div class="empty"><b>Tabela de ocorrências ainda não existe</b>Rode o SQL e recarregue a página.</div>';return;}ocors=data||[];fillOcorTecnico();renderOcor();}
+function renderOcor(){const q=$('oc-busca').value.trim().toLowerCase(),fm=$('oc-filtro').value;const arr=ocors.filter(o=>(!fm||o.motivo===fm)&&(!q||(o.tecnico||'').toLowerCase().includes(q)));$('oc-lista').innerHTML=arr.length?arr.map(o=>`
+    <div class="row-item" style="cursor:default;align-items:flex-start">
+      <div><div class="ri-main">${esc(o.tecnico)}</div>
+      <div class="ri-sub"><span class="badge b-disp">${esc(o.motivo||'')}</span> · ${o.data?fmt(o.data):''}${o.dia_semana?' ('+esc(o.dia_semana)+')':''} · ${esc(o.tempo||'')}</div>
+      ${o.observacao?`<div class="ri-sub" style="margin-top:4px">${esc(o.observacao)}</div>`:''}</div>
+      <div class="item-actions"><button class="btn-edit" data-oc-edit="${o.id}">Editar</button><button class="btn-del" data-oc-del="${o.id}">Excluir</button></div>
+    </div>`).join(''):'<div class="empty">Nenhuma ocorrência registrada.</div>';}
+async function onSaveOcor(){const tecnico=$('oc-tecnico').value,data=$('oc-data').value,motivo=$('oc-motivo').value,tempo=$('oc-tempo').value;if(!tecnico){alert('Selecione o técnico.');return;}if(!data){alert('Informe a data.');return;}if(!motivo){alert('Selecione o motivo.');return;}if(!tempo){alert('Selecione o tempo.');return;}const dados={tecnico,data,dia_semana:diaSemana(data),motivo,tempo,observacao:$('oc-obs').value.trim()};$('oc-save').disabled=true;let error;if(editingOcor){({error}=await db.from('ocorrencias').update(dados).eq('id',editingOcor));}else{({error}=await db.from('ocorrencias').insert(dados));}$('oc-save').disabled=false;if(error){alert('Erro: '+error.message);return;}clearOcor();toast(editingOcor?'Ocorrência atualizada ✓':'Ocorrência registrada ✓');await openOcor();}
+function clearOcor(){['oc-tecnico','oc-data','oc-dia','oc-motivo','oc-tempo','oc-obs'].forEach(i=>$(i).value='');editingOcor=null;$('oc-title').textContent='Registrar ocorrência';$('oc-save').textContent='Registrar';$('oc-cancel').style.display='none';}
+function editOcor(id){const o=ocors.find(x=>x.id===id);if(!o)return;$('oc-tecnico').value=o.tecnico||'';$('oc-data').value=o.data||'';$('oc-dia').value=o.dia_semana||'';$('oc-motivo').value=o.motivo||'';$('oc-tempo').value=o.tempo||'';$('oc-obs').value=o.observacao||'';editingOcor=id;$('oc-title').textContent='Editar ocorrência';$('oc-save').textContent='Salvar alterações';$('oc-cancel').style.display='inline-block';window.scrollTo({top:0,behavior:'smooth'});}
+async function deleteOcor(id){if(!confirm('Excluir esta ocorrência?'))return;const{error}=await db.from('ocorrencias').delete().eq('id',id);if(error){alert('Erro: '+error.message);return;}await openOcor();toast('Excluída');}
+
+// ===== Problemas de Sistema =====
+function durTxt(ini,fim){if(!ini||!fim)return'';const[h1,m1]=ini.split(':').map(Number),[h2,m2]=fim.split(':').map(Number);let d=(h2*60+m2)-(h1*60+m1);if(d<0)d+=1440;const h=Math.floor(d/60),m=d%60;return (h?h+'h ':'')+m+'min';}
+async function openProb(){const{data,error}=await db.from('problemas').select('*').order('created_at',{ascending:false});if(error){probs=[];$('pr-lista').innerHTML='<div class="empty"><b>Tabela de problemas ainda não existe</b>Rode o SQL e recarregue a página.</div>';$('pr-c-ab').textContent='0';$('pr-c-fin').textContent='0';return;}probs=data||[];renderProb();}
+function renderProb(){
+  $('pr-c-ab').textContent=probs.filter(p=>p.status==='Aberto').length;
+  $('pr-c-fin').textContent=probs.filter(p=>p.status==='Finalizado').length;
+  const q=$('pr-busca').value.trim().toLowerCase(),fs=$('pr-filtro').value;
+  const arr=probs.filter(p=>(!fs||p.status===fs)&&(!q||(p.motivo||'').toLowerCase().includes(q)));
+  $('pr-lista').innerHTML=arr.length?arr.map(p=>{
+    const links=[];if(p.link_ss)links.push(`<a class="lnk" href="${esc(p.link_ss)}" target="_blank" rel="noopener">SS</a>`);if(p.link_sane)links.push(`<a class="lnk" href="${esc(p.link_sane)}" target="_blank" rel="noopener">SANE</a>`);
+    const dur=p.status==='Finalizado'?durTxt(p.hora_inicio,p.hora_fim):'';
+    return`<div class="row-item" style="cursor:default;align-items:flex-start">
+      <div><div class="ri-main">${esc(p.motivo||'(sem motivo)')}</div>
+      <div class="ri-sub">${p.data?fmt(p.data):''}${p.hora_inicio?' · início '+esc(p.hora_inicio):''}${p.hora_fim?' · fim '+esc(p.hora_fim):''}${dur?' · '+dur:''}</div>
+      ${links.length?`<div class="ri-sub" style="margin-top:4px">${links.join(' · ')}</div>`:''}</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="badge ${p.status==='Aberto'?'b-manut':'b-uso'}">${esc(p.status)}</span>
+        <div class="item-actions">${p.status==='Aberto'?`<button class="btn-edit" data-pr-fin="${p.id}">Finalizar</button>`:''}<button class="btn-edit" data-pr-edit="${p.id}">Editar</button><button class="btn-del" data-pr-del="${p.id}">Excluir</button></div>
+      </div>
+    </div>`;}).join(''):'<div class="empty">Nenhum problema registrado.</div>';
+}
+async function onSaveProb(){const data=$('pr-data').value,motivo=$('pr-motivo').value.trim();if(!data){alert('Informe a data.');return;}if(!motivo){alert('Informe o motivo.');return;}const fim=$('pr-fim').value;const dados={data,motivo,link_ss:$('pr-ss').value.trim(),link_sane:$('pr-sane').value.trim(),hora_inicio:$('pr-ini').value||null,hora_fim:fim||null,status:fim?'Finalizado':'Aberto'};$('pr-save').disabled=true;let error;if(editingProb){({error}=await db.from('problemas').update(dados).eq('id',editingProb));}else{({error}=await db.from('problemas').insert(dados));}$('pr-save').disabled=false;if(error){alert('Erro: '+error.message);return;}clearProb();toast(editingProb?'Atualizado ✓':'Registrado ✓');await openProb();}
+async function finalizarProb(id){const agora=new Date().toTimeString().slice(0,5);const h=prompt('Hora final (HH:MM):',agora);if(h===null)return;const{error}=await db.from('problemas').update({hora_fim:h,status:'Finalizado'}).eq('id',id);if(error){alert('Erro: '+error.message);return;}await openProb();toast('Finalizado ✓');}
+function clearProb(){['pr-data','pr-motivo','pr-ss','pr-sane','pr-ini','pr-fim'].forEach(i=>$(i).value='');editingProb=null;$('pr-title').textContent='Registrar problema de sistema';$('pr-save').textContent='Salvar';$('pr-cancel').style.display='none';}
+function editProb(id){const p=probs.find(x=>x.id===id);if(!p)return;$('pr-data').value=p.data||'';$('pr-motivo').value=p.motivo||'';$('pr-ss').value=p.link_ss||'';$('pr-sane').value=p.link_sane||'';$('pr-ini').value=p.hora_inicio||'';$('pr-fim').value=p.hora_fim||'';editingProb=id;$('pr-title').textContent='Editar problema';$('pr-save').textContent='Salvar alterações';$('pr-cancel').style.display='inline-block';window.scrollTo({top:0,behavior:'smooth'});}
+async function deleteProb(id){if(!confirm('Excluir este registro?'))return;const{error}=await db.from('problemas').delete().eq('id',id);if(error){alert('Erro: '+error.message);return;}await openProb();toast('Excluído');}
+
 // ===== Listeners =====
 $('btn-login').onclick=doLogin;
 $('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
@@ -858,6 +1052,17 @@ $('nav-rel').onclick=()=>showView('relatorios');
 $('nav-fer').onclick=()=>showView('ferias');
 $('nav-fol').onclick=()=>showView('folgas');
 $('nav-ate').onclick=()=>showView('atestados');
+$('nav-aniv').onclick=()=>showView('aniv');
+$('nav-ocor').onclick=()=>showView('ocor');
+$('nav-prob').onclick=()=>showView('prob');
+$('an-save').onclick=onSaveAniv;$('an-cancel').onclick=clearAniv;$('an-busca').oninput=renderAniv;
+$('an-lista').addEventListener('click',e=>{const ed=e.target.getAttribute('data-an-edit'),dl=e.target.getAttribute('data-an-del');if(ed)editAniv(ed);if(dl)deleteAniv(dl);});
+$('an-lista').addEventListener('change',e=>{const fg=e.target.getAttribute('data-aniv-folga');if(fg)toggleFolgaAniv(fg,e.target.checked);});
+$('oc-save').onclick=onSaveOcor;$('oc-cancel').onclick=clearOcor;$('oc-busca').oninput=renderOcor;$('oc-filtro').onchange=renderOcor;
+$('oc-data').onchange=()=>{$('oc-dia').value=diaSemana($('oc-data').value);};
+$('oc-lista').addEventListener('click',e=>{const ed=e.target.getAttribute('data-oc-edit'),dl=e.target.getAttribute('data-oc-del');if(ed)editOcor(ed);if(dl)deleteOcor(dl);});
+$('pr-save').onclick=onSaveProb;$('pr-cancel').onclick=clearProb;$('pr-busca').oninput=renderProb;$('pr-filtro').onchange=renderProb;
+$('pr-lista').addEventListener('click',e=>{const fn=e.target.getAttribute('data-pr-fin'),ed=e.target.getAttribute('data-pr-edit'),dl=e.target.getAttribute('data-pr-del');if(fn)finalizarProb(fn);if(ed)editProb(ed);if(dl)deleteProb(dl);});
 $('at-save').onclick=onSaveAtest;
 $('at-cancel').onclick=clearAtest;
 $('at-busca').oninput=renderAtest;
