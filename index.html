@@ -229,10 +229,9 @@
   <div id="view-ferias" style="display:none">
     <div class="form-card">
       <h2 id="fe-title">Lançar férias</h2>
-      <p class="hint" id="fe-hint">Registre o período de férias de um colaborador.</p>
-      <label>Colaborador *</label>
-      <input id="fe-colab" placeholder="Ex.: Maria Santos" list="colab-list">
-      <datalist id="colab-list"></datalist>
+      <p class="hint" id="fe-hint">Apenas colaboradores da Área Técnica. Registre o período de férias.</p>
+      <label>Colaborador (Área Técnica) *</label>
+      <select id="fe-colab"><option value="">— selecione —</option></select>
       <div class="row2">
         <div><label>Início *</label><input id="fe-ini" type="date"></div>
         <div><label>Fim *</label><input id="fe-fim" type="date"></div>
@@ -501,14 +500,19 @@ function exportCSV(){
 const statusFeria=f=>{const t=hoje();if(f.data_fim&&f.data_fim<t)return'Concluída';if(f.data_inicio&&f.data_inicio>t)return'Agendada';return'Em férias';};
 const feClass=s=>s==='Em férias'?'b-uso':s==='Agendada'?'b-disp':'b-desc';
 function diasFeria(f){if(!f.data_inicio||!f.data_fim)return'';const d=Math.round((new Date(f.data_fim)-new Date(f.data_inicio))/86400000)+1;return d>0?d+' dia(s)':'';}
-function fillColabList(){
-  const nomes=new Set();maquinas.forEach(m=>{if(m.colaborador)nomes.add(m.colaborador);});ferias.forEach(f=>{if(f.colaborador)nomes.add(f.colaborador);});
-  $('colab-list').innerHTML=[...nomes].sort().map(n=>`<option value="${esc(n)}">`).join('');
+const norm=s=>(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+function fillColabSelect(){
+  const nomes=new Set();
+  maquinas.forEach(m=>{if(m.colaborador&&norm(m.setor)==='area tecnica')nomes.add(m.colaborador);});
+  ferias.forEach(f=>{if(f.colaborador)nomes.add(f.colaborador);});
+  const sel=$('fe-colab'),cur=sel.value;
+  sel.innerHTML='<option value="">— selecione —</option>'+[...nomes].sort().map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  if(cur)sel.value=cur;
 }
 async function openFerias(){
   const{data,error}=await db.from('ferias').select('*').order('data_inicio',{ascending:false});
   if(error){ferias=[];$('fe-lista').innerHTML='<div class="empty"><b>Tabela de férias ainda não existe</b>Rode o SQL de férias no Supabase e recarregue a página.</div>';$('fe-c-agora').textContent=$('fe-c-agend').textContent=$('fe-c-conc').textContent='0';return;}
-  ferias=data||[];fillColabList();renderFerias();
+  ferias=data||[];fillColabSelect();renderFerias();
 }
 function renderFerias(){
   $('fe-c-agora').textContent=ferias.filter(f=>statusFeria(f)==='Em férias').length;
