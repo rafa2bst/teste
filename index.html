@@ -141,6 +141,7 @@
     <button id="nav-cad" class="active">Cadastrar / Atualizar</button>
     <button id="nav-rel">Administrador / Relatórios</button>
     <button id="nav-fer">Férias</button>
+    <button id="nav-fol">Folgas</button>
   </nav>
 
   <!-- VIEW: CADASTRO -->
@@ -257,6 +258,64 @@
       <div id="fe-lista" class="list"></div>
     </div>
   </div>
+
+  <!-- VIEW: FOLGAS (somente admin) -->
+  <div id="view-folgas" style="display:none">
+    <div class="form-card">
+      <h2 id="fo-title">Lançar folga</h2>
+      <p class="hint">Apenas colaboradores da Área Técnica.</p>
+      <label>Colaborador (Área Técnica) *</label>
+      <select id="fo-colab"><option value="">— selecione —</option></select>
+      <div class="row2">
+        <div><label>Tipo de folga *</label>
+          <select id="fo-tipo">
+            <option value="">— selecione —</option>
+            <option>Folga Banco de Horas</option>
+            <option>Folga Aniversário</option>
+            <option>Folga Abono</option>
+            <option>Abono Gestor</option>
+          </select>
+        </div>
+        <div><label>Data da folga *</label><input id="fo-data" type="date"></div>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-weight:500;color:var(--ink)">
+        <input type="checkbox" id="fo-emendada" style="width:auto"> Folga emendada
+      </label>
+      <div id="fo-motivo-wrap" style="display:none">
+        <label>Motivo da emenda</label>
+        <input id="fo-motivo" placeholder="Ex.: emendou com o feriado de 7 de setembro">
+      </div>
+      <label>Observação</label>
+      <textarea id="fo-obs" placeholder="Opcional"></textarea>
+      <div class="actions">
+        <button class="btn-primary" id="fo-save">Lançar folga</button>
+        <button class="btn-ghost" id="fo-cancel" style="display:none">Cancelar</button>
+      </div>
+    </div>
+
+    <div style="margin-top:28px">
+      <div class="counts">
+        <div class="stat s-uso"><b id="fo-c-bh">0</b><span>Banco de Horas</span></div>
+        <div class="stat s-disp"><b id="fo-c-an">0</b><span>Aniversário</span></div>
+        <div class="stat s-manut"><b id="fo-c-ab">0</b><span>Abono</span></div>
+        <div class="stat s-desc"><b id="fo-c-ag">0</b><span>Abono Gestor</span></div>
+      </div>
+      <div class="toolbar">
+        <div class="search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <input id="fo-busca" placeholder="Buscar por colaborador...">
+        </div>
+        <select id="fo-filtro" style="width:auto;min-width:170px">
+          <option value="">Todos os tipos</option>
+          <option>Folga Banco de Horas</option>
+          <option>Folga Aniversário</option>
+          <option>Folga Abono</option>
+          <option>Abono Gestor</option>
+        </select>
+      </div>
+      <div id="fo-lista" class="list"></div>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -268,7 +327,7 @@ const db=supabase.createClient(SUPA_URL,SUPA_KEY);
 const ADMIN_EMAILS=['rafael.andrade.sa@gmail.com'];
 const isAdmin=u=>!!u&&ADMIN_EMAILS.includes((u.email||'').toLowerCase());
 
-let maquinas=[],atribuicoes=[],manutencoes=[],isAdminUser=false,editingPatr=null,ferias=[],editingFeria=null;
+let maquinas=[],atribuicoes=[],manutencoes=[],isAdminUser=false,editingPatr=null,ferias=[],editingFeria=null,folgas=[],editingFolga=null;
 const $=id=>document.getElementById(id);
 const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const hoje=()=>new Date().toISOString().slice(0,10);
@@ -373,15 +432,18 @@ async function registrarManutencao(patr){
 
 // ===== Views =====
 function showView(v){
-  if((v==='relatorios'||v==='ferias')&&!isAdminUser)v='cadastro';
+  if((v==='relatorios'||v==='ferias'||v==='folgas')&&!isAdminUser)v='cadastro';
   $('view-cadastro').style.display=v==='cadastro'?'block':'none';
   $('view-relatorios').style.display=v==='relatorios'?'block':'none';
   $('view-ferias').style.display=v==='ferias'?'block':'none';
+  $('view-folgas').style.display=v==='folgas'?'block':'none';
   $('nav-cad').classList.toggle('active',v==='cadastro');
   $('nav-rel').classList.toggle('active',v==='relatorios');
   $('nav-fer').classList.toggle('active',v==='ferias');
+  $('nav-fol').classList.toggle('active',v==='folgas');
   if(v==='relatorios')renderRelatorios();
   if(v==='ferias')openFerias();
+  if(v==='folgas')openFolgas();
 }
 function showSub(s){
   $('sv-maquina').style.display=s==='maq'?'block':'none';
@@ -549,6 +611,56 @@ function clearFeria(){['fe-colab','fe-ini','fe-fim','fe-obs'].forEach(i=>$(i).va
 function editFeria(id){const f=ferias.find(x=>x.id===id);if(!f)return;$('fe-colab').value=f.colaborador||'';$('fe-ini').value=f.data_inicio||'';$('fe-fim').value=f.data_fim||'';$('fe-obs').value=f.observacao||'';editingFeria=id;$('fe-title').textContent='Editar férias';$('fe-save').textContent='Salvar alterações';$('fe-cancel').style.display='inline-block';window.scrollTo({top:0,behavior:'smooth'});}
 async function deleteFeria(id){const f=ferias.find(x=>x.id===id);if(!confirm('Excluir as férias de "'+(f?f.colaborador:'')+'"?'))return;const{error}=await db.from('ferias').delete().eq('id',id);if(error){alert('Erro: '+error.message);return;}await openFerias();toast('Férias excluídas');}
 
+// ===== Folgas =====
+const TIPO_BADGE={'Folga Banco de Horas':'b-uso','Folga Aniversário':'b-disp','Folga Abono':'b-manut','Abono Gestor':'b-desc'};
+function fillFolgaColab(){
+  const nomes=new Set();
+  maquinas.forEach(m=>{if(m.colaborador&&norm(m.setor)==='area tecnica')nomes.add(m.colaborador);});
+  folgas.forEach(f=>{if(f.colaborador)nomes.add(f.colaborador);});
+  const sel=$('fo-colab'),cur=sel.value;
+  sel.innerHTML='<option value="">— selecione —</option>'+[...nomes].sort().map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  if(cur)sel.value=cur;
+}
+async function openFolgas(){
+  const{data,error}=await db.from('folgas').select('*').order('data',{ascending:false});
+  if(error){folgas=[];$('fo-lista').innerHTML='<div class="empty"><b>Tabela de folgas ainda não existe</b>Rode o SQL de folgas no Supabase e recarregue a página.</div>';['fo-c-bh','fo-c-an','fo-c-ab','fo-c-ag'].forEach(i=>$(i).textContent='0');return;}
+  folgas=data||[];fillFolgaColab();renderFolgas();
+}
+function renderFolgas(){
+  const cnt=t=>folgas.filter(f=>f.tipo===t).length;
+  $('fo-c-bh').textContent=cnt('Folga Banco de Horas');
+  $('fo-c-an').textContent=cnt('Folga Aniversário');
+  $('fo-c-ab').textContent=cnt('Folga Abono');
+  $('fo-c-ag').textContent=cnt('Abono Gestor');
+  const q=$('fo-busca').value.trim().toLowerCase(),ft=$('fo-filtro').value;
+  const arr=folgas.filter(f=>(!ft||f.tipo===ft)&&(!q||(f.colaborador||'').toLowerCase().includes(q)));
+  $('fo-lista').innerHTML=arr.length?arr.map(f=>`
+    <div class="row-item" style="cursor:default;align-items:flex-start">
+      <div><div class="ri-main">${esc(f.colaborador)}</div>
+      <div class="ri-sub"><span class="badge ${TIPO_BADGE[f.tipo]||'b-desc'}">${esc(f.tipo||'')}</span>${f.data?' · '+fmt(f.data):''}${f.emendada?' · <b style="color:var(--amber)">Emendada</b>':''}</div>
+      ${f.emendada&&f.motivo_emenda?`<div class="ri-sub" style="margin-top:4px">Emenda: ${esc(f.motivo_emenda)}</div>`:''}
+      ${f.observacao?`<div class="ri-sub" style="margin-top:4px">${esc(f.observacao)}</div>`:''}</div>
+      <div class="item-actions"><button class="btn-edit" data-fo-edit="${f.id}">Editar</button><button class="btn-del" data-fo-del="${f.id}">Excluir</button></div>
+    </div>`).join(''):'<div class="empty">Nenhuma folga lançada ainda.</div>';
+}
+async function onSaveFolga(){
+  const colaborador=$('fo-colab').value,tipo=$('fo-tipo').value,data=$('fo-data').value;
+  if(!colaborador){alert('Selecione o colaborador.');return;}
+  if(!tipo){alert('Selecione o tipo de folga.');return;}
+  if(!data){alert('Informe a data da folga.');return;}
+  const emendada=$('fo-emendada').checked;
+  const dados={colaborador,tipo,data,emendada,motivo_emenda:emendada?$('fo-motivo').value.trim():null,observacao:$('fo-obs').value.trim()};
+  $('fo-save').disabled=true;let error;
+  if(editingFolga){({error}=await db.from('folgas').update(dados).eq('id',editingFolga));}
+  else{({error}=await db.from('folgas').insert(dados));}
+  $('fo-save').disabled=false;
+  if(error){alert('Erro ao salvar: '+error.message);return;}
+  clearFolga();toast(editingFolga?'Folga atualizada ✓':'Folga lançada ✓');await openFolgas();
+}
+function clearFolga(){['fo-colab','fo-tipo','fo-data','fo-motivo','fo-obs'].forEach(i=>$(i).value='');$('fo-emendada').checked=false;$('fo-motivo-wrap').style.display='none';editingFolga=null;$('fo-title').textContent='Lançar folga';$('fo-save').textContent='Lançar folga';$('fo-cancel').style.display='none';}
+function editFolga(id){const f=folgas.find(x=>x.id===id);if(!f)return;$('fo-colab').value=f.colaborador||'';$('fo-tipo').value=f.tipo||'';$('fo-data').value=f.data||'';$('fo-emendada').checked=!!f.emendada;$('fo-motivo-wrap').style.display=f.emendada?'block':'none';$('fo-motivo').value=f.motivo_emenda||'';$('fo-obs').value=f.observacao||'';editingFolga=id;$('fo-title').textContent='Editar folga';$('fo-save').textContent='Salvar alterações';$('fo-cancel').style.display='inline-block';window.scrollTo({top:0,behavior:'smooth'});}
+async function deleteFolga(id){const f=folgas.find(x=>x.id===id);if(!confirm('Excluir a folga de "'+(f?f.colaborador:'')+'"?'))return;const{error}=await db.from('folgas').delete().eq('id',id);if(error){alert('Erro: '+error.message);return;}await openFolgas();toast('Folga excluída');}
+
 // ===== Listeners =====
 $('btn-login').onclick=doLogin;
 $('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
@@ -558,6 +670,13 @@ $('btn-cancel').onclick=()=>{clearForm();showView(isAdminUser?'relatorios':'cada
 $('nav-cad').onclick=()=>showView('cadastro');
 $('nav-rel').onclick=()=>showView('relatorios');
 $('nav-fer').onclick=()=>showView('ferias');
+$('nav-fol').onclick=()=>showView('folgas');
+$('fo-save').onclick=onSaveFolga;
+$('fo-cancel').onclick=clearFolga;
+$('fo-busca').oninput=renderFolgas;
+$('fo-filtro').onchange=renderFolgas;
+$('fo-emendada').onchange=()=>{$('fo-motivo-wrap').style.display=$('fo-emendada').checked?'block':'none';};
+$('fo-lista').addEventListener('click',e=>{const ed=e.target.getAttribute('data-fo-edit'),dl=e.target.getAttribute('data-fo-del');if(ed)editFolga(ed);if(dl)deleteFolga(dl);});
 $('fe-save').onclick=onSaveFeria;
 $('fe-cancel').onclick=clearFeria;
 $('fe-busca').oninput=renderFerias;
