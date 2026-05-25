@@ -114,13 +114,13 @@
 
   .toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%) translateY(20px);background:var(--accent);color:#fff;padding:14px 24px;border-radius:12px;font-weight:600;font-size:15px;box-shadow:0 10px 34px rgba(0,0,0,.2);opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:50}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-  .cal{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;box-shadow:var(--shadow);max-width:268px;margin-bottom:10px}
+  .cal{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;box-shadow:var(--shadow);width:fit-content;max-width:100%;margin-bottom:10px}
   .cal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
   .cal-head b{font-family:'Manrope',sans-serif;font-weight:700;font-size:14px}
   .cal-nav{background:#fff;border:1px solid var(--line);border-radius:6px;width:24px;height:24px;padding:0;cursor:pointer;font-weight:700;color:var(--ink);line-height:1}
-  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,32px);gap:3px}
   .cal-wd{text-align:center;font-size:10px;font-weight:700;color:var(--ink-soft);padding:1px 0}
-  .cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:12px;border-radius:6px}
+  .cal-day{height:32px;display:flex;align-items:center;justify-content:center;font-size:12px;border-radius:6px}
   .cal-day.empty{visibility:hidden}
   .cal-day.marked{background:var(--accent-soft);color:var(--accent-dark);font-weight:700;border:1px solid var(--accent)}
   .cal-day.fo.marked{background:var(--amber-soft);color:var(--amber);border-color:var(--amber)}
@@ -461,6 +461,14 @@
       </select>
       <label>Tempo *</label>
       <select id="oc-tempo"><option value="">— selecione —</option><option>Integral</option><option>Parcial</option><option>Fracionado</option></select>
+      <div id="oc-fracao-wrap" style="display:none">
+        <label>Fração (minutos)</label>
+        <select id="oc-fracao">
+          <option value="">— selecione —</option>
+          <option>30</option><option>60</option><option>90</option><option>120</option>
+          <option>150</option><option>180</option><option>210</option><option>240</option>
+        </select>
+      </div>
       <label>Observação</label>
       <textarea id="oc-obs" placeholder="Opcional"></textarea>
       <div class="actions">
@@ -1009,17 +1017,18 @@ async function deleteAniv(id){if(!confirm('Excluir este aniversário?'))return;c
 const DIAS_SEM=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
 function diaSemana(s){if(!s)return'';return DIAS_SEM[new Date(s+'T12:00:00').getDay()];}
 function fillOcorTecnico(){const nomes=new Set();maquinas.forEach(m=>{if(m.colaborador&&norm(m.setor)==='area tecnica')nomes.add(m.colaborador);});ocors.forEach(o=>{if(o.tecnico)nomes.add(o.tecnico);});const sel=$('oc-tecnico'),cur=sel.value;sel.innerHTML='<option value="">— selecione —</option>'+[...nomes].sort().map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');if(cur)sel.value=cur;}
+function updateOcorFracao(){$('oc-fracao-wrap').style.display=$('oc-tempo').value==='Fracionado'?'block':'none';}
 async function openOcor(){const{data,error}=await db.from('ocorrencias').select('*').order('data',{ascending:false});if(error){ocors=[];$('oc-lista').innerHTML='<div class="empty"><b>Tabela de ocorrências ainda não existe</b>Rode o SQL e recarregue a página.</div>';return;}ocors=data||[];fillOcorTecnico();renderOcor();}
 function renderOcor(){const q=$('oc-busca').value.trim().toLowerCase(),fm=$('oc-filtro').value;const arr=ocors.filter(o=>(!fm||o.motivo===fm)&&(!q||(o.tecnico||'').toLowerCase().includes(q)));$('oc-lista').innerHTML=arr.length?arr.map(o=>`
     <div class="row-item" style="cursor:default;align-items:flex-start">
       <div><div class="ri-main">${esc(o.tecnico)}</div>
-      <div class="ri-sub"><span class="badge b-disp">${esc(o.motivo||'')}</span> · ${o.data?fmt(o.data):''}${o.dia_semana?' ('+esc(o.dia_semana)+')':''} · ${esc(o.tempo||'')}</div>
+      <div class="ri-sub"><span class="badge b-disp">${esc(o.motivo||'')}</span> · ${o.data?fmt(o.data):''}${o.dia_semana?' ('+esc(o.dia_semana)+')':''} · ${esc(o.tempo||'')}${o.fracao?' ('+esc(o.fracao)+' min)':''}</div>
       ${o.observacao?`<div class="ri-sub" style="margin-top:4px">${esc(o.observacao)}</div>`:''}</div>
       <div class="item-actions"><button class="btn-edit" data-oc-edit="${o.id}">Editar</button><button class="btn-del" data-oc-del="${o.id}">Excluir</button></div>
     </div>`).join(''):'<div class="empty">Nenhuma ocorrência registrada.</div>';}
-async function onSaveOcor(){const tecnico=$('oc-tecnico').value,data=$('oc-data').value,motivo=$('oc-motivo').value,tempo=$('oc-tempo').value;if(!tecnico){alert('Selecione o técnico.');return;}if(!data){alert('Informe a data.');return;}if(!motivo){alert('Selecione o motivo.');return;}if(!tempo){alert('Selecione o tempo.');return;}const dados={tecnico,data,dia_semana:diaSemana(data),motivo,tempo,observacao:$('oc-obs').value.trim()};$('oc-save').disabled=true;let error;if(editingOcor){({error}=await db.from('ocorrencias').update(dados).eq('id',editingOcor));}else{({error}=await db.from('ocorrencias').insert(dados));}$('oc-save').disabled=false;if(error){alert('Erro: '+error.message);return;}clearOcor();toast(editingOcor?'Ocorrência atualizada ✓':'Ocorrência registrada ✓');await openOcor();}
-function clearOcor(){['oc-tecnico','oc-data','oc-dia','oc-motivo','oc-tempo','oc-obs'].forEach(i=>$(i).value='');editingOcor=null;$('oc-title').textContent='Registrar ocorrência';$('oc-save').textContent='Registrar';$('oc-cancel').style.display='none';}
-function editOcor(id){const o=ocors.find(x=>x.id===id);if(!o)return;$('oc-tecnico').value=o.tecnico||'';$('oc-data').value=o.data||'';$('oc-dia').value=o.dia_semana||'';$('oc-motivo').value=o.motivo||'';$('oc-tempo').value=o.tempo||'';$('oc-obs').value=o.observacao||'';editingOcor=id;$('oc-title').textContent='Editar ocorrência';$('oc-save').textContent='Salvar alterações';$('oc-cancel').style.display='inline-block';window.scrollTo({top:0,behavior:'smooth'});}
+async function onSaveOcor(){const tecnico=$('oc-tecnico').value,data=$('oc-data').value,motivo=$('oc-motivo').value,tempo=$('oc-tempo').value;if(!tecnico){alert('Selecione o técnico.');return;}if(!data){alert('Informe a data.');return;}if(!motivo){alert('Selecione o motivo.');return;}if(!tempo){alert('Selecione o tempo.');return;}const dados={tecnico,data,dia_semana:diaSemana(data),motivo,tempo,fracao:tempo==='Fracionado'?$('oc-fracao').value:null,observacao:$('oc-obs').value.trim()};$('oc-save').disabled=true;let error;if(editingOcor){({error}=await db.from('ocorrencias').update(dados).eq('id',editingOcor));}else{({error}=await db.from('ocorrencias').insert(dados));}$('oc-save').disabled=false;if(error){alert('Erro: '+error.message);return;}clearOcor();toast(editingOcor?'Ocorrência atualizada ✓':'Ocorrência registrada ✓');await openOcor();}
+function clearOcor(){['oc-tecnico','oc-data','oc-dia','oc-motivo','oc-tempo','oc-fracao','oc-obs'].forEach(i=>$(i).value='');updateOcorFracao();editingOcor=null;$('oc-title').textContent='Registrar ocorrência';$('oc-save').textContent='Registrar';$('oc-cancel').style.display='none';}
+function editOcor(id){const o=ocors.find(x=>x.id===id);if(!o)return;$('oc-tecnico').value=o.tecnico||'';$('oc-data').value=o.data||'';$('oc-dia').value=o.dia_semana||'';$('oc-motivo').value=o.motivo||'';$('oc-tempo').value=o.tempo||'';$('oc-fracao').value=o.fracao||'';updateOcorFracao();$('oc-obs').value=o.observacao||'';editingOcor=id;$('oc-title').textContent='Editar ocorrência';$('oc-save').textContent='Salvar alterações';$('oc-cancel').style.display='inline-block';window.scrollTo({top:0,behavior:'smooth'});}
 async function deleteOcor(id){if(!confirm('Excluir esta ocorrência?'))return;const{error}=await db.from('ocorrencias').delete().eq('id',id);if(error){alert('Erro: '+error.message);return;}await openOcor();toast('Excluída');}
 
 // ===== Problemas de Sistema =====
@@ -1068,6 +1077,7 @@ $('an-lista').addEventListener('click',e=>{const ed=e.target.getAttribute('data-
 $('an-lista').addEventListener('change',e=>{const fg=e.target.getAttribute('data-aniv-folga');if(fg)toggleFolgaAniv(fg,e.target.checked);});
 $('oc-save').onclick=onSaveOcor;$('oc-cancel').onclick=clearOcor;$('oc-busca').oninput=renderOcor;$('oc-filtro').onchange=renderOcor;
 $('oc-data').onchange=()=>{$('oc-dia').value=diaSemana($('oc-data').value);};
+$('oc-tempo').onchange=updateOcorFracao;
 $('oc-lista').addEventListener('click',e=>{const ed=e.target.getAttribute('data-oc-edit'),dl=e.target.getAttribute('data-oc-del');if(ed)editOcor(ed);if(dl)deleteOcor(dl);});
 $('pr-save').onclick=onSaveProb;$('pr-cancel').onclick=clearProb;$('pr-busca').oninput=renderProb;$('pr-filtro').onchange=renderProb;
 $('pr-lista').addEventListener('click',e=>{const fn=e.target.getAttribute('data-pr-fin'),ed=e.target.getAttribute('data-pr-edit'),dl=e.target.getAttribute('data-pr-del');if(fn)finalizarProb(fn);if(ed)editProb(ed);if(dl)deleteProb(dl);});
