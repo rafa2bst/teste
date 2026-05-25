@@ -162,6 +162,7 @@
     <button id="nav-aniv">Aniversários</button>
     <button id="nav-ocor">Ocorrências</button>
     <button id="nav-prob">Problemas</button>
+    <button id="nav-trein">Treinamentos</button>
   </nav>
 
   <!-- VIEW: CADASTRO -->
@@ -533,6 +534,46 @@
       <div id="pr-lista" class="list"></div>
     </div>
   </div>
+
+  <!-- VIEW: TREINAMENTOS -->
+  <div id="view-trein" style="display:none">
+    <div class="form-card">
+      <h2 id="tr-title">Registrar treinamento</h2>
+      <p class="hint">Treinamentos da Área Técnica — individual ou para toda a equipe.</p>
+      <label>Colaborador *</label>
+      <select id="tr-colab"><option value="">— selecione —</option><option>Todos (equipe)</option></select>
+      <label>Treinamento *</label>
+      <input id="tr-nome" placeholder="Ex.: Atendimento N2, reciclagem de produto">
+      <div class="row2">
+        <div><label>Data</label><input id="tr-data" type="date"></div>
+        <div><label>Carga horária (h)</label><input id="tr-carga" placeholder="Ex.: 8"></div>
+      </div>
+      <label>Status *</label>
+      <select id="tr-status"><option>Planejado</option><option>Concluído</option></select>
+      <label>Observação</label>
+      <textarea id="tr-obs" placeholder="Opcional"></textarea>
+      <div class="actions">
+        <button class="btn-primary" id="tr-save">Salvar</button>
+        <button class="btn-ghost" id="tr-cancel" style="display:none">Cancelar</button>
+      </div>
+    </div>
+    <div style="margin-top:28px">
+      <div class="counts">
+        <div class="stat s-disp"><b id="tr-c-pl">0</b><span>Planejados</span></div>
+        <div class="stat s-uso"><b id="tr-c-co">0</b><span>Concluídos</span></div>
+      </div>
+      <div class="toolbar">
+        <div class="search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <input id="tr-busca" placeholder="Buscar por colaborador ou treinamento...">
+        </div>
+        <select id="tr-filtro" style="width:auto;min-width:150px">
+          <option value="">Todos</option><option>Planejado</option><option>Concluído</option>
+        </select>
+      </div>
+      <div id="tr-lista" class="list"></div>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -544,7 +585,7 @@ const db=supabase.createClient(SUPA_URL,SUPA_KEY);
 const ADMIN_EMAILS=['rafael.andrade.sa@gmail.com'];
 const isAdmin=u=>!!u&&ADMIN_EMAILS.includes((u.email||'').toLowerCase());
 
-let maquinas=[],atribuicoes=[],manutencoes=[],isAdminUser=false,editingPatr=null,ferias=[],editingFeria=null,folgas=[],editingFolga=null,atestados=[],editingAtest=null,feCal=null,foCal=null,atCal=null,anivs=[],editingAniv=null,ocors=[],editingOcor=null,probs=[],editingProb=null,anCal=null;
+let maquinas=[],atribuicoes=[],manutencoes=[],isAdminUser=false,editingPatr=null,ferias=[],editingFeria=null,folgas=[],editingFolga=null,atestados=[],editingAtest=null,feCal=null,foCal=null,atCal=null,anivs=[],editingAniv=null,ocors=[],editingOcor=null,probs=[],editingProb=null,anCal=null,treins=[],editingTrein=null;
 const $=id=>document.getElementById(id);
 const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const hoje=()=>new Date().toISOString().slice(0,10);
@@ -649,7 +690,7 @@ async function registrarManutencao(patr){
 
 // ===== Views =====
 function showView(v){
-  const adminViews=['relatorios','ferias','folgas','atestados','aniv','ocor','prob'];
+  const adminViews=['relatorios','ferias','folgas','atestados','aniv','ocor','prob','trein'];
   if(adminViews.includes(v)&&!isAdminUser)v='cadastro';
   $('view-cadastro').style.display=v==='cadastro'?'block':'none';
   $('view-relatorios').style.display=v==='relatorios'?'block':'none';
@@ -659,6 +700,7 @@ function showView(v){
   $('view-aniv').style.display=v==='aniv'?'block':'none';
   $('view-ocor').style.display=v==='ocor'?'block':'none';
   $('view-prob').style.display=v==='prob'?'block':'none';
+  $('view-trein').style.display=v==='trein'?'block':'none';
   $('nav-cad').classList.toggle('active',v==='cadastro');
   $('nav-rel').classList.toggle('active',v==='relatorios');
   $('nav-fer').classList.toggle('active',v==='ferias');
@@ -667,6 +709,7 @@ function showView(v){
   $('nav-aniv').classList.toggle('active',v==='aniv');
   $('nav-ocor').classList.toggle('active',v==='ocor');
   $('nav-prob').classList.toggle('active',v==='prob');
+  $('nav-trein').classList.toggle('active',v==='trein');
   if(v==='relatorios')renderRelatorios();
   if(v==='ferias')openFerias();
   if(v==='folgas')openFolgas();
@@ -674,6 +717,7 @@ function showView(v){
   if(v==='aniv')openAniv();
   if(v==='ocor')openOcor();
   if(v==='prob')openProb();
+  if(v==='trein')openTrein();
 }
 function showSub(s){
   $('sv-maquina').style.display=s==='maq'?'block':'none';
@@ -1058,6 +1102,31 @@ function clearProb(){['pr-data','pr-motivo','pr-ss','pr-sane','pr-ini','pr-fim']
 function editProb(id){const p=probs.find(x=>x.id===id);if(!p)return;$('pr-data').value=p.data||'';$('pr-motivo').value=p.motivo||'';$('pr-ss').value=p.link_ss||'';$('pr-sane').value=p.link_sane||'';$('pr-ini').value=p.hora_inicio||'';$('pr-fim').value=p.hora_fim||'';editingProb=id;$('pr-title').textContent='Editar problema';$('pr-save').textContent='Salvar alterações';$('pr-cancel').style.display='inline-block';window.scrollTo({top:0,behavior:'smooth'});}
 async function deleteProb(id){if(!confirm('Excluir este registro?'))return;const{error}=await db.from('problemas').delete().eq('id',id);if(error){alert('Erro: '+error.message);return;}await openProb();toast('Excluído');}
 
+// ===== Treinamentos =====
+function fillTreinColab(){const nomes=new Set();maquinas.forEach(m=>{if(m.colaborador&&norm(m.setor)==='area tecnica')nomes.add(m.colaborador);});treins.forEach(t=>{if(t.colaborador&&t.colaborador!=='Todos (equipe)')nomes.add(t.colaborador);});const sel=$('tr-colab'),cur=sel.value;sel.innerHTML='<option value="">— selecione —</option><option>Todos (equipe)</option>'+[...nomes].sort().map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');if(cur)sel.value=cur;}
+async function openTrein(){const{data,error}=await db.from('treinamentos').select('*').order('data',{ascending:false});if(error){treins=[];$('tr-lista').innerHTML='<div class="empty"><b>Tabela de treinamentos ainda não existe</b>Rode o SQL e recarregue a página.</div>';$('tr-c-pl').textContent='0';$('tr-c-co').textContent='0';return;}treins=data||[];fillTreinColab();renderTrein();}
+function renderTrein(){
+  $('tr-c-pl').textContent=treins.filter(t=>t.status==='Planejado').length;
+  $('tr-c-co').textContent=treins.filter(t=>t.status==='Concluído').length;
+  const q=$('tr-busca').value.trim().toLowerCase(),fs=$('tr-filtro').value;
+  const arr=treins.filter(t=>(!fs||t.status===fs)&&(!q||((t.colaborador||'')+' '+(t.treinamento||'')).toLowerCase().includes(q)));
+  $('tr-lista').innerHTML=arr.length?arr.map(t=>`
+    <div class="row-item" style="cursor:default;align-items:flex-start">
+      <div><div class="ri-main">${esc(t.treinamento||'(sem nome)')}</div>
+      <div class="ri-sub">${esc(t.colaborador||'')}${t.data?' · '+fmt(t.data):''}${t.carga_horaria?' · '+esc(t.carga_horaria)+'h':''}</div>
+      ${t.observacao?`<div class="ri-sub" style="margin-top:4px">${esc(t.observacao)}</div>`:''}</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="badge ${t.status==='Concluído'?'b-uso':'b-disp'}">${esc(t.status||'')}</span>
+        <div class="item-actions">${t.status==='Planejado'?`<button class="btn-edit" data-tr-done="${t.id}">Concluir</button>`:''}<button class="btn-edit" data-tr-edit="${t.id}">Editar</button><button class="btn-del" data-tr-del="${t.id}">Excluir</button></div>
+      </div>
+    </div>`).join(''):'<div class="empty">Nenhum treinamento registrado.</div>';
+}
+async function onSaveTrein(){const colaborador=$('tr-colab').value,treinamento=$('tr-nome').value.trim();if(!colaborador){alert('Selecione o colaborador.');return;}if(!treinamento){alert('Informe o treinamento.');return;}const dados={colaborador,treinamento,data:$('tr-data').value||null,carga_horaria:$('tr-carga').value.trim(),status:$('tr-status').value,observacao:$('tr-obs').value.trim()};$('tr-save').disabled=true;let error;if(editingTrein){({error}=await db.from('treinamentos').update(dados).eq('id',editingTrein));}else{({error}=await db.from('treinamentos').insert(dados));}$('tr-save').disabled=false;if(error){alert('Erro: '+error.message);return;}clearTrein();toast(editingTrein?'Atualizado ✓':'Treinamento salvo ✓');await openTrein();}
+async function concluirTrein(id){const{error}=await db.from('treinamentos').update({status:'Concluído'}).eq('id',id);if(error){alert('Erro: '+error.message);return;}await openTrein();toast('Treinamento concluído ✓');}
+function clearTrein(){['tr-colab','tr-nome','tr-data','tr-carga','tr-obs'].forEach(i=>$(i).value='');$('tr-status').value='Planejado';editingTrein=null;$('tr-title').textContent='Registrar treinamento';$('tr-save').textContent='Salvar';$('tr-cancel').style.display='none';}
+function editTrein(id){const t=treins.find(x=>x.id===id);if(!t)return;$('tr-colab').value=t.colaborador||'';$('tr-nome').value=t.treinamento||'';$('tr-data').value=t.data||'';$('tr-carga').value=t.carga_horaria||'';$('tr-status').value=t.status||'Planejado';$('tr-obs').value=t.observacao||'';editingTrein=id;$('tr-title').textContent='Editar treinamento';$('tr-save').textContent='Salvar alterações';$('tr-cancel').style.display='inline-block';window.scrollTo({top:0,behavior:'smooth'});}
+async function deleteTrein(id){if(!confirm('Excluir este treinamento?'))return;const{error}=await db.from('treinamentos').delete().eq('id',id);if(error){alert('Erro: '+error.message);return;}await openTrein();toast('Excluído');}
+
 // ===== Listeners =====
 $('btn-login').onclick=doLogin;
 $('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
@@ -1072,6 +1141,9 @@ $('nav-ate').onclick=()=>showView('atestados');
 $('nav-aniv').onclick=()=>showView('aniv');
 $('nav-ocor').onclick=()=>showView('ocor');
 $('nav-prob').onclick=()=>showView('prob');
+$('nav-trein').onclick=()=>showView('trein');
+$('tr-save').onclick=onSaveTrein;$('tr-cancel').onclick=clearTrein;$('tr-busca').oninput=renderTrein;$('tr-filtro').onchange=renderTrein;
+$('tr-lista').addEventListener('click',e=>{const dn=e.target.getAttribute('data-tr-done'),ed=e.target.getAttribute('data-tr-edit'),dl=e.target.getAttribute('data-tr-del');if(dn)concluirTrein(dn);if(ed)editTrein(ed);if(dl)deleteTrein(dl);});
 $('an-save').onclick=onSaveAniv;$('an-cancel').onclick=clearAniv;$('an-busca').oninput=renderAniv;
 $('an-lista').addEventListener('click',e=>{const ed=e.target.getAttribute('data-an-edit'),dl=e.target.getAttribute('data-an-del');if(ed)editAniv(ed);if(dl)deleteAniv(dl);});
 $('an-lista').addEventListener('change',e=>{const fg=e.target.getAttribute('data-aniv-folga');if(fg)toggleFolgaAniv(fg,e.target.checked);});
