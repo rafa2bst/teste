@@ -5,6 +5,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <style>
   :root{
     --paper:#f4f1ea;--card:#fdfcf9;--ink:#1c1c19;--ink-soft:#5b594f;--line:#e3ddd0;
@@ -130,6 +131,17 @@
   .cal-names b{color:var(--ink)}
   .cal-day.an.marked{background:#f0e6f5;color:#7a3d8f;border-color:#a86bbf}
   .lnk{color:var(--accent-dark);font-weight:600;text-decoration:underline;font-size:13px}
+  .dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+  .chart-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:var(--shadow)}
+  .chart-card h3{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);margin-bottom:12px}
+  .chart-box{position:relative;height:240px}
+  .fat-table{border-collapse:collapse;font-size:13px;min-width:640px}
+  .fat-table th,.fat-table td{border:1px solid var(--line);padding:6px 8px;text-align:center}
+  .fat-table th{background:var(--accent-soft);color:var(--accent-dark);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+  .fat-table td:first-child{text-align:left;font-weight:600;background:#faf8f2}
+  .fat-table input{width:96px;border:1px solid var(--line);border-radius:6px;padding:5px;font-size:13px;text-align:right}
+  .fat-table .tot{font-weight:700;background:#faf8f2;white-space:nowrap}
+  .fat-table tr:last-child td{background:var(--accent-soft);font-weight:700}
 </style>
 
 <!-- ===== LOGIN ===== -->
@@ -163,6 +175,9 @@
     <button id="nav-ocor">Ocorrências</button>
     <button id="nav-prob">Problemas</button>
     <button id="nav-trein">Treinamentos</button>
+    <button id="nav-anom">Anomalias</button>
+    <button id="nav-fat">Faturamento</button>
+    <button id="nav-dash">Relatórios</button>
   </nav>
 
   <!-- VIEW: CADASTRO -->
@@ -574,6 +589,65 @@
       <div id="tr-lista" class="list"></div>
     </div>
   </div>
+
+  <!-- VIEW: ANOMALIAS -->
+  <div id="view-anom" style="display:none">
+    <div class="form-card">
+      <h2 id="am-title">Anotação de anomalia</h2>
+      <p class="hint">Anomalias de técnicos da Área Técnica.</p>
+      <label>Técnico (Área Técnica) *</label>
+      <select id="am-tecnico"><option value="">— selecione —</option></select>
+      <div class="row2">
+        <div><label>Data *</label><input id="am-data" type="date"></div>
+        <div><label>Horário</label><input id="am-hora" type="time"></div>
+      </div>
+      <label>Motivo *</label>
+      <textarea id="am-motivo" placeholder="Descreva a anomalia"></textarea>
+      <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-weight:500;color:var(--ink)">
+        <input type="checkbox" id="am-tratado" style="width:auto"> Foi tratado com o técnico?
+      </label>
+      <div class="actions">
+        <button class="btn-primary" id="am-save">Salvar</button>
+        <button class="btn-ghost" id="am-cancel" style="display:none">Cancelar</button>
+      </div>
+    </div>
+    <div style="margin-top:28px">
+      <div class="counts">
+        <div class="stat s-desc"><b id="am-c-tot">0</b><span>Total</span></div>
+        <div class="stat s-uso"><b id="am-c-tr">0</b><span>Tratadas</span></div>
+        <div class="stat s-manut"><b id="am-c-pe">0</b><span>Pendentes</span></div>
+      </div>
+      <div class="search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="am-busca" placeholder="Buscar por técnico...">
+      </div>
+      <div id="am-lista" class="list"></div>
+    </div>
+  </div>
+
+  <!-- VIEW: FATURAMENTO -->
+  <div id="view-fat" style="display:none">
+    <div class="toolbar">
+      <label style="margin:0">Ano</label>
+      <input id="fat-ano" type="number" style="width:110px">
+      <button class="btn-primary" id="fat-save" style="flex:none">Salvar faturamento</button>
+    </div>
+    <div id="fat-grid" style="overflow-x:auto"></div>
+  </div>
+
+  <!-- VIEW: RELATÓRIOS / DASHBOARD -->
+  <div id="view-dash" style="display:none">
+    <div class="counts" id="dash-kpis"></div>
+    <div class="dash-grid">
+      <div class="chart-card"><h3>Máquinas por status</h3><div class="chart-box"><canvas id="ch-status"></canvas></div></div>
+      <div class="chart-card"><h3>Folgas por tipo</h3><div class="chart-box"><canvas id="ch-folgas"></canvas></div></div>
+      <div class="chart-card"><h3>Atestados por tipo</h3><div class="chart-box"><canvas id="ch-atest"></canvas></div></div>
+      <div class="chart-card"><h3>Ocorrências por motivo</h3><div class="chart-box"><canvas id="ch-ocor"></canvas></div></div>
+      <div class="chart-card"><h3>Problemas de sistema</h3><div class="chart-box"><canvas id="ch-prob"></canvas></div></div>
+      <div class="chart-card"><h3>Treinamentos</h3><div class="chart-box"><canvas id="ch-trein"></canvas></div></div>
+      <div class="chart-card" style="grid-column:1/-1"><h3>Faturamento por mês (R$) — <span id="dash-ano-lbl"></span></h3><div class="chart-box"><canvas id="ch-fat"></canvas></div></div>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -585,7 +659,8 @@ const db=supabase.createClient(SUPA_URL,SUPA_KEY);
 const ADMIN_EMAILS=['rafael.andrade.sa@gmail.com'];
 const isAdmin=u=>!!u&&ADMIN_EMAILS.includes((u.email||'').toLowerCase());
 
-let maquinas=[],atribuicoes=[],manutencoes=[],isAdminUser=false,editingPatr=null,ferias=[],editingFeria=null,folgas=[],editingFolga=null,atestados=[],editingAtest=null,feCal=null,foCal=null,atCal=null,anivs=[],editingAniv=null,ocors=[],editingOcor=null,probs=[],editingProb=null,anCal=null,treins=[],editingTrein=null;
+let maquinas=[],atribuicoes=[],manutencoes=[],isAdminUser=false,editingPatr=null,ferias=[],editingFeria=null,folgas=[],editingFolga=null,atestados=[],editingAtest=null,feCal=null,foCal=null,atCal=null,anivs=[],editingAniv=null,ocors=[],editingOcor=null,probs=[],editingProb=null,anCal=null,treins=[],editingTrein=null,anoms=[],editingAnom=null;
+const charts={};
 const $=id=>document.getElementById(id);
 const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const hoje=()=>new Date().toISOString().slice(0,10);
@@ -690,7 +765,7 @@ async function registrarManutencao(patr){
 
 // ===== Views =====
 function showView(v){
-  const adminViews=['relatorios','ferias','folgas','atestados','aniv','ocor','prob','trein'];
+  const adminViews=['relatorios','ferias','folgas','atestados','aniv','ocor','prob','trein','anom','fat','dash'];
   if(adminViews.includes(v)&&!isAdminUser)v='cadastro';
   $('view-cadastro').style.display=v==='cadastro'?'block':'none';
   $('view-relatorios').style.display=v==='relatorios'?'block':'none';
@@ -701,6 +776,9 @@ function showView(v){
   $('view-ocor').style.display=v==='ocor'?'block':'none';
   $('view-prob').style.display=v==='prob'?'block':'none';
   $('view-trein').style.display=v==='trein'?'block':'none';
+  $('view-anom').style.display=v==='anom'?'block':'none';
+  $('view-fat').style.display=v==='fat'?'block':'none';
+  $('view-dash').style.display=v==='dash'?'block':'none';
   $('nav-cad').classList.toggle('active',v==='cadastro');
   $('nav-rel').classList.toggle('active',v==='relatorios');
   $('nav-fer').classList.toggle('active',v==='ferias');
@@ -710,6 +788,9 @@ function showView(v){
   $('nav-ocor').classList.toggle('active',v==='ocor');
   $('nav-prob').classList.toggle('active',v==='prob');
   $('nav-trein').classList.toggle('active',v==='trein');
+  $('nav-anom').classList.toggle('active',v==='anom');
+  $('nav-fat').classList.toggle('active',v==='fat');
+  $('nav-dash').classList.toggle('active',v==='dash');
   if(v==='relatorios')renderRelatorios();
   if(v==='ferias')openFerias();
   if(v==='folgas')openFolgas();
@@ -718,6 +799,9 @@ function showView(v){
   if(v==='ocor')openOcor();
   if(v==='prob')openProb();
   if(v==='trein')openTrein();
+  if(v==='anom')openAnom();
+  if(v==='fat')openFat();
+  if(v==='dash')openDash();
 }
 function showSub(s){
   $('sv-maquina').style.display=s==='maq'?'block':'none';
@@ -1127,6 +1211,90 @@ function clearTrein(){['tr-colab','tr-nome','tr-data','tr-carga','tr-obs'].forEa
 function editTrein(id){const t=treins.find(x=>x.id===id);if(!t)return;$('tr-colab').value=t.colaborador||'';$('tr-nome').value=t.treinamento||'';$('tr-data').value=t.data||'';$('tr-carga').value=t.carga_horaria||'';$('tr-status').value=t.status||'Planejado';$('tr-obs').value=t.observacao||'';editingTrein=id;$('tr-title').textContent='Editar treinamento';$('tr-save').textContent='Salvar alterações';$('tr-cancel').style.display='inline-block';window.scrollTo({top:0,behavior:'smooth'});}
 async function deleteTrein(id){if(!confirm('Excluir este treinamento?'))return;const{error}=await db.from('treinamentos').delete().eq('id',id);if(error){alert('Erro: '+error.message);return;}await openTrein();toast('Excluído');}
 
+// ===== Anomalias =====
+function fillAnomTecnico(){const nomes=new Set();maquinas.forEach(m=>{if(m.colaborador&&norm(m.setor)==='area tecnica')nomes.add(m.colaborador);});anoms.forEach(a=>{if(a.tecnico)nomes.add(a.tecnico);});const sel=$('am-tecnico'),cur=sel.value;sel.innerHTML='<option value="">— selecione —</option>'+[...nomes].sort().map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');if(cur)sel.value=cur;}
+async function openAnom(){const{data,error}=await db.from('anomalias').select('*').order('data',{ascending:false});if(error){anoms=[];$('am-lista').innerHTML='<div class="empty"><b>Tabela de anomalias ainda não existe</b>Rode o SQL e recarregue a página.</div>';['am-c-tot','am-c-tr','am-c-pe'].forEach(i=>$(i).textContent='0');return;}anoms=data||[];fillAnomTecnico();renderAnom();}
+function renderAnom(){
+  $('am-c-tot').textContent=anoms.length;
+  $('am-c-tr').textContent=anoms.filter(a=>a.tratado).length;
+  $('am-c-pe').textContent=anoms.filter(a=>!a.tratado).length;
+  const q=$('am-busca').value.trim().toLowerCase();
+  const arr=anoms.filter(a=>!q||(a.tecnico||'').toLowerCase().includes(q));
+  $('am-lista').innerHTML=arr.length?arr.map(a=>`
+    <div class="row-item" style="cursor:default;align-items:flex-start">
+      <div><div class="ri-main">${esc(a.tecnico)}</div>
+      <div class="ri-sub">${a.data?fmt(a.data):''}${a.horario?' · '+esc(a.horario):''}</div>
+      ${a.motivo?`<div class="ri-sub" style="margin-top:4px">${esc(a.motivo)}</div>`:''}
+      <label class="ri-sub" style="display:flex;align-items:center;gap:6px;margin-top:6px;cursor:pointer"><input type="checkbox" data-am-trat="${a.id}" ${a.tratado?'checked':''} style="width:auto"> Tratado com o técnico</label></div>
+      <div class="item-actions"><button class="btn-edit" data-am-edit="${a.id}">Editar</button><button class="btn-del" data-am-del="${a.id}">Excluir</button></div>
+    </div>`).join(''):'<div class="empty">Nenhuma anomalia registrada.</div>';
+}
+async function onSaveAnom(){const tecnico=$('am-tecnico').value,data=$('am-data').value;if(!tecnico){alert('Selecione o técnico.');return;}if(!data){alert('Informe a data.');return;}if(!$('am-motivo').value.trim()){alert('Informe o motivo.');return;}const dados={tecnico,data,horario:$('am-hora').value||null,motivo:$('am-motivo').value.trim(),tratado:$('am-tratado').checked};$('am-save').disabled=true;let error;if(editingAnom){({error}=await db.from('anomalias').update(dados).eq('id',editingAnom));}else{({error}=await db.from('anomalias').insert(dados));}$('am-save').disabled=false;if(error){alert('Erro: '+error.message);return;}clearAnom();toast(editingAnom?'Atualizado ✓':'Anomalia registrada ✓');await openAnom();}
+async function toggleTratado(id,checked){const{error}=await db.from('anomalias').update({tratado:checked}).eq('id',id);if(error){alert('Erro: '+error.message);return;}await openAnom();toast(checked?'Marcada como tratada ✓':'Marcada como pendente');}
+function clearAnom(){['am-tecnico','am-data','am-hora','am-motivo'].forEach(i=>$(i).value='');$('am-tratado').checked=false;editingAnom=null;$('am-title').textContent='Anotação de anomalia';$('am-save').textContent='Salvar';$('am-cancel').style.display='none';}
+function editAnom(id){const a=anoms.find(x=>x.id===id);if(!a)return;$('am-tecnico').value=a.tecnico||'';$('am-data').value=a.data||'';$('am-hora').value=a.horario||'';$('am-motivo').value=a.motivo||'';$('am-tratado').checked=!!a.tratado;editingAnom=id;$('am-title').textContent='Editar anomalia';$('am-save').textContent='Salvar alterações';$('am-cancel').style.display='inline-block';window.scrollTo({top:0,behavior:'smooth'});}
+async function deleteAnom(id){if(!confirm('Excluir esta anomalia?'))return;const{error}=await db.from('anomalias').delete().eq('id',id);if(error){alert('Erro: '+error.message);return;}await openAnom();toast('Excluída');}
+
+// ===== Faturamento =====
+const MESES_CURTO=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const FAT_COLS=[['exporta_importa','Exporta-Importa'],['conversao_dados','Conversão de Dados'],['relatorios','Relatórios'],['conjunto_dados','Conjunto de Dados']];
+const fmtR=v=>'R$ '+(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+function recalcFat(){
+  const colTot={};FAT_COLS.forEach(c=>colTot[c[0]]=0);let grand=0;
+  for(let m=1;m<=12;m++){let rowTot=0;FAT_COLS.forEach(c=>{const v=parseFloat($('fat-'+m+'-'+c[0]).value)||0;rowTot+=v;colTot[c[0]]+=v;});$('fat-tot-'+m).textContent=fmtR(rowTot);grand+=rowTot;}
+  FAT_COLS.forEach(c=>$('fat-coltot-'+c[0]).textContent=fmtR(colTot[c[0]]));$('fat-grandtot').textContent=fmtR(grand);
+}
+function renderFatGrid(rows){
+  const byMes={};rows.forEach(r=>byMes[r.mes]=r);
+  let html='<table class="fat-table"><thead><tr><th>Mês</th>'+FAT_COLS.map(c=>`<th>${c[1]}</th>`).join('')+'<th>Total</th></tr></thead><tbody>';
+  for(let m=1;m<=12;m++){const r=byMes[m]||{};html+=`<tr><td>${MESES_CURTO[m-1]}</td>`+FAT_COLS.map(c=>`<td><input type="number" step="0.01" id="fat-${m}-${c[0]}" value="${r[c[0]]!=null?r[c[0]]:''}" oninput="recalcFat()"></td>`).join('')+`<td class="tot" id="fat-tot-${m}">R$ 0,00</td></tr>`;}
+  html+=`<tr><td>Total</td>`+FAT_COLS.map(c=>`<td class="tot" id="fat-coltot-${c[0]}">R$ 0,00</td>`).join('')+`<td class="tot" id="fat-grandtot">R$ 0,00</td></tr></tbody></table>`;
+  $('fat-grid').innerHTML=html;recalcFat();
+}
+async function openFat(){
+  if(!$('fat-ano').value)$('fat-ano').value=new Date().getFullYear();
+  const ano=parseInt($('fat-ano').value)||new Date().getFullYear();
+  const{data,error}=await db.from('faturamento').select('*').eq('ano',ano);
+  if(error){$('fat-grid').innerHTML='<div class="empty"><b>Tabela de faturamento ainda não existe</b>Rode o SQL e recarregue a página.</div>';return;}
+  renderFatGrid(data||[]);
+}
+async function saveFat(){
+  const ano=parseInt($('fat-ano').value)||new Date().getFullYear();
+  const rows=[];for(let m=1;m<=12;m++){const r={ano,mes:m};FAT_COLS.forEach(c=>{r[c[0]]=parseFloat($('fat-'+m+'-'+c[0]).value)||0;});rows.push(r);}
+  $('fat-save').disabled=true;const{error}=await db.from('faturamento').upsert(rows,{onConflict:'ano,mes'});$('fat-save').disabled=false;
+  if(error){alert('Erro ao salvar: '+error.message);return;}toast('Faturamento salvo ✓');
+}
+
+// ===== Relatórios / Dashboard =====
+function mkChart(id,cfg){if(charts[id])charts[id].destroy();charts[id]=new Chart($(id),cfg);}
+function countBy(arr,key){const o={};arr.forEach(x=>{const k=x[key]||'(vazio)';o[k]=(o[k]||0)+1;});return o;}
+const PAL=['#1f6f5c','#2a5d8f','#9a6b16','#a8412f','#7a3d8f','#5b594f','#1f9f7c','#cf8b3a','#b0577e','#3f7d6a','#8a6d3b','#6b8fb0'];
+async function openDash(){
+  if(typeof Chart==='undefined'){$('dash-kpis').innerHTML='<div class="empty">Não foi possível carregar os gráficos (sem internet?).</div>';return;}
+  const ano=new Date().getFullYear();
+  const res=await Promise.all([
+    db.from('maquinas').select('status'),db.from('folgas').select('tipo'),db.from('atestados').select('tipo'),
+    db.from('ocorrencias').select('motivo'),db.from('problemas').select('status'),db.from('treinamentos').select('status'),
+    db.from('anomalias').select('tratado'),db.from('atestados').select('id'),db.from('faturamento').select('*').eq('ano',ano)
+  ]);
+  const g=i=>res[i].error?[]:(res[i].data||[]);
+  const mq=g(0),fo=g(1),at=g(2),oc=g(3),pr=g(4),tr=g(5),an=g(6),fat=g(8);
+  const emUso=mq.filter(m=>m.status==='Em uso').length,probAb=pr.filter(p=>p.status==='Aberto').length,treinCo=tr.filter(t=>t.status==='Concluído').length;
+  $('dash-kpis').innerHTML=[['Máquinas',mq.length],['Em uso',emUso],['Problemas abertos',probAb],['Treinos concluídos',treinCo],['Atestados',at.length],['Anomalias',an.length]].map(k=>`<div class="stat"><b>${k[1]}</b><span>${esc(k[0])}</span></div>`).join('');
+  const dough=(id,obj)=>{const lab=Object.keys(obj);mkChart(id,{type:'doughnut',data:{labels:lab,datasets:[{data:lab.map(l=>obj[l]),backgroundColor:PAL}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{size:11}}}}}});};
+  const barc=(id,obj,horiz)=>{const lab=Object.keys(obj);mkChart(id,{type:'bar',data:{labels:lab,datasets:[{data:lab.map(l=>obj[l]),backgroundColor:'#1f6f5c'}]},options:{indexAxis:horiz?'y':'x',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10}}},y:{ticks:{font:{size:10}}}}}});};
+  dough('ch-status',countBy(mq,'status'));
+  barc('ch-folgas',countBy(fo,'tipo'));
+  dough('ch-atest',countBy(at,'tipo'));
+  barc('ch-ocor',countBy(oc,'motivo'),true);
+  dough('ch-prob',countBy(pr,'status'));
+  dough('ch-trein',countBy(tr,'status'));
+  $('dash-ano-lbl').textContent=ano;
+  const porMes=Array(12).fill(0);
+  fat.forEach(r=>{porMes[(r.mes||1)-1]=(+r.exporta_importa||0)+(+r.conversao_dados||0)+(+r.relatorios||0)+(+r.conjunto_dados||0);});
+  mkChart('ch-fat',{type:'bar',data:{labels:MESES_CURTO,datasets:[{label:'Total',data:porMes,backgroundColor:'#2a5d8f'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>'R$ '+v}}}}});
+}
+
 // ===== Listeners =====
 $('btn-login').onclick=doLogin;
 $('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
@@ -1142,6 +1310,13 @@ $('nav-aniv').onclick=()=>showView('aniv');
 $('nav-ocor').onclick=()=>showView('ocor');
 $('nav-prob').onclick=()=>showView('prob');
 $('nav-trein').onclick=()=>showView('trein');
+$('nav-anom').onclick=()=>showView('anom');
+$('nav-fat').onclick=()=>showView('fat');
+$('nav-dash').onclick=()=>showView('dash');
+$('am-save').onclick=onSaveAnom;$('am-cancel').onclick=clearAnom;$('am-busca').oninput=renderAnom;
+$('am-lista').addEventListener('click',e=>{const ed=e.target.getAttribute('data-am-edit'),dl=e.target.getAttribute('data-am-del');if(ed)editAnom(ed);if(dl)deleteAnom(dl);});
+$('am-lista').addEventListener('change',e=>{const tr=e.target.getAttribute('data-am-trat');if(tr)toggleTratado(tr,e.target.checked);});
+$('fat-save').onclick=saveFat;$('fat-ano').onchange=openFat;
 $('tr-save').onclick=onSaveTrein;$('tr-cancel').onclick=clearTrein;$('tr-busca').oninput=renderTrein;$('tr-filtro').onchange=renderTrein;
 $('tr-lista').addEventListener('click',e=>{const dn=e.target.getAttribute('data-tr-done'),ed=e.target.getAttribute('data-tr-edit'),dl=e.target.getAttribute('data-tr-del');if(dn)concluirTrein(dn);if(ed)editTrein(ed);if(dl)deleteTrein(dl);});
 $('an-save').onclick=onSaveAniv;$('an-cancel').onclick=clearAniv;$('an-busca').oninput=renderAniv;
