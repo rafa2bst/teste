@@ -142,6 +142,13 @@
   .fat-table input{width:96px;border:1px solid var(--line);border-radius:6px;padding:5px;font-size:13px;text-align:right}
   .fat-table .tot{font-weight:700;background:#faf8f2;white-space:nowrap}
   .fat-table tr:last-child td{background:var(--accent-soft);font-weight:700}
+  .period-block{border:1px solid var(--line);border-radius:12px;padding:14px;margin-top:14px;background:#faf8f2}
+  .period-block h3{font-family:var(--display);font-size:16px;margin-bottom:6px}
+  .orient{font-size:12px;color:var(--ink-soft);background:#fff;border:1px dashed var(--line);border-radius:8px;padding:8px 10px;margin-bottom:10px;line-height:1.55}
+  .prio-row{display:grid;grid-template-columns:96px 1fr 1fr;gap:8px;align-items:center;margin-bottom:8px}
+  .prio-row label{margin:0;font-weight:600;text-transform:none;letter-spacing:0;color:var(--ink)}
+  .fa-period{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}
+  .fa-opt{display:flex;align-items:center;gap:8px;font-size:13px;margin:3px 0}
 </style>
 
 <!-- ===== LOGIN ===== -->
@@ -173,6 +180,7 @@
   <nav class="nav" id="nav" style="display:none">
     <button id="nav-cad" class="active">Cadastrar / Atualizar</button>
     <button id="nav-solf">Solicitar folga</button>
+    <button id="nav-solfer">Solicitar férias</button>
     <button id="nav-rel">Administrador / Relatórios</button>
     <button id="nav-fer">Férias</button>
     <button id="nav-fol">Folgas</button>
@@ -185,6 +193,7 @@
     <button id="nav-fat">Faturamento</button>
     <button id="nav-dash">Relatórios</button>
     <button id="nav-soladm">Solicitações</button>
+    <button id="nav-feradm">Pedidos de férias</button>
   </nav>
 
   <!-- VIEW: CADASTRO -->
@@ -697,6 +706,47 @@
     </div>
     <div id="sa-lista" class="list"></div>
   </div>
+
+  <!-- VIEW: SOLICITAR FÉRIAS (colaborador) -->
+  <div id="view-solfer" style="display:none">
+    <div class="form-card">
+      <h2>Solicitar férias</h2>
+      <p class="hint">Escolha como dividir suas férias e informe as datas de preferência.</p>
+      <label>Seu nome *</label>
+      <input id="fr-colab" readonly>
+      <label>Como deseja dividir suas férias? *</label>
+      <select id="fr-opcao">
+        <option value="">— selecione —</option>
+        <option value="2x15">2 períodos de 15 dias</option>
+        <option value="5-10-15">3 períodos (5 + 10 + 15 dias)</option>
+      </select>
+      <div id="fr-periodos"></div>
+      <div class="actions"><button class="btn-primary" id="fr-save" style="display:none">Enviar pedido</button></div>
+    </div>
+    <div style="margin-top:28px">
+      <div class="sec-title" style="margin-top:0">Minhas solicitações de férias</div>
+      <div id="fr-lista" class="list"></div>
+    </div>
+  </div>
+
+  <!-- VIEW: PEDIDOS DE FÉRIAS (admin) -->
+  <div id="view-feradm" style="display:none">
+    <div class="counts">
+      <div class="stat s-manut"><b id="fa-c-pe">0</b><span>Pendentes</span></div>
+      <div class="stat s-uso"><b id="fa-c-ap">0</b><span>Aprovadas</span></div>
+      <div class="stat s-desc"><b id="fa-c-re">0</b><span>Recusadas</span></div>
+    </div>
+    <div class="toolbar">
+      <div class="search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="fa-busca" placeholder="Buscar por colaborador...">
+      </div>
+      <select id="fa-filtro" style="width:auto;min-width:150px">
+        <option value="Pendente">Pendentes</option><option value="">Todas</option><option value="Aprovada">Aprovadas</option><option value="Recusada">Recusadas</option>
+      </select>
+    </div>
+    <div id="fa-lista" class="list"></div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -710,7 +760,7 @@ const isAdmin=u=>!!u&&ADMIN_EMAILS.includes((u.email||'').toLowerCase());
 
 let maquinas=[],atribuicoes=[],manutencoes=[],isAdminUser=false,editingPatr=null,ferias=[],editingFeria=null,folgas=[],editingFolga=null,atestados=[],editingAtest=null,feCal=null,foCal=null,atCal=null,anivs=[],editingAniv=null,ocors=[],editingOcor=null,probs=[],editingProb=null,anCal=null,treins=[],editingTrein=null,anoms=[],editingAnom=null;
 const charts={};
-let currentEmail='',authMode='login',sols=[];
+let currentEmail='',authMode='login',sols=[],ferReqs=[];
 const $=id=>document.getElementById(id);
 const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const hoje=()=>new Date().toISOString().slice(0,10);
@@ -726,8 +776,9 @@ async function showApp(user){
   $('login-screen').style.display='none';$('app').style.display='block';
   $('user-email').textContent=user.email;currentEmail=user.email||'';isAdminUser=isAdmin(user);
   $('nav').style.display='flex';
-  ['nav-rel','nav-fer','nav-fol','nav-ate','nav-aniv','nav-ocor','nav-prob','nav-trein','nav-anom','nav-fat','nav-dash','nav-soladm'].forEach(id=>$(id).style.display=isAdminUser?'':'none');
+  ['nav-rel','nav-fer','nav-fol','nav-ate','nav-aniv','nav-ocor','nav-prob','nav-trein','nav-anom','nav-fat','nav-dash','nav-soladm','nav-feradm'].forEach(id=>$(id).style.display=isAdminUser?'':'none');
   $('nav-solf').style.display=isAdminUser?'none':'';
+  $('nav-solfer').style.display=isAdminUser?'none':'';
   if(isAdminUser)await loadAll();
   showView(isAdminUser?'cadastro':'solfolga');
 }
@@ -831,7 +882,7 @@ async function registrarManutencao(patr){
 
 // ===== Views =====
 function showView(v){
-  const adminViews=['relatorios','ferias','folgas','atestados','aniv','ocor','prob','trein','anom','fat','dash','soladm'];
+  const adminViews=['relatorios','ferias','folgas','atestados','aniv','ocor','prob','trein','anom','fat','dash','soladm','feradm'];
   if(adminViews.includes(v)&&!isAdminUser)v='solfolga';
   $('view-cadastro').style.display=v==='cadastro'?'block':'none';
   $('view-relatorios').style.display=v==='relatorios'?'block':'none';
@@ -847,6 +898,8 @@ function showView(v){
   $('view-dash').style.display=v==='dash'?'block':'none';
   $('view-solfolga').style.display=v==='solfolga'?'block':'none';
   $('view-soladm').style.display=v==='soladm'?'block':'none';
+  $('view-solfer').style.display=v==='solfer'?'block':'none';
+  $('view-feradm').style.display=v==='feradm'?'block':'none';
   $('nav-cad').classList.toggle('active',v==='cadastro');
   $('nav-rel').classList.toggle('active',v==='relatorios');
   $('nav-fer').classList.toggle('active',v==='ferias');
@@ -861,6 +914,8 @@ function showView(v){
   $('nav-dash').classList.toggle('active',v==='dash');
   $('nav-solf').classList.toggle('active',v==='solfolga');
   $('nav-soladm').classList.toggle('active',v==='soladm');
+  $('nav-solfer').classList.toggle('active',v==='solfer');
+  $('nav-feradm').classList.toggle('active',v==='feradm');
   if(v==='relatorios')renderRelatorios();
   if(v==='ferias')openFerias();
   if(v==='folgas')openFolgas();
@@ -874,6 +929,8 @@ function showView(v){
   if(v==='dash')openDash();
   if(v==='solfolga')openSolf();
   if(v==='soladm')openSolAdm();
+  if(v==='solfer')openSolfer();
+  if(v==='feradm')openFerAdm();
 }
 function showSub(s){
   $('sv-maquina').style.display=s==='maq'?'block':'none';
@@ -1433,12 +1490,112 @@ async function recusarSolf(id){
   await openSolAdm();toast('Solicitação recusada');
 }
 
+// ===== Solicitações de férias =====
+const FER_PERIODOS={'2x15':[{label:'1º período (15 dias)',dias:15},{label:'2º período (15 dias)',dias:15}],'5-10-15':[{label:'1º período (5 dias)',dias:5},{label:'2º período (10 dias)',dias:10},{label:'3º período (15 dias)',dias:15}]};
+function ferOpLabel(o){return o==='2x15'?'2 períodos de 15 dias':o==='5-10-15'?'3 períodos (5 + 10 + 15 dias)':o||'';}
+function ferAuto(p,k,dias){const v=$('fr-'+p+'-'+k+'-ini').value;if(!v)return;const dt=new Date(v+'T00:00');dt.setDate(dt.getDate()+(dias-1));$('fr-'+p+'-'+k+'-fim').value=dt.toISOString().slice(0,10);}
+function renderFerPeriodos(opcao){
+  const defs=FER_PERIODOS[opcao]||[];$('fr-save').style.display=defs.length?'inline-block':'none';
+  if(!defs.length){$('fr-periodos').innerHTML='';return;}
+  const ord=['1º','2º','3º'];
+  $('fr-periodos').innerHTML=defs.map((d,p)=>`
+    <div class="period-block">
+      <h3>${d.label}</h3>
+      <div class="orient">Informe três datas que você gostaria de gozar o seu ${ord[p]} período de férias.<br>
+      <b>Orientações:</b> 1- Não agendar férias para iniciar nas sextas-feiras; 2- As férias não podem iniciar em dois dias antecedentes a um feriado.</div>
+      <div class="prio-row" style="margin-bottom:4px"><span></span><b style="font-size:11px;color:var(--ink-soft)">Início</b><b style="font-size:11px;color:var(--ink-soft)">Fim</b></div>
+      ${[1,2,3].map(k=>`<div class="prio-row"><label>Prioridade ${k}</label><input type="date" id="fr-${p}-${k}-ini" onchange="ferAuto(${p},${k},${d.dias})"><input type="date" id="fr-${p}-${k}-fim"></div>`).join('')}
+    </div>`).join('');
+}
+async function openSolfer(){
+  $('fr-colab').value=nomeFromEmail(currentEmail);
+  const{data,error}=await db.from('solicitacoes_ferias').select('*').eq('solicitante_email',currentEmail).order('created_at',{ascending:false});
+  if(error){$('fr-lista').innerHTML='<div class="empty"><b>Tabela de solicitações de férias ainda não existe</b>Peça ao administrador para rodar o SQL.</div>';return;}
+  renderMyFer(data||[]);
+}
+function ferDetTxt(s){return ((s.detalhes&&s.detalhes.periodos)||[]).map(pp=>esc(pp.label)+': '+pp.prioridades.map(pr=>'P'+pr.prioridade+' '+fmt(pr.inicio)+'→'+fmt(pr.fim)).join(' / ')).join('<br>');}
+function renderMyFer(rows){
+  $('fr-lista').innerHTML=rows.length?rows.map(s=>`
+    <div class="row-item" style="cursor:default;align-items:flex-start">
+      <div><div class="ri-main">${esc(ferOpLabel(s.opcao))}</div><div class="ri-sub">${ferDetTxt(s)}</div></div>
+      <span class="badge ${SOL_BADGE[s.status]||'b-desc'}">${esc(s.status||'')}</span>
+    </div>`).join(''):'<div class="empty">Você ainda não solicitou férias.</div>';
+}
+async function onSaveFer(){
+  const opcao=$('fr-opcao').value;if(!opcao){alert('Escolha como dividir suas férias.');return;}
+  const defs=FER_PERIODOS[opcao],periodos=[],sextas=[];
+  for(let p=0;p<defs.length;p++){
+    const prios=[];
+    for(let k=1;k<=3;k++){
+      const ini=$('fr-'+p+'-'+k+'-ini').value,fim=$('fr-'+p+'-'+k+'-fim').value;
+      if(!ini&&!fim)continue;
+      if(!ini||!fim){alert(defs[p].label+' — Prioridade '+k+': preencha início e fim.');return;}
+      if(new Date(ini+'T00:00').getDay()===5)sextas.push(defs[p].label+' · P'+k+' ('+fmt(ini)+')');
+      prios.push({inicio:ini,fim,prioridade:k});
+    }
+    if(!prios.length){alert(defs[p].label+': informe ao menos a 1ª prioridade.');return;}
+    periodos.push({label:defs[p].label,dias:defs[p].dias,prioridades:prios});
+  }
+  if(sextas.length&&!confirm('Estas datas começam numa sexta-feira (contra a orientação):\n'+sextas.join('\n')+'\n\nEnviar mesmo assim?'))return;
+  $('fr-save').disabled=true;
+  const{error}=await db.from('solicitacoes_ferias').insert({solicitante_email:currentEmail,colaborador:$('fr-colab').value,opcao,detalhes:{periodos},status:'Pendente'});
+  $('fr-save').disabled=false;
+  if(error){alert('Erro: '+error.message);return;}
+  $('fr-opcao').value='';renderFerPeriodos('');toast('Pedido de férias enviado ✓');openSolfer();
+}
+async function openFerAdm(){
+  const{data,error}=await db.from('solicitacoes_ferias').select('*').order('created_at',{ascending:false});
+  if(error){ferReqs=[];$('fa-lista').innerHTML='<div class="empty"><b>Tabela de solicitações de férias ainda não existe</b>Rode o SQL e recarregue a página.</div>';['fa-c-pe','fa-c-ap','fa-c-re'].forEach(i=>$(i).textContent='0');return;}
+  ferReqs=data||[];renderFerAdm();
+}
+function renderFerAdm(){
+  $('fa-c-pe').textContent=ferReqs.filter(s=>s.status==='Pendente').length;
+  $('fa-c-ap').textContent=ferReqs.filter(s=>s.status==='Aprovada').length;
+  $('fa-c-re').textContent=ferReqs.filter(s=>s.status==='Recusada').length;
+  const q=$('fa-busca').value.trim().toLowerCase(),fs=$('fa-filtro').value;
+  const arr=ferReqs.filter(s=>(!fs||s.status===fs)&&(!q||(s.colaborador||'').toLowerCase().includes(q)));
+  $('fa-lista').innerHTML=arr.length?arr.map(s=>{
+    const periodos=(s.detalhes&&s.detalhes.periodos)||[],pend=s.status==='Pendente';
+    const ph=periodos.map((pp,pi)=>`<div class="fa-period"><b style="font-size:13px">${esc(pp.label)}</b>${pp.prioridades.map((pr,idx)=>`<label class="fa-opt">${pend?`<input type="radio" name="fap-${s.id}-${pi}" value="${idx}" ${idx===0?'checked':''} style="width:auto">`:'•'} P${pr.prioridade}: ${fmt(pr.inicio)} → ${fmt(pr.fim)}</label>`).join('')}</div>`).join('');
+    return `<div class="row-item" style="cursor:default;flex-direction:column;align-items:stretch">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div><div class="ri-main">${esc(s.colaborador)} — ${esc(ferOpLabel(s.opcao))}</div><div class="ri-sub" style="opacity:.7">${esc(s.solicitante_email||'')}</div></div>
+        <span class="badge ${SOL_BADGE[s.status]||'b-desc'}">${esc(s.status||'')}</span>
+      </div>${ph}
+      ${pend?`<div class="item-actions" style="margin-top:10px"><button class="btn-edit" data-fa-ok="${s.id}">Aprovar com seleção</button><button class="btn-del" data-fa-no="${s.id}">Recusar</button></div>`:''}
+    </div>`;}).join(''):'<div class="empty">Nenhum pedido de férias.</div>';
+}
+async function aprovarFer(id){
+  const s=ferReqs.find(x=>x.id===id);if(!s)return;
+  const periodos=(s.detalhes&&s.detalhes.periodos)||[],inserts=[];
+  for(let pi=0;pi<periodos.length;pi++){
+    const sel=document.querySelector('input[name="fap-'+id+'-'+pi+'"]:checked');
+    const idx=sel?parseInt(sel.value):0,pr=periodos[pi].prioridades[idx]||periodos[pi].prioridades[0];
+    if(pr)inserts.push({colaborador:s.colaborador,data_inicio:pr.inicio,data_fim:pr.fim,observacao:periodos[pi].label+' (aprovado da solicitação · P'+pr.prioridade+')'});
+  }
+  const u=await db.from('solicitacoes_ferias').update({status:'Aprovada'}).eq('id',id);
+  if(u.error){alert('Erro: '+u.error.message);return;}
+  if(inserts.length){const ins=await db.from('ferias').insert(inserts);if(ins.error){alert('Pedido aprovado, mas houve erro ao lançar nas Férias: '+ins.error.message);}}
+  await openFerAdm();toast('Férias aprovadas e lançadas ✓');
+}
+async function recusarFer(id){
+  const{error}=await db.from('solicitacoes_ferias').update({status:'Recusada'}).eq('id',id);
+  if(error){alert('Erro: '+error.message);return;}
+  await openFerAdm();toast('Pedido recusado');
+}
+
 // ===== Listeners =====
 $('btn-auth').onclick=doAuth;
 $('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doAuth();});
 $('login-pass2').addEventListener('keydown',e=>{if(e.key==='Enter')doAuth();});
 $('auth-toggle').onclick=e=>{e.preventDefault();setAuthMode(authMode==='login'?'signup':'login');};
 $('nav-solf').onclick=()=>showView('solfolga');
+$('nav-solfer').onclick=()=>showView('solfer');
+$('nav-feradm').onclick=()=>showView('feradm');
+$('fr-opcao').onchange=()=>renderFerPeriodos($('fr-opcao').value);
+$('fr-save').onclick=onSaveFer;
+$('fa-busca').oninput=renderFerAdm;$('fa-filtro').onchange=renderFerAdm;
+$('fa-lista').addEventListener('click',e=>{const ok=e.target.getAttribute('data-fa-ok'),no=e.target.getAttribute('data-fa-no');if(ok)aprovarFer(ok);if(no)recusarFer(no);});
 $('nav-soladm').onclick=()=>showView('soladm');
 $('sf-save').onclick=onSaveSolf;
 $('sa-busca').oninput=renderSolAdm;$('sa-filtro').onchange=renderSolAdm;
