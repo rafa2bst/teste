@@ -148,13 +148,18 @@
 <div id="login-screen" class="login-wrap" style="display:none">
   <div class="login-card">
     <h1>Área de Gestão Área Técnica</h1>
-    <p class="sub">Acesso restrito. Entre com seu e-mail e senha.</p>
+    <p class="sub" id="auth-sub">Acesso restrito. Entre com seu e-mail e senha.</p>
     <div class="login-error" id="login-error"></div>
     <label>E-mail</label>
     <input id="login-email" type="email" placeholder="voce@empresa.com" autocomplete="username">
     <label>Senha</label>
     <input id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password">
-    <div class="actions"><button class="btn-primary" id="btn-login">Entrar</button></div>
+    <div id="signup-extra" style="display:none">
+      <label>Confirmar senha</label>
+      <input id="login-pass2" type="password" placeholder="••••••••">
+    </div>
+    <div class="actions"><button class="btn-primary" id="btn-auth">Entrar</button></div>
+    <p style="text-align:center;margin-top:14px;font-size:13px;color:var(--ink-soft)"><a href="#" id="auth-toggle" class="lnk">Criar login</a></p>
   </div>
 </div>
 
@@ -167,6 +172,7 @@
 
   <nav class="nav" id="nav" style="display:none">
     <button id="nav-cad" class="active">Cadastrar / Atualizar</button>
+    <button id="nav-solf">Solicitar folga</button>
     <button id="nav-rel">Administrador / Relatórios</button>
     <button id="nav-fer">Férias</button>
     <button id="nav-fol">Folgas</button>
@@ -178,6 +184,7 @@
     <button id="nav-anom">Anomalias</button>
     <button id="nav-fat">Faturamento</button>
     <button id="nav-dash">Relatórios</button>
+    <button id="nav-soladm">Solicitações</button>
   </nav>
 
   <!-- VIEW: CADASTRO -->
@@ -648,6 +655,48 @@
       <div class="chart-card" style="grid-column:1/-1"><h3>Faturamento por mês (R$) — <span id="dash-ano-lbl"></span></h3><div class="chart-box"><canvas id="ch-fat"></canvas></div></div>
     </div>
   </div>
+
+  <!-- VIEW: SOLICITAR FOLGA (colaborador) -->
+  <div id="view-solfolga" style="display:none">
+    <div class="form-card">
+      <h2>Solicitar folga</h2>
+      <p class="hint">Envie seu pedido. O administrador vai analisar e aprovar ou recusar.</p>
+      <label>Seu nome *</label>
+      <select id="sf-colab"><option value="">— selecione —</option></select>
+      <div class="row2">
+        <div><label>Tipo de folga *</label>
+          <select id="sf-tipo"><option value="">— selecione —</option><option>Folga Banco de Horas</option><option>Folga Aniversário</option><option>Folga Abono</option><option>Abono Gestor</option></select>
+        </div>
+        <div><label>Data *</label><input id="sf-data" type="date"></div>
+      </div>
+      <label>Motivo / observação</label>
+      <textarea id="sf-motivo" placeholder="Opcional"></textarea>
+      <div class="actions"><button class="btn-primary" id="sf-save">Enviar pedido</button></div>
+    </div>
+    <div style="margin-top:28px">
+      <div class="sec-title" style="margin-top:0">Minhas solicitações</div>
+      <div id="sf-lista" class="list"></div>
+    </div>
+  </div>
+
+  <!-- VIEW: SOLICITAÇÕES (admin) -->
+  <div id="view-soladm" style="display:none">
+    <div class="counts">
+      <div class="stat s-manut"><b id="sa-c-pe">0</b><span>Pendentes</span></div>
+      <div class="stat s-uso"><b id="sa-c-ap">0</b><span>Aprovadas</span></div>
+      <div class="stat s-desc"><b id="sa-c-re">0</b><span>Recusadas</span></div>
+    </div>
+    <div class="toolbar">
+      <div class="search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="sa-busca" placeholder="Buscar por colaborador...">
+      </div>
+      <select id="sa-filtro" style="width:auto;min-width:150px">
+        <option value="Pendente">Pendentes</option><option value="">Todas</option><option value="Aprovada">Aprovadas</option><option value="Recusada">Recusadas</option>
+      </select>
+    </div>
+    <div id="sa-lista" class="list"></div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -661,6 +710,7 @@ const isAdmin=u=>!!u&&ADMIN_EMAILS.includes((u.email||'').toLowerCase());
 
 let maquinas=[],atribuicoes=[],manutencoes=[],isAdminUser=false,editingPatr=null,ferias=[],editingFeria=null,folgas=[],editingFolga=null,atestados=[],editingAtest=null,feCal=null,foCal=null,atCal=null,anivs=[],editingAniv=null,ocors=[],editingOcor=null,probs=[],editingProb=null,anCal=null,treins=[],editingTrein=null,anoms=[],editingAnom=null;
 const charts={};
+let currentEmail='',authMode='login',sols=[];
 const $=id=>document.getElementById(id);
 const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const hoje=()=>new Date().toISOString().slice(0,10);
@@ -674,21 +724,37 @@ async function checkAuth(){const{data:{session}}=await db.auth.getSession();sess
 function showLogin(){$('login-screen').style.display='flex';$('app').style.display='none';}
 async function showApp(user){
   $('login-screen').style.display='none';$('app').style.display='block';
-  $('user-email').textContent=user.email;isAdminUser=isAdmin(user);
-  $('nav').style.display=isAdminUser?'flex':'none';
+  $('user-email').textContent=user.email;currentEmail=user.email||'';isAdminUser=isAdmin(user);
+  $('nav').style.display='flex';
+  ['nav-rel','nav-fer','nav-fol','nav-ate','nav-aniv','nav-ocor','nav-prob','nav-trein','nav-anom','nav-fat','nav-dash','nav-soladm'].forEach(id=>$(id).style.display=isAdminUser?'':'none');
+  $('nav-solf').style.display=isAdminUser?'none':'';
   if(isAdminUser)await loadAll();
-  showView('cadastro');
+  showView(isAdminUser?'cadastro':'solfolga');
 }
+function setAuthMode(m){authMode=m;$('login-error').style.display='none';$('signup-extra').style.display=m==='signup'?'block':'none';$('btn-auth').textContent=m==='signup'?'Criar conta':'Entrar';$('auth-sub').textContent=m==='signup'?'Crie seu login com e-mail e senha.':'Acesso restrito. Entre com seu e-mail e senha.';$('auth-toggle').textContent=m==='signup'?'Já tenho conta — entrar':'Criar login';}
+function doAuth(){authMode==='signup'?doSignup():doLogin();}
 async function doLogin(){
-  const email=$('login-email').value.trim(),password=$('login-pass').value,err=$('login-error');err.style.display='none';
+  const email=$('login-email').value.trim(),password=$('login-pass').value,err=$('login-error');err.style.display='none';err.style.background='';err.style.color='';
   if(!email||!password){err.textContent='Preencha e-mail e senha.';err.style.display='block';return;}
-  $('btn-login').disabled=true;$('btn-login').textContent='Entrando...';
+  $('btn-auth').disabled=true;$('btn-auth').textContent='Entrando...';
   const{data,error}=await db.auth.signInWithPassword({email,password});
-  $('btn-login').disabled=false;$('btn-login').textContent='Entrar';
+  $('btn-auth').disabled=false;$('btn-auth').textContent='Entrar';
   if(error){err.textContent='E-mail ou senha inválidos.';err.style.display='block';return;}
   showApp(data.user);
 }
-async function doLogout(){await db.auth.signOut();maquinas=[];atribuicoes=[];manutencoes=[];isAdminUser=false;$('login-email').value='';$('login-pass').value='';showLogin();}
+async function doSignup(){
+  const email=$('login-email').value.trim(),password=$('login-pass').value,p2=$('login-pass2').value,err=$('login-error');err.style.display='none';err.style.background='';err.style.color='';
+  if(!email||!password){err.textContent='Preencha e-mail e senha.';err.style.display='block';return;}
+  if(password.length<6){err.textContent='A senha precisa ter ao menos 6 caracteres.';err.style.display='block';return;}
+  if(password!==p2){err.textContent='As senhas não conferem.';err.style.display='block';return;}
+  $('btn-auth').disabled=true;$('btn-auth').textContent='Criando...';
+  const{data,error}=await db.auth.signUp({email,password});
+  $('btn-auth').disabled=false;$('btn-auth').textContent='Criar conta';
+  if(error){err.textContent='Erro: '+error.message;err.style.display='block';return;}
+  if(data.session){showApp(data.user);}
+  else{setAuthMode('login');err.style.background='#e6efe9';err.style.color='#175547';err.textContent='Conta criada! Confirme pelo e-mail antes de entrar.';err.style.display='block';}
+}
+async function doLogout(){await db.auth.signOut();maquinas=[];atribuicoes=[];manutencoes=[];isAdminUser=false;currentEmail='';$('login-email').value='';$('login-pass').value='';if($('login-pass2'))$('login-pass2').value='';setAuthMode('login');showLogin();}
 
 // ===== Carregar dados =====
 async function loadAll(){
@@ -765,8 +831,8 @@ async function registrarManutencao(patr){
 
 // ===== Views =====
 function showView(v){
-  const adminViews=['relatorios','ferias','folgas','atestados','aniv','ocor','prob','trein','anom','fat','dash'];
-  if(adminViews.includes(v)&&!isAdminUser)v='cadastro';
+  const adminViews=['relatorios','ferias','folgas','atestados','aniv','ocor','prob','trein','anom','fat','dash','soladm'];
+  if(adminViews.includes(v)&&!isAdminUser)v='solfolga';
   $('view-cadastro').style.display=v==='cadastro'?'block':'none';
   $('view-relatorios').style.display=v==='relatorios'?'block':'none';
   $('view-ferias').style.display=v==='ferias'?'block':'none';
@@ -779,6 +845,8 @@ function showView(v){
   $('view-anom').style.display=v==='anom'?'block':'none';
   $('view-fat').style.display=v==='fat'?'block':'none';
   $('view-dash').style.display=v==='dash'?'block':'none';
+  $('view-solfolga').style.display=v==='solfolga'?'block':'none';
+  $('view-soladm').style.display=v==='soladm'?'block':'none';
   $('nav-cad').classList.toggle('active',v==='cadastro');
   $('nav-rel').classList.toggle('active',v==='relatorios');
   $('nav-fer').classList.toggle('active',v==='ferias');
@@ -791,6 +859,8 @@ function showView(v){
   $('nav-anom').classList.toggle('active',v==='anom');
   $('nav-fat').classList.toggle('active',v==='fat');
   $('nav-dash').classList.toggle('active',v==='dash');
+  $('nav-solf').classList.toggle('active',v==='solfolga');
+  $('nav-soladm').classList.toggle('active',v==='soladm');
   if(v==='relatorios')renderRelatorios();
   if(v==='ferias')openFerias();
   if(v==='folgas')openFolgas();
@@ -802,6 +872,8 @@ function showView(v){
   if(v==='anom')openAnom();
   if(v==='fat')openFat();
   if(v==='dash')openDash();
+  if(v==='solfolga')openSolf();
+  if(v==='soladm')openSolAdm();
 }
 function showSub(s){
   $('sv-maquina').style.display=s==='maq'?'block':'none';
@@ -1295,9 +1367,81 @@ async function openDash(){
   mkChart('ch-fat',{type:'bar',data:{labels:MESES_CURTO,datasets:[{label:'Total',data:porMes,backgroundColor:'#2a5d8f'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>'R$ '+v}}}}});
 }
 
+// ===== Solicitações de folga =====
+const SOL_BADGE={'Pendente':'b-manut','Aprovada':'b-uso','Recusada':'b-desc'};
+async function ensureMaquinas(){if(!maquinas.length){const{data}=await db.from('maquinas').select('colaborador,setor');maquinas=data||[];}}
+function fillSolfColab(){const nomes=new Set();maquinas.forEach(m=>{if(m.colaborador&&norm(m.setor)==='area tecnica')nomes.add(m.colaborador);});const sel=$('sf-colab'),cur=sel.value;sel.innerHTML='<option value="">— selecione —</option>'+[...nomes].sort().map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');if(cur)sel.value=cur;}
+async function openSolf(){
+  await ensureMaquinas();fillSolfColab();
+  const{data,error}=await db.from('solicitacoes_folga').select('*').eq('solicitante_email',currentEmail).order('created_at',{ascending:false});
+  if(error){$('sf-lista').innerHTML='<div class="empty"><b>Tabela de solicitações ainda não existe</b>Peça ao administrador para rodar o SQL.</div>';return;}
+  renderMySolf(data||[]);
+}
+function renderMySolf(rows){
+  $('sf-lista').innerHTML=rows.length?rows.map(s=>`
+    <div class="row-item" style="cursor:default;align-items:flex-start">
+      <div><div class="ri-main">${esc(s.tipo||'')}</div>
+      <div class="ri-sub">${s.data?fmt(s.data):''}${s.motivo?' · '+esc(s.motivo):''}</div></div>
+      <span class="badge ${SOL_BADGE[s.status]||'b-desc'}">${esc(s.status||'')}</span>
+    </div>`).join(''):'<div class="empty">Você ainda não fez nenhuma solicitação.</div>';
+}
+async function onSaveSolf(){
+  const colaborador=$('sf-colab').value,tipo=$('sf-tipo').value,data=$('sf-data').value;
+  if(!colaborador){alert('Selecione seu nome.');return;}
+  if(!tipo){alert('Selecione o tipo de folga.');return;}
+  if(!data){alert('Informe a data.');return;}
+  $('sf-save').disabled=true;
+  const{error}=await db.from('solicitacoes_folga').insert({solicitante_email:currentEmail,colaborador,tipo,data,motivo:$('sf-motivo').value.trim(),status:'Pendente'});
+  $('sf-save').disabled=false;
+  if(error){alert('Erro: '+error.message);return;}
+  $('sf-tipo').value='';$('sf-data').value='';$('sf-motivo').value='';
+  toast('Pedido enviado ✓');openSolf();
+}
+async function openSolAdm(){
+  const{data,error}=await db.from('solicitacoes_folga').select('*').order('created_at',{ascending:false});
+  if(error){sols=[];$('sa-lista').innerHTML='<div class="empty"><b>Tabela de solicitações ainda não existe</b>Rode o SQL e recarregue a página.</div>';['sa-c-pe','sa-c-ap','sa-c-re'].forEach(i=>$(i).textContent='0');return;}
+  sols=data||[];renderSolAdm();
+}
+function renderSolAdm(){
+  $('sa-c-pe').textContent=sols.filter(s=>s.status==='Pendente').length;
+  $('sa-c-ap').textContent=sols.filter(s=>s.status==='Aprovada').length;
+  $('sa-c-re').textContent=sols.filter(s=>s.status==='Recusada').length;
+  const q=$('sa-busca').value.trim().toLowerCase(),fs=$('sa-filtro').value;
+  const arr=sols.filter(s=>(!fs||s.status===fs)&&(!q||(s.colaborador||'').toLowerCase().includes(q)));
+  $('sa-lista').innerHTML=arr.length?arr.map(s=>`
+    <div class="row-item" style="cursor:default;align-items:flex-start">
+      <div><div class="ri-main">${esc(s.colaborador)} — ${esc(s.tipo||'')}</div>
+      <div class="ri-sub">${s.data?fmt(s.data):''}${s.motivo?' · '+esc(s.motivo):''}</div>
+      <div class="ri-sub" style="margin-top:2px;opacity:.7">${esc(s.solicitante_email||'')}</div></div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="badge ${SOL_BADGE[s.status]||'b-desc'}">${esc(s.status||'')}</span>
+        ${s.status==='Pendente'?`<div class="item-actions"><button class="btn-edit" data-sa-ok="${s.id}">Aceitar</button><button class="btn-del" data-sa-no="${s.id}">Recusar</button></div>`:''}
+      </div>
+    </div>`).join(''):'<div class="empty">Nenhuma solicitação.</div>';
+}
+async function aceitarSolf(id){
+  const s=sols.find(x=>x.id===id);if(!s)return;
+  const u=await db.from('solicitacoes_folga').update({status:'Aprovada'}).eq('id',id);
+  if(u.error){alert('Erro: '+u.error.message);return;}
+  await db.from('folgas').insert({colaborador:s.colaborador,tipo:s.tipo,data:s.data,emendada:false,motivo_emenda:null,observacao:'Aprovada da solicitação de '+(s.solicitante_email||'')});
+  await openSolAdm();toast('Aprovada e folga lançada ✓');
+}
+async function recusarSolf(id){
+  const{error}=await db.from('solicitacoes_folga').update({status:'Recusada'}).eq('id',id);
+  if(error){alert('Erro: '+error.message);return;}
+  await openSolAdm();toast('Solicitação recusada');
+}
+
 // ===== Listeners =====
-$('btn-login').onclick=doLogin;
-$('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+$('btn-auth').onclick=doAuth;
+$('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doAuth();});
+$('login-pass2').addEventListener('keydown',e=>{if(e.key==='Enter')doAuth();});
+$('auth-toggle').onclick=e=>{e.preventDefault();setAuthMode(authMode==='login'?'signup':'login');};
+$('nav-solf').onclick=()=>showView('solfolga');
+$('nav-soladm').onclick=()=>showView('soladm');
+$('sf-save').onclick=onSaveSolf;
+$('sa-busca').oninput=renderSolAdm;$('sa-filtro').onchange=renderSolAdm;
+$('sa-lista').addEventListener('click',e=>{const ok=e.target.getAttribute('data-sa-ok'),no=e.target.getAttribute('data-sa-no');if(ok)aceitarSolf(ok);if(no)recusarSolf(no);});
 $('btn-logout').onclick=doLogout;
 $('btn-save').onclick=onSave;
 $('btn-cancel').onclick=()=>{clearForm();showView(isAdminUser?'relatorios':'cadastro');};
