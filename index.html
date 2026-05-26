@@ -662,7 +662,7 @@
       <h2>Solicitar folga</h2>
       <p class="hint">Envie seu pedido. O administrador vai analisar e aprovar ou recusar.</p>
       <label>Seu nome *</label>
-      <select id="sf-colab"><option value="">— selecione —</option></select>
+      <input id="sf-colab" readonly>
       <div class="row2">
         <div><label>Tipo de folga *</label>
           <select id="sf-tipo"><option value="">— selecione —</option><option>Folga Banco de Horas</option><option>Folga Aniversário</option><option>Folga Abono</option><option>Abono Gestor</option></select>
@@ -1371,8 +1371,9 @@ async function openDash(){
 const SOL_BADGE={'Pendente':'b-manut','Aprovada':'b-uso','Recusada':'b-desc'};
 async function ensureMaquinas(){if(!maquinas.length){const{data}=await db.from('maquinas').select('colaborador,setor');maquinas=data||[];}}
 function fillSolfColab(){const nomes=new Set();maquinas.forEach(m=>{if(m.colaborador&&norm(m.setor)==='area tecnica')nomes.add(m.colaborador);});const sel=$('sf-colab'),cur=sel.value;sel.innerHTML='<option value="">— selecione —</option>'+[...nomes].sort().map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');if(cur)sel.value=cur;}
+function nomeFromEmail(email){const l=(email||'').split('@')[0];return l.split(/[._-]+/).filter(Boolean).map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ');}
 async function openSolf(){
-  await ensureMaquinas();fillSolfColab();
+  $('sf-colab').value=nomeFromEmail(currentEmail);
   const{data,error}=await db.from('solicitacoes_folga').select('*').eq('solicitante_email',currentEmail).order('created_at',{ascending:false});
   if(error){$('sf-lista').innerHTML='<div class="empty"><b>Tabela de solicitações ainda não existe</b>Peça ao administrador para rodar o SQL.</div>';return;}
   renderMySolf(data||[]);
