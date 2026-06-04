@@ -149,6 +149,7 @@
   .prio-row label{margin:0;font-weight:600;text-transform:none;letter-spacing:0;color:var(--ink)}
   .fa-period{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}
   .fa-opt{display:flex;align-items:center;gap:8px;font-size:13px;margin:3px 0}
+  .nav-badge{display:inline-block;background:#a8412f;color:#fff;font-size:10px;padding:1px 7px;border-radius:10px;margin-left:6px;font-weight:700;line-height:1.4;vertical-align:middle}
 </style>
 
 <!-- ===== LOGIN ===== -->
@@ -182,6 +183,7 @@
     <button id="nav-solf">Solicitar folga</button>
     <button id="nav-solfer">Solicitar férias</button>
     <button id="nav-solat">Solicitar atestado/consulta</button>
+    <button id="nav-solo">Solicitar ocorrência</button>
     <button id="nav-meus">Meus registros</button>
     <button id="nav-rel">Patrimônio Notebooks</button>
     <button id="nav-fer">Férias</button>
@@ -196,6 +198,7 @@
     <button id="nav-dash">Relatórios</button>
     <button id="nav-soladm">Pedidos de folgas</button>
     <button id="nav-atadm">Pedidos de atestados</button>
+    <button id="nav-ocadm">Pedidos de ocorrências</button>
     <button id="nav-feradm">Pedidos de férias</button>
   </nav>
 
@@ -786,42 +789,18 @@
       <p class="hint">Use para atestado médico, consulta, dentista, óbito ou acompanhamento de terceiros.</p>
       <label>Seu nome *</label>
       <input id="sat-colab" readonly>
+      <label>Tipo *</label>
+      <select id="sat-tipo">
+        <option value="">— selecione —</option>
+        <option>Atestado médico</option>
+        <option>Consulta</option>
+        <option>Dentista</option>
+        <option>Óbito</option>
+        <option>Acompanhamento terceiros</option>
+      </select>
       <div class="row2">
-        <div><label>Tipo *</label>
-          <select id="sat-tipo">
-            <option value="">— selecione —</option>
-            <option>Atestado médico</option>
-            <option>Consulta</option>
-            <option>Dentista</option>
-            <option>Óbito</option>
-            <option>Acompanhamento terceiros</option>
-          </select>
-        </div>
         <div><label>Data *</label><input id="sat-data" type="date"></div>
-      </div>
-      <div id="sat-fim-wrap" style="display:none">
-        <label>Data fim (opcional — deixe em branco se for de 1 dia)</label>
-        <input id="sat-data-fim" type="date">
-      </div>
-      <div id="sat-motivo-wrap" style="display:none">
-        <label>Motivo do atestado</label>
-        <input id="sat-motivo" placeholder="Ex.: gripe, repouso 2 dias">
-      </div>
-      <div id="sat-consulta-wrap" style="display:none">
-        <label>Modalidade</label>
-        <select id="sat-modalidade">
-          <option value="">— selecione —</option>
-          <option>Parcial (turno)</option>
-          <option>Fracionada</option>
-        </select>
-        <div id="sat-fracao-wrap" style="display:none">
-          <label>Fração (minutos)</label>
-          <select id="sat-fracao">
-            <option value="">— selecione —</option>
-            <option>30</option><option>60</option><option>90</option><option>120</option>
-            <option>150</option><option>180</option><option>210</option><option>240</option>
-          </select>
-        </div>
+        <div><label>Horário</label><input id="sat-horario" type="time"></div>
       </div>
       <label>Observação</label>
       <textarea id="sat-obs" placeholder="Opcional"></textarea>
@@ -852,6 +831,54 @@
     <div id="aa-lista" class="list"></div>
   </div>
 
+  <!-- VIEW: SOLICITAR OCORRÊNCIA (colaborador) -->
+  <div id="view-solo" style="display:none">
+    <div class="form-card">
+      <h2>Solicitar ocorrência</h2>
+      <p class="hint">Registre uma ocorrência (queda de internet, treinamento, motivos pessoais etc.) para o coordenador autorizar.</p>
+      <label>Seu nome *</label>
+      <input id="so-colab" readonly>
+      <label>Motivo *</label>
+      <select id="so-motivo">
+        <option value="">— selecione —</option>
+        <option>Apoio Fone</option><option>Apoio Web</option><option>Apoio Chat</option>
+        <option>Treinamento</option><option>Motivos pessoais</option><option>Queda de Energia</option>
+        <option>Queda de Internet</option><option>Ações RH</option><option>Feedback</option>
+        <option>Apoio da equipe</option><option>Problemas técnicos</option><option>Outros</option>
+      </select>
+      <div class="row2">
+        <div><label>Data *</label><input id="so-data" type="date"></div>
+        <div><label>Horário</label><input id="so-horario" type="time"></div>
+      </div>
+      <label>Observação</label>
+      <textarea id="so-obs" placeholder="Opcional"></textarea>
+      <div class="actions"><button class="btn-primary" id="so-save">Enviar pedido</button></div>
+    </div>
+    <div style="margin-top:28px">
+      <div class="sec-title" style="margin-top:0">Minhas ocorrências enviadas</div>
+      <div id="so-lista" class="list"></div>
+    </div>
+  </div>
+
+  <!-- VIEW: PEDIDOS DE OCORRÊNCIAS (admin) -->
+  <div id="view-ocadm" style="display:none">
+    <div class="counts">
+      <div class="stat s-manut"><b id="oa-c-pe">0</b><span>Pendentes</span></div>
+      <div class="stat s-uso"><b id="oa-c-ap">0</b><span>Aprovadas</span></div>
+      <div class="stat s-desc"><b id="oa-c-re">0</b><span>Recusadas</span></div>
+    </div>
+    <div class="toolbar">
+      <div class="search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="oa-busca" placeholder="Buscar por colaborador...">
+      </div>
+      <select id="oa-filtro" style="width:auto;min-width:160px">
+        <option value="Pendente">Pendentes</option><option value="">Todas</option><option value="Aprovada">Aprovadas</option><option value="Recusada">Recusadas</option>
+      </select>
+    </div>
+    <div id="oa-lista" class="list"></div>
+  </div>
+
   <!-- VIEW: MEUS REGISTROS (colaborador) -->
   <div id="view-meus" style="display:none">
     <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
@@ -878,7 +905,7 @@ const isAdmin=u=>!!u&&ADMIN_EMAILS.includes((u.email||'').toLowerCase());
 
 let maquinas=[],atribuicoes=[],manutencoes=[],isAdminUser=false,editingPatr=null,ferias=[],editingFeria=null,folgas=[],editingFolga=null,atestados=[],editingAtest=null,feCal=null,foCal=null,atCal=null,anivs=[],editingAniv=null,ocors=[],editingOcor=null,probs=[],editingProb=null,anCal=null,treins=[],editingTrein=null,anoms=[],editingAnom=null;
 const charts={};
-let currentEmail='',authMode='login',sols=[],ferReqs=[],atSols=[];
+let currentEmail='',authMode='login',sols=[],ferReqs=[],atSols=[],ocSols=[];
 const $=id=>document.getElementById(id);
 const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const hoje=()=>new Date().toISOString().slice(0,10);
@@ -894,12 +921,14 @@ async function showApp(user){
   $('login-screen').style.display='none';$('app').style.display='block';
   $('user-email').textContent=user.email;currentEmail=user.email||'';isAdminUser=isAdmin(user);
   $('nav').style.display='flex';
-  ['nav-rel','nav-fer','nav-fol','nav-ate','nav-aniv','nav-ocor','nav-prob','nav-trein','nav-anom','nav-fat','nav-dash','nav-soladm','nav-feradm','nav-atadm'].forEach(id=>$(id).style.display=isAdminUser?'':'none');
+  ['nav-rel','nav-fer','nav-fol','nav-ate','nav-aniv','nav-ocor','nav-prob','nav-trein','nav-anom','nav-fat','nav-dash','nav-soladm','nav-feradm','nav-atadm','nav-ocadm'].forEach(id=>$(id).style.display=isAdminUser?'':'none');
   $('nav-solf').style.display=isAdminUser?'none':'';
   $('nav-solfer').style.display=isAdminUser?'none':'';
   $('nav-solat').style.display=isAdminUser?'none':'';
+  $('nav-solo').style.display=isAdminUser?'none':'';
   $('nav-meus').style.display=isAdminUser?'none':'';
   if(isAdminUser)await loadAll();
+  if(isAdminUser)updatePendingBadges();
   showView(isAdminUser?'cadastro':'solfolga');
 }
 function setAuthMode(m){authMode=m;$('login-error').style.display='none';$('signup-extra').style.display=m==='signup'?'block':'none';$('btn-auth').textContent=m==='signup'?'Criar conta':'Entrar';$('auth-sub').textContent=m==='signup'?'Crie seu login com e-mail e senha.':'Acesso restrito. Entre com seu e-mail e senha.';$('auth-toggle').textContent=m==='signup'?'Já tenho conta — entrar':'Criar login';}
@@ -1002,7 +1031,7 @@ async function registrarManutencao(patr){
 
 // ===== Views =====
 function showView(v){
-  const adminViews=['relatorios','ferias','folgas','atestados','aniv','ocor','prob','trein','anom','fat','dash','soladm','feradm','atadm'];
+  const adminViews=['relatorios','ferias','folgas','atestados','aniv','ocor','prob','trein','anom','fat','dash','soladm','feradm','atadm','ocadm'];
   if(adminViews.includes(v)&&!isAdminUser)v='solfolga';
   $('view-cadastro').style.display=v==='cadastro'?'block':'none';
   $('view-relatorios').style.display=v==='relatorios'?'block':'none';
@@ -1022,6 +1051,8 @@ function showView(v){
   $('view-feradm').style.display=v==='feradm'?'block':'none';
   $('view-solat').style.display=v==='solat'?'block':'none';
   $('view-atadm').style.display=v==='atadm'?'block':'none';
+  $('view-solo').style.display=v==='solo'?'block':'none';
+  $('view-ocadm').style.display=v==='ocadm'?'block':'none';
   $('view-meus').style.display=v==='meus'?'block':'none';
   $('nav-cad').classList.toggle('active',v==='cadastro');
   $('nav-rel').classList.toggle('active',v==='relatorios');
@@ -1041,6 +1072,8 @@ function showView(v){
   $('nav-feradm').classList.toggle('active',v==='feradm');
   $('nav-solat').classList.toggle('active',v==='solat');
   $('nav-atadm').classList.toggle('active',v==='atadm');
+  $('nav-solo').classList.toggle('active',v==='solo');
+  $('nav-ocadm').classList.toggle('active',v==='ocadm');
   $('nav-meus').classList.toggle('active',v==='meus');
   if(v==='relatorios')renderRelatorios();
   if(v==='ferias')openFerias();
@@ -1059,6 +1092,8 @@ function showView(v){
   if(v==='feradm')openFerAdm();
   if(v==='solat')openSolat();
   if(v==='atadm')openAtAdm();
+  if(v==='solo')openSolo();
+  if(v==='ocadm')openOcAdm();
   if(v==='meus')openMeus();
 }
 function showSub(s){
@@ -1631,12 +1666,12 @@ async function aceitarSolf(id){
   const u=await db.from('solicitacoes_folga').update({status:'Aprovada'}).eq('id',id);
   if(u.error){alert('Erro: '+u.error.message);return;}
   await db.from('folgas').insert({colaborador:s.colaborador,tipo:s.tipo,data:s.data,emendada:false,motivo_emenda:null,observacao:'Aprovada da solicitação de '+(s.solicitante_email||'')});
-  await openSolAdm();toast('Aprovada e folga lançada ✓');
+  await openSolAdm();updatePendingBadges();toast('Aprovada e folga lançada ✓');
 }
 async function recusarSolf(id){
   const{error}=await db.from('solicitacoes_folga').update({status:'Recusada'}).eq('id',id);
   if(error){alert('Erro: '+error.message);return;}
-  await openSolAdm();toast('Solicitação recusada');
+  await openSolAdm();updatePendingBadges();toast('Solicitação recusada');
 }
 
 // ===== Solicitações de férias =====
@@ -1725,22 +1760,15 @@ async function aprovarFer(id){
   const u=await db.from('solicitacoes_ferias').update({status:'Aprovada'}).eq('id',id);
   if(u.error){alert('Erro: '+u.error.message);return;}
   if(inserts.length){const ins=await db.from('ferias').insert(inserts);if(ins.error){alert('Pedido aprovado, mas houve erro ao lançar nas Férias: '+ins.error.message);}}
-  await openFerAdm();toast('Férias aprovadas e lançadas ✓');
+  await openFerAdm();updatePendingBadges();toast('Férias aprovadas e lançadas ✓');
 }
 async function recusarFer(id){
   const{error}=await db.from('solicitacoes_ferias').update({status:'Recusada'}).eq('id',id);
   if(error){alert('Erro: '+error.message);return;}
-  await openFerAdm();toast('Pedido recusado');
+  await openFerAdm();updatePendingBadges();toast('Pedido recusado');
 }
 
 // ===== Solicitações de atestado / consulta =====
-function updateSatFields(){
-  const t=$('sat-tipo').value,comFracao=(t==='Consulta'||t==='Dentista');
-  $('sat-motivo-wrap').style.display=t==='Atestado médico'?'block':'none';
-  $('sat-fim-wrap').style.display=t==='Atestado médico'?'block':'none';
-  $('sat-consulta-wrap').style.display=comFracao?'block':'none';
-  $('sat-fracao-wrap').style.display=(comFracao&&$('sat-modalidade').value==='Fracionada')?'block':'none';
-}
 async function openSolat(){
   $('sat-colab').value=nomeFromEmail(currentEmail);
   const{data,error}=await db.from('solicitacoes_atestado').select('*').eq('solicitante_email',currentEmail).order('created_at',{ascending:false});
@@ -1749,10 +1777,10 @@ async function openSolat(){
 }
 function renderMySat(rows){
   $('sat-lista').innerHTML=rows.length?rows.map(s=>{
-    const range=s.data_fim&&s.data_fim!==s.data?fmt(s.data)+' → '+fmt(s.data_fim):(s.data?fmt(s.data):'');
+    const det=[s.data?fmt(s.data):'',s.horario?'às '+esc(s.horario):''].filter(Boolean).join(' ');
     return`<div class="row-item" style="cursor:default;align-items:flex-start">
       <div><div class="ri-main">${esc(s.tipo||'')}</div>
-      <div class="ri-sub">${range}${s.motivo?' · '+esc(s.motivo):''}${s.modalidade?' · '+esc(s.modalidade):''}${s.fracao?' ('+esc(s.fracao)+' min)':''}</div>
+      <div class="ri-sub">${det}</div>
       ${s.observacao?`<div class="ri-sub" style="margin-top:4px">${esc(s.observacao)}</div>`:''}</div>
       <span class="badge ${SOL_BADGE[s.status]||'b-desc'}">${esc(s.status||'')}</span>
     </div>`;}).join(''):'<div class="empty">Você ainda não fez pedidos.</div>';
@@ -1761,20 +1789,15 @@ async function onSaveSolat(){
   const tipo=$('sat-tipo').value,data=$('sat-data').value;
   if(!tipo){alert('Selecione o tipo.');return;}
   if(!data){alert('Informe a data.');return;}
-  const comFracao=(tipo==='Consulta'||tipo==='Dentista'),mod=$('sat-modalidade').value;
-  let data_fim=null;
-  if(tipo==='Atestado médico'){data_fim=$('sat-data-fim').value||null;if(data_fim&&data_fim<data){alert('Data fim deve ser maior ou igual à data início.');return;}}
-  const dados={solicitante_email:currentEmail,colaborador:$('sat-colab').value,tipo,data,data_fim,
-    motivo:tipo==='Atestado médico'?$('sat-motivo').value.trim():null,
-    modalidade:comFracao?mod:null,
-    fracao:(comFracao&&mod==='Fracionada')?$('sat-fracao').value:null,
+  const dados={solicitante_email:currentEmail,colaborador:$('sat-colab').value,tipo,data,
+    horario:$('sat-horario').value||null,
     observacao:$('sat-obs').value.trim(),status:'Pendente'};
   $('sat-save').disabled=true;
   const{error}=await db.from('solicitacoes_atestado').insert(dados);
   $('sat-save').disabled=false;
   if(error){alert('Erro: '+error.message);return;}
-  ['sat-tipo','sat-data','sat-data-fim','sat-motivo','sat-modalidade','sat-fracao','sat-obs'].forEach(i=>$(i).value='');
-  updateSatFields();toast('Pedido enviado ✓');openSolat();
+  ['sat-tipo','sat-data','sat-horario','sat-obs'].forEach(i=>$(i).value='');
+  toast('Pedido enviado ✓');openSolat();
 }
 async function openAtAdm(){
   const{data,error}=await db.from('solicitacoes_atestado').select('*').order('created_at',{ascending:false});
@@ -1788,11 +1811,10 @@ function renderAtAdm(){
   const q=$('aa-busca').value.trim().toLowerCase(),fs=$('aa-filtro').value;
   const arr=atSols.filter(s=>(!fs||s.status===fs)&&(!q||(s.colaborador||'').toLowerCase().includes(q)));
   $('aa-lista').innerHTML=arr.length?arr.map(s=>{
-    const range=s.data_fim&&s.data_fim!==s.data?fmt(s.data)+' → '+fmt(s.data_fim):(s.data?fmt(s.data):'');
-    const det=[s.motivo,s.modalidade,(s.fracao?s.fracao+' min':null)].filter(Boolean).join(' · ');
+    const det=[s.data?fmt(s.data):'',s.horario?'às '+esc(s.horario):''].filter(Boolean).join(' ');
     return`<div class="row-item" style="cursor:default;align-items:flex-start">
       <div><div class="ri-main">${esc(s.colaborador)} — ${esc(s.tipo||'')}</div>
-      <div class="ri-sub">${range}${det?' · '+esc(det):''}</div>
+      <div class="ri-sub">${det}</div>
       ${s.observacao?`<div class="ri-sub" style="margin-top:4px">${esc(s.observacao)}</div>`:''}
       <div class="ri-sub" style="margin-top:2px;opacity:.7">${esc(s.solicitante_email||'')}</div></div>
       <div style="display:flex;align-items:center;gap:10px">
@@ -1805,15 +1827,104 @@ async function aceitarSolat(id){
   const s=atSols.find(x=>x.id===id);if(!s)return;
   const u=await db.from('solicitacoes_atestado').update({status:'Aprovada'}).eq('id',id);
   if(u.error){alert('Erro: '+u.error.message);return;}
-  await db.from('atestados').insert({colaborador:s.colaborador,tipo:s.tipo,data:s.data,data_fim:s.data_fim,
-    motivo:s.motivo,modalidade:s.modalidade,fracao:s.fracao,
-    observacao:(s.observacao?s.observacao+' · ':'')+'Aprovado da solicitação de '+(s.solicitante_email||'')});
-  await openAtAdm();toast('Aprovado e lançado em Atestados ✓');
+  const partes=[];
+  if(s.horario)partes.push('Horário: '+s.horario);
+  if(s.observacao)partes.push(s.observacao);
+  partes.push('Aprovado da solicitação de '+(s.solicitante_email||''));
+  await db.from('atestados').insert({colaborador:s.colaborador,tipo:s.tipo,data:s.data,observacao:partes.join(' · ')});
+  await openAtAdm();updatePendingBadges();toast('Aprovado e lançado em Atestados ✓');
 }
 async function recusarSolat(id){
   const{error}=await db.from('solicitacoes_atestado').update({status:'Recusada'}).eq('id',id);
   if(error){alert('Erro: '+error.message);return;}
-  await openAtAdm();toast('Pedido recusado');
+  await openAtAdm();updatePendingBadges();toast('Pedido recusado');
+}
+
+// ===== Solicitações de ocorrência =====
+async function openSolo(){
+  $('so-colab').value=nomeFromEmail(currentEmail);
+  const{data,error}=await db.from('solicitacoes_ocorrencia').select('*').eq('solicitante_email',currentEmail).order('created_at',{ascending:false});
+  if(error){$('so-lista').innerHTML='<div class="empty"><b>Tabela de solicitações de ocorrência ainda não existe</b>Peça ao administrador para rodar o SQL.</div>';return;}
+  renderMySolo(data||[]);
+}
+function renderMySolo(rows){
+  $('so-lista').innerHTML=rows.length?rows.map(s=>{
+    const det=[s.data?fmt(s.data):'',s.horario?'às '+esc(s.horario):''].filter(Boolean).join(' ');
+    return`<div class="row-item" style="cursor:default;align-items:flex-start">
+      <div><div class="ri-main">${esc(s.motivo||'')}</div>
+      <div class="ri-sub">${det}</div>
+      ${s.observacao?`<div class="ri-sub" style="margin-top:4px">${esc(s.observacao)}</div>`:''}</div>
+      <span class="badge ${SOL_BADGE[s.status]||'b-desc'}">${esc(s.status||'')}</span>
+    </div>`;}).join(''):'<div class="empty">Você ainda não registrou ocorrências.</div>';
+}
+async function onSaveSolo(){
+  const motivo=$('so-motivo').value,data=$('so-data').value;
+  if(!motivo){alert('Selecione o motivo.');return;}
+  if(!data){alert('Informe a data.');return;}
+  const dados={solicitante_email:currentEmail,colaborador:$('so-colab').value,motivo,data,
+    horario:$('so-horario').value||null,observacao:$('so-obs').value.trim(),status:'Pendente'};
+  $('so-save').disabled=true;
+  const{error}=await db.from('solicitacoes_ocorrencia').insert(dados);
+  $('so-save').disabled=false;
+  if(error){alert('Erro: '+error.message);return;}
+  ['so-motivo','so-data','so-horario','so-obs'].forEach(i=>$(i).value='');
+  toast('Ocorrência enviada ✓');openSolo();
+}
+async function openOcAdm(){
+  const{data,error}=await db.from('solicitacoes_ocorrencia').select('*').order('created_at',{ascending:false});
+  if(error){ocSols=[];$('oa-lista').innerHTML='<div class="empty"><b>Tabela de solicitações de ocorrência ainda não existe</b>Rode o SQL e recarregue a página.</div>';['oa-c-pe','oa-c-ap','oa-c-re'].forEach(i=>$(i).textContent='0');return;}
+  ocSols=data||[];renderOcAdm();
+}
+function renderOcAdm(){
+  $('oa-c-pe').textContent=ocSols.filter(s=>s.status==='Pendente').length;
+  $('oa-c-ap').textContent=ocSols.filter(s=>s.status==='Aprovada').length;
+  $('oa-c-re').textContent=ocSols.filter(s=>s.status==='Recusada').length;
+  const q=$('oa-busca').value.trim().toLowerCase(),fs=$('oa-filtro').value;
+  const arr=ocSols.filter(s=>(!fs||s.status===fs)&&(!q||(s.colaborador||'').toLowerCase().includes(q)));
+  $('oa-lista').innerHTML=arr.length?arr.map(s=>{
+    const det=[s.data?fmt(s.data):'',s.horario?'às '+esc(s.horario):''].filter(Boolean).join(' ');
+    return`<div class="row-item" style="cursor:default;align-items:flex-start">
+      <div><div class="ri-main">${esc(s.colaborador)} — ${esc(s.motivo||'')}</div>
+      <div class="ri-sub">${det}</div>
+      ${s.observacao?`<div class="ri-sub" style="margin-top:4px">${esc(s.observacao)}</div>`:''}
+      <div class="ri-sub" style="margin-top:2px;opacity:.7">${esc(s.solicitante_email||'')}</div></div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="badge ${SOL_BADGE[s.status]||'b-desc'}">${esc(s.status||'')}</span>
+        ${s.status==='Pendente'?`<div class="item-actions"><button class="btn-edit" data-oa-ok="${s.id}">Aceitar</button><button class="btn-del" data-oa-no="${s.id}">Recusar</button></div>`:''}
+      </div>
+    </div>`;}).join(''):'<div class="empty">Nenhum pedido.</div>';
+}
+async function aceitarSolo(id){
+  const s=ocSols.find(x=>x.id===id);if(!s)return;
+  const u=await db.from('solicitacoes_ocorrencia').update({status:'Aprovada'}).eq('id',id);
+  if(u.error){alert('Erro: '+u.error.message);return;}
+  const partes=[];
+  if(s.horario)partes.push('Horário: '+s.horario);
+  if(s.observacao)partes.push(s.observacao);
+  partes.push('Aprovado da solicitação de '+(s.solicitante_email||''));
+  await db.from('ocorrencias').insert({tecnico:s.colaborador,data:s.data,dia_semana:diaSemana(s.data),motivo:s.motivo,tempo:'Integral',observacao:partes.join(' · ')});
+  await openOcAdm();updatePendingBadges();toast('Aprovado e lançado em Ocorrências ✓');
+}
+async function recusarSolo(id){
+  const{error}=await db.from('solicitacoes_ocorrencia').update({status:'Recusada'}).eq('id',id);
+  if(error){alert('Erro: '+error.message);return;}
+  await openOcAdm();updatePendingBadges();toast('Pedido recusado');
+}
+
+// ===== Badges de pendentes =====
+async function updatePendingBadges(){
+  if(!isAdminUser)return;
+  const pares=[
+    ['nav-soladm','Pedidos de folgas','solicitacoes_folga'],
+    ['nav-atadm','Pedidos de atestados','solicitacoes_atestado'],
+    ['nav-feradm','Pedidos de férias','solicitacoes_ferias'],
+    ['nav-ocadm','Pedidos de ocorrências','solicitacoes_ocorrencia']
+  ];
+  for(const [id,label,tbl] of pares){
+    let n=0;
+    try{const r=await db.from(tbl).select('id',{count:'exact',head:true}).eq('status','Pendente');n=r.count||0;}catch(e){}
+    $(id).innerHTML=esc(label)+(n?'<span class="nav-badge">'+n+'</span>':'');
+  }
 }
 
 // ===== Meus registros (colaborador) =====
@@ -1865,9 +1976,13 @@ $('nav-solat').onclick=()=>showView('solat');
 $('nav-atadm').onclick=()=>showView('atadm');
 $('nav-meus').onclick=()=>showView('meus');
 $('sat-save').onclick=onSaveSolat;
-$('sat-tipo').onchange=updateSatFields;$('sat-modalidade').onchange=updateSatFields;
 $('aa-busca').oninput=renderAtAdm;$('aa-filtro').onchange=renderAtAdm;
 $('aa-lista').addEventListener('click',e=>{const ok=e.target.getAttribute('data-aa-ok'),no=e.target.getAttribute('data-aa-no');if(ok)aceitarSolat(ok);if(no)recusarSolat(no);});
+$('nav-solo').onclick=()=>showView('solo');
+$('nav-ocadm').onclick=()=>showView('ocadm');
+$('so-save').onclick=onSaveSolo;
+$('oa-busca').oninput=renderOcAdm;$('oa-filtro').onchange=renderOcAdm;
+$('oa-lista').addEventListener('click',e=>{const ok=e.target.getAttribute('data-oa-ok'),no=e.target.getAttribute('data-oa-no');if(ok)aceitarSolo(ok);if(no)recusarSolo(no);});
 $('fr-opcao').onchange=()=>renderFerPeriodos($('fr-opcao').value);
 $('fr-save').onclick=onSaveFer;
 $('fa-busca').oninput=renderFerAdm;$('fa-filtro').onchange=renderFerAdm;
