@@ -389,9 +389,15 @@
             <option>Atestado médico</option>
             <option>Consulta</option>
             <option>Dentista</option>
+            <option>Óbito</option>
+            <option>Acompanhamento terceiros</option>
           </select>
         </div>
         <div><label>Data *</label><input id="at-data" type="date"></div>
+      </div>
+      <div id="at-fim-wrap" style="display:none">
+        <label>Data fim (opcional — deixe em branco se for de 1 dia)</label>
+        <input id="at-data-fim" type="date">
       </div>
       <div id="at-motivo-wrap" style="display:none">
         <label>Motivo do atestado</label>
@@ -440,6 +446,8 @@
           <option>Atestado médico</option>
           <option>Consulta</option>
           <option>Dentista</option>
+          <option>Óbito</option>
+          <option>Acompanhamento terceiros</option>
         </select>
       </div>
       <div id="at-lista" class="list"></div>
@@ -1175,11 +1183,11 @@ function renderCal(boxId,detailId,ym,marksFn,cls,onShift){
 }
 function renderFeriasCalendar(){if(!feCal)feCal=curYM();renderCal('fe-cal','fe-cal-detail',feCal,feriasMarks,'',d=>{feCal=shiftMonth(feCal,d);renderFeriasCalendar();});}
 function renderFolgasCalendar(){if(!foCal)foCal=curYM();renderCal('fo-cal','fo-cal-detail',foCal,folgasMarks,'fo',d=>{foCal=shiftMonth(foCal,d);renderFolgasCalendar();});}
-function atestadosMarks(y,m){const mk={};atestados.forEach(a=>{if(!a.data)return;const p=a.data.split('-');if(+p[0]===y&&(+p[1]-1)===m){const tp=a.tipo==='Atestado médico'?'Médico':(a.tipo||'');(mk[a.data]=mk[a.data]||[]).push(a.colaborador+(tp?' ('+tp+')':''));}});return mk;}
+function atestadosMarks(y,m){const mk={},pad=n=>String(n).padStart(2,'0');atestados.forEach(a=>{if(!a.data)return;const tp=a.tipo==='Atestado médico'?'Médico':(a.tipo||'');const lbl=a.colaborador+(tp?' ('+tp+')':'');const ini=new Date(a.data+'T00:00');const fim=a.data_fim?new Date(a.data_fim+'T00:00'):new Date(a.data+'T00:00');let s=0;for(let d=new Date(ini);d<=fim&&s<400;d.setDate(d.getDate()+1),s++){if(d.getFullYear()===y&&d.getMonth()===m){const k=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());(mk[k]=mk[k]||[]).push(lbl);}}});return mk;}
 function renderAtestCalendar(){if(!atCal)atCal=curYM();renderCal('at-cal','at-cal-detail',atCal,atestadosMarks,'at',d=>{atCal=shiftMonth(atCal,d);renderAtestCalendar();});}
 
 // ===== Atestados =====
-const AT_BADGE={'Atestado médico':'b-uso','Consulta':'b-disp','Dentista':'b-manut'};
+const AT_BADGE={'Atestado médico':'b-uso','Consulta':'b-disp','Dentista':'b-manut','Óbito':'b-desc','Acompanhamento terceiros':'b-disp'};
 function fillAtestColab(){
   const nomes=new Set();
   maquinas.forEach(m=>{if(m.colaborador&&norm(m.setor)==='area tecnica')nomes.add(m.colaborador);});
@@ -1191,6 +1199,7 @@ function fillAtestColab(){
 function updateAtestFields(){
   const t=$('at-tipo').value,comFracao=(t==='Consulta'||t==='Dentista');
   $('at-motivo-wrap').style.display=t==='Atestado médico'?'block':'none';
+  $('at-fim-wrap').style.display=t==='Atestado médico'?'block':'none';
   $('at-consulta-wrap').style.display=comFracao?'block':'none';
   $('at-fracao-wrap').style.display=(comFracao&&$('at-modalidade').value==='Fracionada')?'block':'none';
 }
@@ -1212,7 +1221,7 @@ function renderAtest(){
   $('at-lista').innerHTML=arr.length?arr.map(a=>{const d=detAtest(a);return`
     <div class="row-item" style="cursor:default;align-items:flex-start">
       <div><div class="ri-main">${esc(a.colaborador)}</div>
-      <div class="ri-sub"><span class="badge ${AT_BADGE[a.tipo]||'b-desc'}">${esc(a.tipo||'')}</span>${a.data?' · '+fmt(a.data):''}</div>
+      <div class="ri-sub"><span class="badge ${AT_BADGE[a.tipo]||'b-desc'}">${esc(a.tipo||'')}</span>${a.data?' · '+(a.data_fim&&a.data_fim!==a.data?fmt(a.data)+' → '+fmt(a.data_fim):fmt(a.data)):''}</div>
       ${d?`<div class="ri-sub" style="margin-top:4px">${d}</div>`:''}
       ${a.observacao?`<div class="ri-sub" style="margin-top:4px">${esc(a.observacao)}</div>`:''}</div>
       <div class="item-actions"><button class="btn-edit" data-at-edit="${a.id}">Editar</button><button class="btn-del" data-at-del="${a.id}">Excluir</button></div>
@@ -1224,7 +1233,9 @@ async function onSaveAtest(){
   if(!tipo){alert('Selecione o tipo.');return;}
   if(!data){alert('Informe a data.');return;}
   const mod=$('at-modalidade').value,comFracao=(tipo==='Consulta'||tipo==='Dentista');
-  const dados={colaborador,tipo,data,observacao:$('at-obs').value.trim(),
+  let data_fim=null;
+  if(tipo==='Atestado médico'){data_fim=$('at-data-fim').value||null;if(data_fim&&data_fim<data){alert('Data fim deve ser maior ou igual à data início.');return;}}
+  const dados={colaborador,tipo,data,data_fim,observacao:$('at-obs').value.trim(),
     motivo:tipo==='Atestado médico'?$('at-motivo').value.trim():null,
     modalidade:comFracao?mod:null,
     fracao:(comFracao&&mod==='Fracionada')?$('at-fracao').value:null};
@@ -1235,8 +1246,8 @@ async function onSaveAtest(){
   if(error){alert('Erro ao salvar: '+error.message);return;}
   clearAtest();toast(editingAtest?'Atestado atualizado ✓':'Atestado lançado ✓');await openAtest();
 }
-function clearAtest(){['at-colab','at-tipo','at-data','at-motivo','at-modalidade','at-fracao','at-obs'].forEach(i=>$(i).value='');updateAtestFields();editingAtest=null;$('at-title').textContent='Lançar atestado';$('at-save').textContent='Lançar atestado';$('at-cancel').style.display='none';}
-function editAtest(id){const a=atestados.find(x=>x.id===id);if(!a)return;$('at-colab').value=a.colaborador||'';$('at-tipo').value=a.tipo||'';$('at-data').value=a.data||'';$('at-motivo').value=a.motivo||'';$('at-modalidade').value=a.modalidade||'';$('at-fracao').value=a.fracao||'';$('at-obs').value=a.observacao||'';updateAtestFields();editingAtest=id;$('at-title').textContent='Editar atestado';$('at-save').textContent='Salvar alterações';$('at-cancel').style.display='inline-block';window.scrollTo({top:0,behavior:'smooth'});}
+function clearAtest(){['at-colab','at-tipo','at-data','at-data-fim','at-motivo','at-modalidade','at-fracao','at-obs'].forEach(i=>$(i).value='');updateAtestFields();editingAtest=null;$('at-title').textContent='Lançar atestado';$('at-save').textContent='Lançar atestado';$('at-cancel').style.display='none';}
+function editAtest(id){const a=atestados.find(x=>x.id===id);if(!a)return;$('at-colab').value=a.colaborador||'';$('at-tipo').value=a.tipo||'';$('at-data').value=a.data||'';$('at-data-fim').value=a.data_fim||'';$('at-motivo').value=a.motivo||'';$('at-modalidade').value=a.modalidade||'';$('at-fracao').value=a.fracao||'';$('at-obs').value=a.observacao||'';updateAtestFields();editingAtest=id;$('at-title').textContent='Editar atestado';$('at-save').textContent='Salvar alterações';$('at-cancel').style.display='inline-block';window.scrollTo({top:0,behavior:'smooth'});}
 async function deleteAtest(id){const a=atestados.find(x=>x.id===id);if(!confirm('Excluir o atestado de "'+(a?a.colaborador:'')+'"?'))return;const{error}=await db.from('atestados').delete().eq('id',id);if(error){alert('Erro: '+error.message);return;}await openAtest();toast('Atestado excluído');}
 
 // ===== Aniversários =====
