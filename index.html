@@ -181,7 +181,7 @@
     <button id="nav-cad" class="active">Cadastrar / Atualizar</button>
     <button id="nav-solf">Solicitar folga</button>
     <button id="nav-solfer">Solicitar férias</button>
-    <button id="nav-rel">Administrador / Relatórios</button>
+    <button id="nav-rel">Patrimônio Notebooks</button>
     <button id="nav-fer">Férias</button>
     <button id="nav-fol">Folgas</button>
     <button id="nav-ate">Atestados</button>
@@ -232,6 +232,7 @@
   <!-- VIEW: RELATÓRIOS -->
   <div id="view-relatorios" style="display:none">
     <div class="counts">
+      <div class="stat" style="border-left:4px solid var(--ink)"><b id="st-tot">0</b><span>Total de máquinas</span></div>
       <div class="stat s-uso"><b id="st-uso">0</b><span>Em uso</span></div>
       <div class="stat s-disp"><b id="st-disp">0</b><span>Disponíveis</span></div>
       <div class="stat s-manut"><b id="st-manut">0</b><span>Em manutenção</span></div>
@@ -952,6 +953,7 @@ function showSub(s){
   if(s==='todas')renderTodas();
 }
 function renderRelatorios(){
+  $('st-tot').textContent=maquinas.length;
   $('st-uso').textContent=maquinas.filter(m=>m.status==='Em uso').length;
   $('st-disp').textContent=maquinas.filter(m=>m.status==='Disponível').length;
   $('st-manut').textContent=maquinas.filter(m=>m.status==='Manutenção').length;
