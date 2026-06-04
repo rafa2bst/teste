@@ -157,6 +157,10 @@
   .tl-comment{color:var(--ink);flex:1;min-width:200px}
   .ticket-update{margin-top:10px;padding:10px;border:1px dashed var(--line);border-radius:10px;background:#fff}
   .ticket-update select,.ticket-update input{margin-bottom:6px}
+  .stat-clickable{cursor:pointer;transition:transform .12s ease, box-shadow .12s ease}
+  .stat-clickable:hover{transform:translateY(-1px);box-shadow:0 4px 10px rgba(0,0,0,.08)}
+  .stat-clickable.active-filter{background:var(--accent-soft);box-shadow:inset 0 0 0 2px var(--accent)}
+  .stat-clickable.active-filter b{color:var(--accent-dark)}
 </style>
 
 <!-- ===== LOGIN ===== -->
@@ -247,11 +251,11 @@
   <!-- VIEW: RELATÓRIOS -->
   <div id="view-relatorios" style="display:none">
     <div class="counts">
-      <div class="stat" style="border-left:4px solid var(--ink)"><b id="st-tot">0</b><span>Total de máquinas</span></div>
-      <div class="stat s-uso"><b id="st-uso">0</b><span>Em uso</span></div>
-      <div class="stat s-disp"><b id="st-disp">0</b><span>Disponíveis</span></div>
-      <div class="stat s-manut"><b id="st-manut">0</b><span>Em manutenção</span></div>
-      <div class="stat s-desc"><b id="st-desc">0</b><span>Em descarte</span></div>
+      <div class="stat stat-clickable" data-filter-target="filtro-status" data-filter-value="" style="border-left:4px solid var(--ink)"><b id="st-tot">0</b><span>Total de máquinas</span></div>
+      <div class="stat s-uso stat-clickable" data-filter-target="filtro-status" data-filter-value="Em uso"><b id="st-uso">0</b><span>Em uso</span></div>
+      <div class="stat s-disp stat-clickable" data-filter-target="filtro-status" data-filter-value="Disponível"><b id="st-disp">0</b><span>Disponíveis</span></div>
+      <div class="stat s-manut stat-clickable" data-filter-target="filtro-status" data-filter-value="Manutenção"><b id="st-manut">0</b><span>Em manutenção</span></div>
+      <div class="stat s-desc stat-clickable" data-filter-target="filtro-status" data-filter-value="Descarte"><b id="st-desc">0</b><span>Em descarte</span></div>
     </div>
     <div class="subnav">
       <button id="sub-maq" class="active">Por máquina</button>
@@ -315,9 +319,9 @@
 
     <div style="margin-top:28px">
       <div class="counts">
-        <div class="stat s-uso"><b id="fe-c-agora">0</b><span>Em férias agora</span></div>
-        <div class="stat s-disp"><b id="fe-c-agend">0</b><span>Agendadas</span></div>
-        <div class="stat s-desc"><b id="fe-c-conc">0</b><span>Concluídas</span></div>
+        <div class="stat s-uso stat-clickable" data-filter-target="fe-fstatus" data-filter-value="agora"><b id="fe-c-agora">0</b><span>Em férias agora</span></div>
+        <div class="stat s-disp stat-clickable" data-filter-target="fe-fstatus" data-filter-value="agendada"><b id="fe-c-agend">0</b><span>Agendadas</span></div>
+        <div class="stat s-desc stat-clickable" data-filter-target="fe-fstatus" data-filter-value="concluida"><b id="fe-c-conc">0</b><span>Concluídas</span></div>
       </div>
       <div class="sec-title" style="margin-top:0">Calendário de férias</div>
       <div class="cal" id="fe-cal"></div>
@@ -385,10 +389,10 @@
 
     <div style="margin-top:28px">
       <div class="counts">
-        <div class="stat s-uso"><b id="fo-c-bh">0</b><span>Banco de Horas</span></div>
-        <div class="stat s-disp"><b id="fo-c-an">0</b><span>Aniversário</span></div>
-        <div class="stat s-manut"><b id="fo-c-ab">0</b><span>Abono</span></div>
-        <div class="stat s-desc"><b id="fo-c-ag">0</b><span>Abono Gestor</span></div>
+        <div class="stat s-uso stat-clickable" data-filter-target="fo-filtro" data-filter-value="Folga Banco de Horas"><b id="fo-c-bh">0</b><span>Banco de Horas</span></div>
+        <div class="stat s-disp stat-clickable" data-filter-target="fo-filtro" data-filter-value="Folga Aniversário"><b id="fo-c-an">0</b><span>Aniversário</span></div>
+        <div class="stat s-manut stat-clickable" data-filter-target="fo-filtro" data-filter-value="Folga Abono"><b id="fo-c-ab">0</b><span>Abono</span></div>
+        <div class="stat s-desc stat-clickable" data-filter-target="fo-filtro" data-filter-value="Abono Gestor"><b id="fo-c-ag">0</b><span>Abono Gestor</span></div>
       </div>
       <div class="sec-title" style="margin-top:0">Calendário de folgas</div>
       <div class="cal" id="fo-cal"></div>
@@ -464,9 +468,9 @@
 
     <div style="margin-top:28px">
       <div class="counts">
-        <div class="stat s-uso"><b id="at-c-med">0</b><span>Atestado médico</span></div>
-        <div class="stat s-disp"><b id="at-c-con">0</b><span>Consulta</span></div>
-        <div class="stat s-manut"><b id="at-c-den">0</b><span>Dentista</span></div>
+        <div class="stat s-uso stat-clickable" data-filter-target="at-filtro" data-filter-value="Atestado médico"><b id="at-c-med">0</b><span>Atestado médico</span></div>
+        <div class="stat s-disp stat-clickable" data-filter-target="at-filtro" data-filter-value="Consulta"><b id="at-c-con">0</b><span>Consulta</span></div>
+        <div class="stat s-manut stat-clickable" data-filter-target="at-filtro" data-filter-value="Dentista"><b id="at-c-den">0</b><span>Dentista</span></div>
       </div>
       <div class="sec-title" style="margin-top:0">Calendário de atestados</div>
       <div class="cal" id="at-cal"></div>
@@ -593,8 +597,8 @@
     </div>
     <div style="margin-top:28px">
       <div class="counts">
-        <div class="stat s-manut"><b id="pr-c-ab">0</b><span>Em aberto</span></div>
-        <div class="stat s-uso"><b id="pr-c-fin">0</b><span>Finalizados</span></div>
+        <div class="stat s-manut stat-clickable" data-filter-target="pr-filtro" data-filter-value="Aberto"><b id="pr-c-ab">0</b><span>Em aberto</span></div>
+        <div class="stat s-uso stat-clickable" data-filter-target="pr-filtro" data-filter-value="Finalizado"><b id="pr-c-fin">0</b><span>Finalizados</span></div>
       </div>
       <div class="toolbar">
         <div class="search">
@@ -633,8 +637,8 @@
     </div>
     <div style="margin-top:28px">
       <div class="counts">
-        <div class="stat s-disp"><b id="tr-c-pl">0</b><span>Planejados</span></div>
-        <div class="stat s-uso"><b id="tr-c-co">0</b><span>Concluídos</span></div>
+        <div class="stat s-disp stat-clickable" data-filter-target="tr-filtro" data-filter-value="Planejado"><b id="tr-c-pl">0</b><span>Planejados</span></div>
+        <div class="stat s-uso stat-clickable" data-filter-target="tr-filtro" data-filter-value="Concluído"><b id="tr-c-co">0</b><span>Concluídos</span></div>
       </div>
       <div class="toolbar">
         <div class="search">
@@ -672,9 +676,9 @@
     </div>
     <div style="margin-top:28px">
       <div class="counts">
-        <div class="stat s-desc"><b id="am-c-tot">0</b><span>Total</span></div>
-        <div class="stat s-uso"><b id="am-c-tr">0</b><span>Tratadas</span></div>
-        <div class="stat s-manut"><b id="am-c-pe">0</b><span>Pendentes</span></div>
+        <div class="stat s-desc stat-clickable" data-filter-custom="anom-trat" data-filter-value="__all__"><b id="am-c-tot">0</b><span>Total</span></div>
+        <div class="stat s-uso stat-clickable" data-filter-custom="anom-trat" data-filter-value="sim"><b id="am-c-tr">0</b><span>Tratadas</span></div>
+        <div class="stat s-manut stat-clickable" data-filter-custom="anom-trat" data-filter-value="nao"><b id="am-c-pe">0</b><span>Pendentes</span></div>
       </div>
       <div class="search">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
@@ -734,9 +738,9 @@
   <!-- VIEW: SOLICITAÇÕES (admin) -->
   <div id="view-soladm" style="display:none">
     <div class="counts">
-      <div class="stat s-manut"><b id="sa-c-pe">0</b><span>Pendentes</span></div>
-      <div class="stat s-uso"><b id="sa-c-ap">0</b><span>Aprovadas</span></div>
-      <div class="stat s-desc"><b id="sa-c-re">0</b><span>Recusadas</span></div>
+      <div class="stat s-manut stat-clickable" data-filter-target="sa-filtro" data-filter-value="Pendente"><b id="sa-c-pe">0</b><span>Pendentes</span></div>
+      <div class="stat s-uso stat-clickable" data-filter-target="sa-filtro" data-filter-value="Aprovada"><b id="sa-c-ap">0</b><span>Aprovadas</span></div>
+      <div class="stat s-desc stat-clickable" data-filter-target="sa-filtro" data-filter-value="Recusada"><b id="sa-c-re">0</b><span>Recusadas</span></div>
     </div>
     <div class="toolbar">
       <div class="search">
@@ -775,9 +779,9 @@
   <!-- VIEW: PEDIDOS DE FÉRIAS (admin) -->
   <div id="view-feradm" style="display:none">
     <div class="counts">
-      <div class="stat s-manut"><b id="fa-c-pe">0</b><span>Pendentes</span></div>
-      <div class="stat s-uso"><b id="fa-c-ap">0</b><span>Aprovadas</span></div>
-      <div class="stat s-desc"><b id="fa-c-re">0</b><span>Recusadas</span></div>
+      <div class="stat s-manut stat-clickable" data-filter-target="fa-filtro" data-filter-value="Pendente"><b id="fa-c-pe">0</b><span>Pendentes</span></div>
+      <div class="stat s-uso stat-clickable" data-filter-target="fa-filtro" data-filter-value="Aprovada"><b id="fa-c-ap">0</b><span>Aprovadas</span></div>
+      <div class="stat s-desc stat-clickable" data-filter-target="fa-filtro" data-filter-value="Recusada"><b id="fa-c-re">0</b><span>Recusadas</span></div>
     </div>
     <div class="toolbar">
       <div class="search">
@@ -824,9 +828,9 @@
   <!-- VIEW: PEDIDOS DE ATESTADOS (admin) -->
   <div id="view-atadm" style="display:none">
     <div class="counts">
-      <div class="stat s-manut"><b id="aa-c-pe">0</b><span>Pendentes</span></div>
-      <div class="stat s-uso"><b id="aa-c-ap">0</b><span>Aprovados</span></div>
-      <div class="stat s-desc"><b id="aa-c-re">0</b><span>Recusados</span></div>
+      <div class="stat s-manut stat-clickable" data-filter-target="aa-filtro" data-filter-value="Pendente"><b id="aa-c-pe">0</b><span>Pendentes</span></div>
+      <div class="stat s-uso stat-clickable" data-filter-target="aa-filtro" data-filter-value="Aprovada"><b id="aa-c-ap">0</b><span>Aprovados</span></div>
+      <div class="stat s-desc stat-clickable" data-filter-target="aa-filtro" data-filter-value="Recusada"><b id="aa-c-re">0</b><span>Recusados</span></div>
     </div>
     <div class="toolbar">
       <div class="search">
@@ -882,9 +886,9 @@
   <!-- VIEW: PEDIDOS DE OCORRÊNCIAS (admin) -->
   <div id="view-ocadm" style="display:none">
     <div class="counts">
-      <div class="stat s-manut"><b id="oa-c-pe">0</b><span>Pendentes</span></div>
-      <div class="stat s-uso"><b id="oa-c-ap">0</b><span>Aprovadas</span></div>
-      <div class="stat s-desc"><b id="oa-c-re">0</b><span>Recusadas</span></div>
+      <div class="stat s-manut stat-clickable" data-filter-target="oa-filtro" data-filter-value="Pendente"><b id="oa-c-pe">0</b><span>Pendentes</span></div>
+      <div class="stat s-uso stat-clickable" data-filter-target="oa-filtro" data-filter-value="Aprovada"><b id="oa-c-ap">0</b><span>Aprovadas</span></div>
+      <div class="stat s-desc stat-clickable" data-filter-target="oa-filtro" data-filter-value="Recusada"><b id="oa-c-re">0</b><span>Recusadas</span></div>
     </div>
     <div class="toolbar">
       <div class="search">
@@ -923,10 +927,10 @@
   <!-- VIEW: TICKETS DE MANUTENÇÃO (admin) -->
   <div id="view-mtadm" style="display:none">
     <div class="counts">
-      <div class="stat s-manut"><b id="mt-c-ab">0</b><span>Abertos</span></div>
-      <div class="stat s-disp"><b id="mt-c-an">0</b><span>Em andamento</span></div>
-      <div class="stat s-uso"><b id="mt-c-re">0</b><span>Resolvidos</span></div>
-      <div class="stat s-desc"><b id="mt-c-ca">0</b><span>Cancelados</span></div>
+      <div class="stat s-manut stat-clickable" data-filter-target="mt-filtro" data-filter-value="Aberto"><b id="mt-c-ab">0</b><span>Abertos</span></div>
+      <div class="stat s-disp stat-clickable" data-filter-target="mt-filtro" data-filter-value="Em andamento"><b id="mt-c-an">0</b><span>Em andamento</span></div>
+      <div class="stat s-uso stat-clickable" data-filter-target="mt-filtro" data-filter-value="Resolvido"><b id="mt-c-re">0</b><span>Resolvidos</span></div>
+      <div class="stat s-desc stat-clickable" data-filter-target="mt-filtro" data-filter-value="Cancelado"><b id="mt-c-ca">0</b><span>Cancelados</span></div>
     </div>
     <div class="toolbar">
       <div class="search">
@@ -969,7 +973,7 @@ const isAdmin=u=>!!u&&ADMIN_EMAILS.includes((u.email||'').toLowerCase());
 
 let maquinas=[],atribuicoes=[],manutencoes=[],isAdminUser=false,editingPatr=null,ferias=[],editingFeria=null,folgas=[],editingFolga=null,atestados=[],editingAtest=null,feCal=null,foCal=null,atCal=null,anivs=[],editingAniv=null,ocors=[],editingOcor=null,probs=[],editingProb=null,anCal=null,treins=[],editingTrein=null,anoms=[],editingAnom=null;
 const charts={};
-let currentEmail='',authMode='login',sols=[],ferReqs=[],atSols=[],ocSols=[],tickets=[];
+let currentEmail='',authMode='login',sols=[],ferReqs=[],atSols=[],ocSols=[],tickets=[],maqStatusFilter='',anomTratFilter='';
 const $=id=>document.getElementById(id);
 const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const hoje=()=>new Date().toISOString().slice(0,10);
@@ -1191,8 +1195,8 @@ function renderRelatorios(){
 
 // --- Por máquina ---
 function renderMaquinaLista(){
-  const q=$('busca-maq').value.trim().toLowerCase();
-  const arr=maquinas.filter(m=>!q||(m.patrimonio+' '+(m.colaborador||'')+' '+(m.setor||'')).toLowerCase().includes(q));
+  const q=$('busca-maq').value.trim().toLowerCase(),fs=$('filtro-status').value;
+  const arr=maquinas.filter(m=>(!fs||m.status===fs)&&(!q||(m.patrimonio+' '+(m.colaborador||'')+' '+(m.setor||'')).toLowerCase().includes(q)));
   $('maq-conteudo').innerHTML='<div class="list">'+(arr.length?arr.slice(0,80).map(m=>`
     <div class="row-item" data-maq="${esc(m.patrimonio)}">
       <div><div class="ri-main">Patrimônio ${esc(m.patrimonio)}</div><div class="ri-sub">${esc(m.colaborador||'Sem colaborador')} · ${esc(m.setor||'—')}</div></div>
@@ -1615,7 +1619,12 @@ function renderAnom(){
   $('am-c-tr').textContent=anoms.filter(a=>a.tratado).length;
   $('am-c-pe').textContent=anoms.filter(a=>!a.tratado).length;
   const q=$('am-busca').value.trim().toLowerCase();
-  const arr=anoms.filter(a=>!q||(a.tecnico||'').toLowerCase().includes(q));
+  const arr=anoms.filter(a=>{
+    if(q&&!(a.tecnico||'').toLowerCase().includes(q))return false;
+    if(anomTratFilter==='sim'&&!a.tratado)return false;
+    if(anomTratFilter==='nao'&&a.tratado)return false;
+    return true;
+  });
   $('am-lista').innerHTML=arr.length?arr.map(a=>`
     <div class="row-item" style="cursor:default;align-items:flex-start">
       <div><div class="ri-main">${esc(a.tecnico)}</div>
@@ -2052,7 +2061,7 @@ function renderMtAdm(){
   $('mt-c-re').textContent=tickets.filter(t=>t.status==='Finalizado'||t.status==='Resolvido').length;
   $('mt-c-ca').textContent=tickets.filter(t=>t.status==='Cancelado').length;
   const q=$('mt-busca').value.trim().toLowerCase(),fs=$('mt-filtro').value;
-  const arr=tickets.filter(t=>(!fs||(fs==='Aberto'?t.status==='Aberto':fs==='Em andamento'?['Iniciado','Em andamento','Fazendo testes','Aguardando peças','Aguardando colaborador'].includes(t.status):t.status===fs))&&(!q||((t.colaborador||'')+' '+(t.patrimonio||'')).toLowerCase().includes(q)));
+  const arr=tickets.filter(t=>(!fs||(fs==='Aberto'?t.status==='Aberto':fs==='Em andamento'?['Iniciado','Em andamento','Fazendo testes','Aguardando peças','Aguardando colaborador'].includes(t.status):fs==='Resolvido'?['Resolvido','Finalizado'].includes(t.status):t.status===fs))&&(!q||((t.colaborador||'')+' '+(t.patrimonio||'')).toLowerCase().includes(q)));
   $('mt-lista').innerHTML=arr.length?arr.map(t=>{
     const aberto=statusEmAberto(t.status);
     return`<div class="row-item" style="cursor:default;flex-direction:column;align-items:stretch">
@@ -2230,7 +2239,34 @@ $('sub-todas').onclick=()=>showSub('todas');
 $('busca-maq').oninput=renderMaquinaLista;
 $('busca-pes').oninput=renderPessoa;
 $('busca-todas').oninput=renderTodas;
-$('filtro-status').onchange=renderTodas;
+$('filtro-status').onchange=()=>{renderTodas();renderMaquinaLista();};
+
+// ===== Filtros clicáveis nos cards .stat =====
+document.addEventListener('click',e=>{
+  const card=e.target.closest('.stat-clickable');if(!card)return;
+  const tgt=card.getAttribute('data-filter-target'),val=card.getAttribute('data-filter-value')||'',custom=card.getAttribute('data-filter-custom');
+  const yaActive=card.classList.contains('active-filter');
+  // toggle off se clicar no mesmo
+  if(yaActive){
+    card.classList.remove('active-filter');
+    if(tgt){const el=$(tgt);if(el){el.value='';el.dispatchEvent(new Event('change'));}}
+    if(custom==='anom-trat'){anomTratFilter='';renderAnom();}
+    return;
+  }
+  // marca este, limpa irmãos
+  if(card.parentElement)card.parentElement.querySelectorAll('.stat-clickable.active-filter').forEach(s=>s.classList.remove('active-filter'));
+  card.classList.add('active-filter');
+  if(tgt){
+    const el=$(tgt);if(el){el.value=val;el.dispatchEvent(new Event('change'));}
+    // se valor vazio (cards "Total"), tira destaque
+    if(!val)card.classList.remove('active-filter');
+  }
+  if(custom==='anom-trat'){
+    anomTratFilter=val==='__all__'?'':val;
+    renderAnom();
+    if(!anomTratFilter)card.classList.remove('active-filter');
+  }
+});
 $('btn-export').onclick=exportCSV;
 $('maq-conteudo').addEventListener('click',e=>{const el=e.target.closest('[data-maq]');if(el)renderMaquinaDetalhe(el.getAttribute('data-maq'));});
 $('pes-conteudo').addEventListener('click',e=>{const el=e.target.closest('[data-maq]');if(el){showSub('maq');renderMaquinaDetalhe(el.getAttribute('data-maq'));}});
