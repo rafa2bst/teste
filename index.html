@@ -184,6 +184,7 @@
     <button id="nav-solfer">Solicitar férias</button>
     <button id="nav-solat">Solicitar atestado/consulta</button>
     <button id="nav-solo">Solicitar ocorrência</button>
+    <button id="nav-solm">Manutenção (ticket)</button>
     <button id="nav-meus">Meus registros</button>
     <button id="nav-rel">Patrimônio Notebooks</button>
     <button id="nav-fer">Férias</button>
@@ -199,6 +200,7 @@
     <button id="nav-soladm">Pedidos de folgas</button>
     <button id="nav-atadm">Pedidos de atestados</button>
     <button id="nav-ocadm">Pedidos de ocorrências</button>
+    <button id="nav-mtadm">Tickets de manutenção</button>
     <button id="nav-feradm">Pedidos de férias</button>
   </nav>
 
@@ -848,7 +850,17 @@
       </select>
       <div class="row2">
         <div><label>Data *</label><input id="so-data" type="date"></div>
-        <div><label>Horário</label><input id="so-horario" type="time"></div>
+        <div><label>Tempo *</label>
+          <select id="so-tempo"><option value="">— selecione —</option><option>Integral</option><option>Parcial</option><option>Fracionado</option></select>
+        </div>
+      </div>
+      <div id="so-fracao-wrap" style="display:none">
+        <label>Fração (minutos)</label>
+        <select id="so-fracao">
+          <option value="">— selecione —</option>
+          <option>30</option><option>60</option><option>90</option><option>120</option>
+          <option>150</option><option>180</option><option>210</option><option>240</option>
+        </select>
       </div>
       <label>Observação</label>
       <textarea id="so-obs" placeholder="Opcional"></textarea>
@@ -879,6 +891,51 @@
     <div id="oa-lista" class="list"></div>
   </div>
 
+  <!-- VIEW: TICKET DE MANUTENÇÃO (colaborador) -->
+  <div id="view-solm" style="display:none">
+    <div class="form-card">
+      <h2>Abrir ticket de manutenção</h2>
+      <p class="hint">Descreva o problema da máquina. O administrador vai dar andamento.</p>
+      <label>Seu nome *</label>
+      <input id="tk-colab" readonly>
+      <label>Patrimônio *</label>
+      <input id="tk-pat" type="text" list="tk-pat-list" placeholder="Número do patrimônio (ex.: 1098)">
+      <datalist id="tk-pat-list"></datalist>
+      <label>Descrição do problema *</label>
+      <textarea id="tk-desc" placeholder="Ex.: tela não liga, teclado travando, ruído na ventoinha..."></textarea>
+      <label>Observação</label>
+      <textarea id="tk-obs" placeholder="Opcional"></textarea>
+      <div class="actions"><button class="btn-primary" id="tk-save">Abrir ticket</button></div>
+    </div>
+    <div style="margin-top:28px">
+      <div class="sec-title" style="margin-top:0">Meus tickets</div>
+      <div id="tk-lista" class="list"></div>
+    </div>
+  </div>
+
+  <!-- VIEW: TICKETS DE MANUTENÇÃO (admin) -->
+  <div id="view-mtadm" style="display:none">
+    <div class="counts">
+      <div class="stat s-manut"><b id="mt-c-ab">0</b><span>Abertos</span></div>
+      <div class="stat s-disp"><b id="mt-c-an">0</b><span>Em andamento</span></div>
+      <div class="stat s-uso"><b id="mt-c-re">0</b><span>Resolvidos</span></div>
+      <div class="stat s-desc"><b id="mt-c-ca">0</b><span>Cancelados</span></div>
+    </div>
+    <div class="toolbar">
+      <div class="search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="mt-busca" placeholder="Buscar por colaborador ou patrimônio...">
+      </div>
+      <select id="mt-filtro" style="width:auto;min-width:170px">
+        <option value="Aberto">Abertos</option><option value="">Todos</option>
+        <option value="Em andamento">Em andamento</option>
+        <option value="Resolvido">Resolvidos</option>
+        <option value="Cancelado">Cancelados</option>
+      </select>
+    </div>
+    <div id="mt-lista" class="list"></div>
+  </div>
+
   <!-- VIEW: MEUS REGISTROS (colaborador) -->
   <div id="view-meus" style="display:none">
     <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
@@ -905,7 +962,7 @@ const isAdmin=u=>!!u&&ADMIN_EMAILS.includes((u.email||'').toLowerCase());
 
 let maquinas=[],atribuicoes=[],manutencoes=[],isAdminUser=false,editingPatr=null,ferias=[],editingFeria=null,folgas=[],editingFolga=null,atestados=[],editingAtest=null,feCal=null,foCal=null,atCal=null,anivs=[],editingAniv=null,ocors=[],editingOcor=null,probs=[],editingProb=null,anCal=null,treins=[],editingTrein=null,anoms=[],editingAnom=null;
 const charts={};
-let currentEmail='',authMode='login',sols=[],ferReqs=[],atSols=[],ocSols=[];
+let currentEmail='',authMode='login',sols=[],ferReqs=[],atSols=[],ocSols=[],tickets=[];
 const $=id=>document.getElementById(id);
 const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const hoje=()=>new Date().toISOString().slice(0,10);
@@ -921,11 +978,12 @@ async function showApp(user){
   $('login-screen').style.display='none';$('app').style.display='block';
   $('user-email').textContent=user.email;currentEmail=user.email||'';isAdminUser=isAdmin(user);
   $('nav').style.display='flex';
-  ['nav-rel','nav-fer','nav-fol','nav-ate','nav-aniv','nav-ocor','nav-prob','nav-trein','nav-anom','nav-fat','nav-dash','nav-soladm','nav-feradm','nav-atadm','nav-ocadm'].forEach(id=>$(id).style.display=isAdminUser?'':'none');
+  ['nav-cad','nav-rel','nav-fer','nav-fol','nav-ate','nav-aniv','nav-ocor','nav-prob','nav-trein','nav-anom','nav-fat','nav-dash','nav-soladm','nav-feradm','nav-atadm','nav-ocadm','nav-mtadm'].forEach(id=>$(id).style.display=isAdminUser?'':'none');
   $('nav-solf').style.display=isAdminUser?'none':'';
   $('nav-solfer').style.display=isAdminUser?'none':'';
   $('nav-solat').style.display=isAdminUser?'none':'';
   $('nav-solo').style.display=isAdminUser?'none':'';
+  $('nav-solm').style.display=isAdminUser?'none':'';
   $('nav-meus').style.display=isAdminUser?'none':'';
   if(isAdminUser)await loadAll();
   if(isAdminUser)updatePendingBadges();
@@ -1031,7 +1089,7 @@ async function registrarManutencao(patr){
 
 // ===== Views =====
 function showView(v){
-  const adminViews=['relatorios','ferias','folgas','atestados','aniv','ocor','prob','trein','anom','fat','dash','soladm','feradm','atadm','ocadm'];
+  const adminViews=['cadastro','relatorios','ferias','folgas','atestados','aniv','ocor','prob','trein','anom','fat','dash','soladm','feradm','atadm','ocadm','mtadm'];
   if(adminViews.includes(v)&&!isAdminUser)v='solfolga';
   $('view-cadastro').style.display=v==='cadastro'?'block':'none';
   $('view-relatorios').style.display=v==='relatorios'?'block':'none';
@@ -1053,6 +1111,8 @@ function showView(v){
   $('view-atadm').style.display=v==='atadm'?'block':'none';
   $('view-solo').style.display=v==='solo'?'block':'none';
   $('view-ocadm').style.display=v==='ocadm'?'block':'none';
+  $('view-solm').style.display=v==='solm'?'block':'none';
+  $('view-mtadm').style.display=v==='mtadm'?'block':'none';
   $('view-meus').style.display=v==='meus'?'block':'none';
   $('nav-cad').classList.toggle('active',v==='cadastro');
   $('nav-rel').classList.toggle('active',v==='relatorios');
@@ -1074,6 +1134,8 @@ function showView(v){
   $('nav-atadm').classList.toggle('active',v==='atadm');
   $('nav-solo').classList.toggle('active',v==='solo');
   $('nav-ocadm').classList.toggle('active',v==='ocadm');
+  $('nav-solm').classList.toggle('active',v==='solm');
+  $('nav-mtadm').classList.toggle('active',v==='mtadm');
   $('nav-meus').classList.toggle('active',v==='meus');
   if(v==='relatorios')renderRelatorios();
   if(v==='ferias')openFerias();
@@ -1094,6 +1156,8 @@ function showView(v){
   if(v==='atadm')openAtAdm();
   if(v==='solo')openSolo();
   if(v==='ocadm')openOcAdm();
+  if(v==='solm')openSolMan();
+  if(v==='mtadm')openMtAdm();
   if(v==='meus')openMeus();
 }
 function showSub(s){
@@ -1849,7 +1913,7 @@ async function openSolo(){
 }
 function renderMySolo(rows){
   $('so-lista').innerHTML=rows.length?rows.map(s=>{
-    const det=[s.data?fmt(s.data):'',s.horario?'às '+esc(s.horario):''].filter(Boolean).join(' ');
+    const det=[s.data?fmt(s.data):'',s.tempo||'',(s.fracao?'('+esc(s.fracao)+' min)':'')].filter(Boolean).join(' · ');
     return`<div class="row-item" style="cursor:default;align-items:flex-start">
       <div><div class="ri-main">${esc(s.motivo||'')}</div>
       <div class="ri-sub">${det}</div>
@@ -1857,17 +1921,20 @@ function renderMySolo(rows){
       <span class="badge ${SOL_BADGE[s.status]||'b-desc'}">${esc(s.status||'')}</span>
     </div>`;}).join(''):'<div class="empty">Você ainda não registrou ocorrências.</div>';
 }
+function updateSoloFracao(){$('so-fracao-wrap').style.display=$('so-tempo').value==='Fracionado'?'block':'none';}
 async function onSaveSolo(){
-  const motivo=$('so-motivo').value,data=$('so-data').value;
+  const motivo=$('so-motivo').value,data=$('so-data').value,tempo=$('so-tempo').value;
   if(!motivo){alert('Selecione o motivo.');return;}
   if(!data){alert('Informe a data.');return;}
+  if(!tempo){alert('Selecione o tempo (Integral / Parcial / Fracionado).');return;}
   const dados={solicitante_email:currentEmail,colaborador:$('so-colab').value,motivo,data,
-    horario:$('so-horario').value||null,observacao:$('so-obs').value.trim(),status:'Pendente'};
+    tempo,fracao:tempo==='Fracionado'?$('so-fracao').value:null,
+    observacao:$('so-obs').value.trim(),status:'Pendente'};
   $('so-save').disabled=true;
   const{error}=await db.from('solicitacoes_ocorrencia').insert(dados);
   $('so-save').disabled=false;
   if(error){alert('Erro: '+error.message);return;}
-  ['so-motivo','so-data','so-horario','so-obs'].forEach(i=>$(i).value='');
+  ['so-motivo','so-data','so-tempo','so-fracao','so-obs'].forEach(i=>$(i).value='');updateSoloFracao();
   toast('Ocorrência enviada ✓');openSolo();
 }
 async function openOcAdm(){
@@ -1882,7 +1949,7 @@ function renderOcAdm(){
   const q=$('oa-busca').value.trim().toLowerCase(),fs=$('oa-filtro').value;
   const arr=ocSols.filter(s=>(!fs||s.status===fs)&&(!q||(s.colaborador||'').toLowerCase().includes(q)));
   $('oa-lista').innerHTML=arr.length?arr.map(s=>{
-    const det=[s.data?fmt(s.data):'',s.horario?'às '+esc(s.horario):''].filter(Boolean).join(' ');
+    const det=[s.data?fmt(s.data):'',s.tempo||'',(s.fracao?'('+esc(s.fracao)+' min)':'')].filter(Boolean).join(' · ');
     return`<div class="row-item" style="cursor:default;align-items:flex-start">
       <div><div class="ri-main">${esc(s.colaborador)} — ${esc(s.motivo||'')}</div>
       <div class="ri-sub">${det}</div>
@@ -1898,11 +1965,8 @@ async function aceitarSolo(id){
   const s=ocSols.find(x=>x.id===id);if(!s)return;
   const u=await db.from('solicitacoes_ocorrencia').update({status:'Aprovada'}).eq('id',id);
   if(u.error){alert('Erro: '+u.error.message);return;}
-  const partes=[];
-  if(s.horario)partes.push('Horário: '+s.horario);
-  if(s.observacao)partes.push(s.observacao);
-  partes.push('Aprovado da solicitação de '+(s.solicitante_email||''));
-  await db.from('ocorrencias').insert({tecnico:s.colaborador,data:s.data,dia_semana:diaSemana(s.data),motivo:s.motivo,tempo:'Integral',observacao:partes.join(' · ')});
+  const obs=(s.observacao?s.observacao+' · ':'')+'Aprovado da solicitação de '+(s.solicitante_email||'');
+  await db.from('ocorrencias').insert({tecnico:s.colaborador,data:s.data,dia_semana:diaSemana(s.data),motivo:s.motivo,tempo:s.tempo||'Integral',fracao:s.fracao,observacao:obs});
   await openOcAdm();updatePendingBadges();toast('Aprovado e lançado em Ocorrências ✓');
 }
 async function recusarSolo(id){
@@ -1911,19 +1975,107 @@ async function recusarSolo(id){
   await openOcAdm();updatePendingBadges();toast('Pedido recusado');
 }
 
+// ===== Tickets de manutenção =====
+async function openSolMan(){
+  $('tk-colab').value=nomeFromEmail(currentEmail);
+  // popular datalist com as máquinas do colaborador
+  await ensureMaquinas();
+  const meu=norm($('tk-colab').value);
+  const minhas=maquinas.filter(m=>norm(m.colaborador||'')===meu);
+  $('tk-pat-list').innerHTML=minhas.map(m=>`<option value="${esc(m.patrimonio)}">${esc(m.modelo||m.setor||'')}</option>`).join('');
+  const{data,error}=await db.from('tickets_manutencao').select('*').eq('solicitante_email',currentEmail).order('created_at',{ascending:false});
+  if(error){$('tk-lista').innerHTML='<div class="empty"><b>Tabela de tickets ainda não existe</b>Peça ao administrador para rodar o SQL.</div>';return;}
+  renderMyTickets(data||[]);
+}
+const TK_BADGE={'Aberto':'b-manut','Em andamento':'b-disp','Resolvido':'b-uso','Cancelado':'b-desc'};
+function renderMyTickets(rows){
+  $('tk-lista').innerHTML=rows.length?rows.map(t=>`
+    <div class="row-item" style="cursor:default;align-items:flex-start">
+      <div><div class="ri-main">Patrimônio ${esc(t.patrimonio||'')}</div>
+      <div class="ri-sub">${esc(t.descricao||'')}</div>
+      ${t.resposta?`<div class="ri-sub" style="margin-top:4px;color:var(--accent-dark)"><b>Resposta do admin:</b> ${esc(t.resposta)}</div>`:''}
+      ${t.observacao?`<div class="ri-sub" style="margin-top:4px">${esc(t.observacao)}</div>`:''}</div>
+      <span class="badge ${TK_BADGE[t.status]||'b-desc'}">${esc(t.status||'')}</span>
+    </div>`).join(''):'<div class="empty">Você ainda não abriu tickets.</div>';
+}
+async function onSaveSolMan(){
+  const patrimonio=$('tk-pat').value.trim(),descricao=$('tk-desc').value.trim();
+  if(!patrimonio){alert('Informe o patrimônio.');return;}
+  if(!descricao){alert('Descreva o problema.');return;}
+  const dados={solicitante_email:currentEmail,colaborador:$('tk-colab').value,patrimonio,descricao,observacao:$('tk-obs').value.trim(),status:'Aberto'};
+  $('tk-save').disabled=true;
+  const{error}=await db.from('tickets_manutencao').insert(dados);
+  $('tk-save').disabled=false;
+  if(error){alert('Erro: '+error.message);return;}
+  ['tk-pat','tk-desc','tk-obs'].forEach(i=>$(i).value='');
+  toast('Ticket aberto ✓');openSolMan();
+}
+async function openMtAdm(){
+  const{data,error}=await db.from('tickets_manutencao').select('*').order('created_at',{ascending:false});
+  if(error){tickets=[];$('mt-lista').innerHTML='<div class="empty"><b>Tabela de tickets ainda não existe</b>Rode o SQL e recarregue a página.</div>';['mt-c-ab','mt-c-an','mt-c-re','mt-c-ca'].forEach(i=>$(i).textContent='0');return;}
+  tickets=data||[];renderMtAdm();
+}
+function renderMtAdm(){
+  $('mt-c-ab').textContent=tickets.filter(t=>t.status==='Aberto').length;
+  $('mt-c-an').textContent=tickets.filter(t=>t.status==='Em andamento').length;
+  $('mt-c-re').textContent=tickets.filter(t=>t.status==='Resolvido').length;
+  $('mt-c-ca').textContent=tickets.filter(t=>t.status==='Cancelado').length;
+  const q=$('mt-busca').value.trim().toLowerCase(),fs=$('mt-filtro').value;
+  const arr=tickets.filter(t=>(!fs||t.status===fs)&&(!q||((t.colaborador||'')+' '+(t.patrimonio||'')).toLowerCase().includes(q)));
+  $('mt-lista').innerHTML=arr.length?arr.map(t=>{
+    const open=t.status!=='Resolvido'&&t.status!=='Cancelado';
+    return`<div class="row-item" style="cursor:default;flex-direction:column;align-items:stretch">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div><div class="ri-main">${esc(t.colaborador)} — Patrimônio ${esc(t.patrimonio||'')}</div>
+        <div class="ri-sub" style="margin-top:4px">${esc(t.descricao||'')}</div>
+        ${t.observacao?`<div class="ri-sub" style="margin-top:4px">${esc(t.observacao)}</div>`:''}
+        ${t.resposta?`<div class="ri-sub" style="margin-top:4px;color:var(--accent-dark)"><b>Resposta:</b> ${esc(t.resposta)}</div>`:''}
+        <div class="ri-sub" style="margin-top:4px;opacity:.7">${esc(t.solicitante_email||'')}</div></div>
+        <span class="badge ${TK_BADGE[t.status]||'b-desc'}">${esc(t.status||'')}</span>
+      </div>
+      ${open?`<div class="item-actions" style="margin-top:10px;justify-content:flex-end">
+        ${t.status==='Aberto'?`<button class="btn-edit" data-mt-an="${t.id}">Iniciar atendimento</button>`:''}
+        <button class="btn-edit" data-mt-rs="${t.id}">Resolver</button>
+        <button class="btn-del" data-mt-cn="${t.id}">Cancelar</button>
+      </div>`:''}
+    </div>`;}).join(''):'<div class="empty">Nenhum ticket.</div>';
+}
+async function statusTicket(id,novoStatus,extras){
+  const dados={status:novoStatus,...(extras||{})};
+  const{error}=await db.from('tickets_manutencao').update(dados).eq('id',id);
+  if(error){alert('Erro: '+error.message);return false;}
+  return true;
+}
+async function iniciarTicket(id){if(await statusTicket(id,'Em andamento')){await openMtAdm();updatePendingBadges();toast('Ticket em andamento');}}
+async function resolverTicket(id){
+  const t=tickets.find(x=>x.id===id);if(!t)return;
+  const resp=prompt('Resposta / resolução (opcional):',t.resposta||'');
+  if(resp===null)return;
+  if(!await statusTicket(id,'Resolvido',{resposta:resp,resolvido_em:new Date().toISOString()}))return;
+  // adicionar manutenção no histórico do patrimônio
+  if(t.patrimonio){await db.from('manutencoes').insert({patrimonio:t.patrimonio,descricao:'Ticket: '+(t.descricao||'')+(resp?' · Resposta: '+resp:''),data:new Date().toISOString().slice(0,10)});}
+  await openMtAdm();updatePendingBadges();toast('Ticket resolvido ✓');
+}
+async function cancelarTicket(id){
+  if(!confirm('Cancelar este ticket?'))return;
+  if(!await statusTicket(id,'Cancelado'))return;
+  await openMtAdm();updatePendingBadges();toast('Ticket cancelado');
+}
+
 // ===== Badges de pendentes =====
 async function updatePendingBadges(){
   if(!isAdminUser)return;
   const pares=[
-    ['nav-soladm','Pedidos de folgas','solicitacoes_folga'],
-    ['nav-atadm','Pedidos de atestados','solicitacoes_atestado'],
-    ['nav-feradm','Pedidos de férias','solicitacoes_ferias'],
-    ['nav-ocadm','Pedidos de ocorrências','solicitacoes_ocorrencia']
+    ['nav-soladm','Pedidos de folgas','solicitacoes_folga','Pendente'],
+    ['nav-atadm','Pedidos de atestados','solicitacoes_atestado','Pendente'],
+    ['nav-feradm','Pedidos de férias','solicitacoes_ferias','Pendente'],
+    ['nav-ocadm','Pedidos de ocorrências','solicitacoes_ocorrencia','Pendente'],
+    ['nav-mtadm','Tickets de manutenção','tickets_manutencao','Aberto']
   ];
-  for(const [id,label,tbl] of pares){
+  for(const [id,label,tbl,st] of pares){
     let n=0;
-    try{const r=await db.from(tbl).select('id',{count:'exact',head:true}).eq('status','Pendente');n=r.count||0;}catch(e){}
-    $(id).innerHTML=esc(label)+(n?'<span class="nav-badge">'+n+'</span>':'');
+    try{const r=await db.from(tbl).select('id',{count:'exact',head:true}).eq('status',st);n=r.count||0;}catch(e){}
+    if($(id))$(id).innerHTML=esc(label)+(n?'<span class="nav-badge">'+n+'</span>':'');
   }
 }
 
@@ -1981,8 +2133,14 @@ $('aa-lista').addEventListener('click',e=>{const ok=e.target.getAttribute('data-
 $('nav-solo').onclick=()=>showView('solo');
 $('nav-ocadm').onclick=()=>showView('ocadm');
 $('so-save').onclick=onSaveSolo;
+$('so-tempo').onchange=updateSoloFracao;
 $('oa-busca').oninput=renderOcAdm;$('oa-filtro').onchange=renderOcAdm;
 $('oa-lista').addEventListener('click',e=>{const ok=e.target.getAttribute('data-oa-ok'),no=e.target.getAttribute('data-oa-no');if(ok)aceitarSolo(ok);if(no)recusarSolo(no);});
+$('nav-solm').onclick=()=>showView('solm');
+$('nav-mtadm').onclick=()=>showView('mtadm');
+$('tk-save').onclick=onSaveSolMan;
+$('mt-busca').oninput=renderMtAdm;$('mt-filtro').onchange=renderMtAdm;
+$('mt-lista').addEventListener('click',e=>{const an=e.target.getAttribute('data-mt-an'),rs=e.target.getAttribute('data-mt-rs'),cn=e.target.getAttribute('data-mt-cn');if(an)iniciarTicket(an);if(rs)resolverTicket(rs);if(cn)cancelarTicket(cn);});
 $('fr-opcao').onchange=()=>renderFerPeriodos($('fr-opcao').value);
 $('fr-save').onclick=onSaveFer;
 $('fa-busca').oninput=renderFerAdm;$('fa-filtro').onchange=renderFerAdm;
