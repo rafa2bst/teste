@@ -307,9 +307,28 @@
       <div class="sec-title" style="margin-top:0">Calendário de férias</div>
       <div class="cal" id="fe-cal"></div>
       <div class="cal-names" id="fe-cal-detail">Clique num dia colorido para ver quem está de férias.</div>
-      <div class="search">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-        <input id="fe-busca" placeholder="Buscar por colaborador...">
+      <div class="toolbar">
+        <div class="search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <input id="fe-busca" placeholder="Buscar por colaborador...">
+        </div>
+        <select id="fe-fstatus" style="width:auto;min-width:170px">
+          <option value="">Todos os status</option>
+          <option value="agora">Em curso agora</option>
+          <option value="prox3">Próximos 3 meses</option>
+          <option value="agendada">Agendadas (futuras)</option>
+          <option value="concluida">Concluídas</option>
+        </select>
+        <select id="fe-fmes" style="width:auto;min-width:140px">
+          <option value="">Todos os meses</option>
+          <option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option>
+          <option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option>
+          <option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option>
+          <option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
+        </select>
+        <select id="fe-ftec" style="width:auto;min-width:170px">
+          <option value="">Todos os técnicos</option>
+        </select>
       </div>
       <div id="fe-lista" class="list"></div>
     </div>
@@ -1077,8 +1096,24 @@ function renderFerias(){
   $('fe-c-agora').textContent=ferias.filter(f=>statusFeria(f)==='Em férias').length;
   $('fe-c-agend').textContent=ferias.filter(f=>statusFeria(f)==='Agendada').length;
   $('fe-c-conc').textContent=ferias.filter(f=>statusFeria(f)==='Concluída').length;
-  const q=$('fe-busca').value.trim().toLowerCase();
-  const arr=ferias.filter(f=>!q||(f.colaborador||'').toLowerCase().includes(q));
+  // popular filtro de técnico (mantém seleção atual)
+  const selT=$('fe-ftec'),curT=selT.value,nomes=[...new Set(ferias.map(f=>f.colaborador).filter(Boolean))].sort();
+  selT.innerHTML='<option value="">Todos os técnicos</option>'+nomes.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  if(curT)selT.value=curT;
+  const q=$('fe-busca').value.trim().toLowerCase(),fst=$('fe-fstatus').value,fmes=parseInt($('fe-fmes').value)||0,ftec=$('fe-ftec').value;
+  const hoje=new Date();hoje.setHours(0,0,0,0);
+  const tres=new Date(hoje);tres.setMonth(tres.getMonth()+3);
+  const arr=ferias.filter(f=>{
+    if(q&&!(f.colaborador||'').toLowerCase().includes(q))return false;
+    if(ftec&&f.colaborador!==ftec)return false;
+    const st=statusFeria(f);
+    if(fst==='agora'&&st!=='Em férias')return false;
+    if(fst==='agendada'&&st!=='Agendada')return false;
+    if(fst==='concluida'&&st!=='Concluída')return false;
+    if(fst==='prox3'){if(!f.data_inicio)return false;const di=new Date(f.data_inicio+'T00:00');if(di<hoje||di>tres)return false;}
+    if(fmes){if(!f.data_inicio)return false;const mi=new Date(f.data_inicio+'T00:00').getMonth()+1,mf=f.data_fim?new Date(f.data_fim+'T00:00').getMonth()+1:mi;if(mi!==fmes&&mf!==fmes)return false;}
+    return true;
+  });
   $('fe-lista').innerHTML=arr.length?arr.map(f=>{const st=statusFeria(f);return`
     <div class="row-item" style="cursor:default;align-items:flex-start">
       <div><div class="ri-main">${esc(f.colaborador)}</div>
@@ -1659,6 +1694,7 @@ $('fo-lista').addEventListener('click',e=>{const ed=e.target.getAttribute('data-
 $('fe-save').onclick=onSaveFeria;
 $('fe-cancel').onclick=clearFeria;
 $('fe-busca').oninput=renderFerias;
+$('fe-fstatus').onchange=renderFerias;$('fe-fmes').onchange=renderFerias;$('fe-ftec').onchange=renderFerias;
 $('fe-lista').addEventListener('click',e=>{const ed=e.target.getAttribute('data-fe-edit'),dl=e.target.getAttribute('data-fe-del');if(ed)editFeria(ed);if(dl)deleteFeria(dl);});
 $('sub-maq').onclick=()=>showSub('maq');
 $('sub-pes').onclick=()=>showSub('pes');
