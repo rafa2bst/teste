@@ -232,6 +232,7 @@
     <button id="nav-dash">Relatórios</button>
     <button id="nav-soladm">Pedidos de folgas</button>
     <button id="nav-tar">Tarefas</button>
+    <button id="nav-rot">Rotinas</button>
     <button id="nav-atadm">Pedidos de atestados</button>
     <button id="nav-ocadm">Pedidos de ocorrências</button>
     <button id="nav-mtadm">Tickets de manutenção</button>
@@ -1009,6 +1010,11 @@
     <div id="mtar-kanban" class="kanban"></div>
   </div>
 
+  <!-- VIEW: ROTINAS (templates de tarefas, admin) -->
+  <div id="view-rot" style="display:none">
+    <div id="rot-conteudo"></div>
+  </div>
+
   <!-- MODAL de tarefa (compartilhado) -->
   <div id="task-modal-bg" class="modal-bg" style="display:none">
     <div class="modal-card" id="task-modal" onclick="event.stopPropagation()"></div>
@@ -1026,7 +1032,7 @@ const isAdmin=u=>!!u&&ADMIN_EMAILS.includes((u.email||'').toLowerCase());
 
 let maquinas=[],atribuicoes=[],manutencoes=[],isAdminUser=false,editingPatr=null,ferias=[],editingFeria=null,folgas=[],editingFolga=null,atestados=[],editingAtest=null,feCal=null,foCal=null,atCal=null,anivs=[],editingAniv=null,ocors=[],editingOcor=null,probs=[],editingProb=null,anCal=null,treins=[],editingTrein=null,anoms=[],editingAnom=null;
 const charts={};
-let currentEmail='',authMode='login',sols=[],ferReqs=[],atSols=[],ocSols=[],tickets=[],maqStatusFilter='',anomTratFilter='',tarefas=[],currentTaskId=null;
+let currentEmail='',authMode='login',sols=[],ferReqs=[],atSols=[],ocSols=[],tickets=[],maqStatusFilter='',anomTratFilter='',tarefas=[],currentTaskId=null,rotinas=[],selectedRotId=null;
 const $=id=>document.getElementById(id);
 const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const hoje=()=>new Date().toISOString().slice(0,10);
@@ -1042,7 +1048,7 @@ async function showApp(user){
   $('login-screen').style.display='none';$('app').style.display='block';
   $('user-email').textContent=user.email;currentEmail=user.email||'';isAdminUser=isAdmin(user);
   $('nav').style.display='flex';
-  ['nav-cad','nav-rel','nav-fer','nav-fol','nav-ate','nav-aniv','nav-ocor','nav-prob','nav-trein','nav-anom','nav-fat','nav-dash','nav-soladm','nav-feradm','nav-atadm','nav-ocadm','nav-mtadm','nav-tar'].forEach(id=>$(id).style.display=isAdminUser?'':'none');
+  ['nav-cad','nav-rel','nav-fer','nav-fol','nav-ate','nav-aniv','nav-ocor','nav-prob','nav-trein','nav-anom','nav-fat','nav-dash','nav-soladm','nav-feradm','nav-atadm','nav-ocadm','nav-mtadm','nav-tar','nav-rot'].forEach(id=>$(id).style.display=isAdminUser?'':'none');
   $('nav-solf').style.display=isAdminUser?'none':'';
   $('nav-solfer').style.display=isAdminUser?'none':'';
   $('nav-solat').style.display=isAdminUser?'none':'';
@@ -1155,7 +1161,7 @@ async function registrarManutencao(patr){
 
 // ===== Views =====
 function showView(v){
-  const adminViews=['cadastro','relatorios','ferias','folgas','atestados','aniv','ocor','prob','trein','anom','fat','dash','soladm','feradm','atadm','ocadm','mtadm','tar'];
+  const adminViews=['cadastro','relatorios','ferias','folgas','atestados','aniv','ocor','prob','trein','anom','fat','dash','soladm','feradm','atadm','ocadm','mtadm','tar','rot'];
   if(adminViews.includes(v)&&!isAdminUser)v='solfolga';
   $('view-cadastro').style.display=v==='cadastro'?'block':'none';
   $('view-relatorios').style.display=v==='relatorios'?'block':'none';
@@ -1180,6 +1186,7 @@ function showView(v){
   $('view-solm').style.display=v==='solm'?'block':'none';
   $('view-mtadm').style.display=v==='mtadm'?'block':'none';
   $('view-tar').style.display=v==='tar'?'block':'none';
+  $('view-rot').style.display=v==='rot'?'block':'none';
   $('view-mtar').style.display=v==='mtar'?'block':'none';
   $('view-meus').style.display=v==='meus'?'block':'none';
   $('nav-cad').classList.toggle('active',v==='cadastro');
@@ -1205,6 +1212,7 @@ function showView(v){
   $('nav-solm').classList.toggle('active',v==='solm');
   $('nav-mtadm').classList.toggle('active',v==='mtadm');
   $('nav-tar').classList.toggle('active',v==='tar');
+  $('nav-rot').classList.toggle('active',v==='rot');
   $('nav-mtar').classList.toggle('active',v==='mtar');
   $('nav-meus').classList.toggle('active',v==='meus');
   if(v==='relatorios')renderRelatorios();
@@ -1229,6 +1237,7 @@ function showView(v){
   if(v==='solm')openSolMan();
   if(v==='mtadm')openMtAdm();
   if(v==='tar')openTar();
+  if(v==='rot')openRot();
   if(v==='mtar')openMtar();
   if(v==='meus')openMeus();
 }
@@ -2252,6 +2261,145 @@ function colaboradoresAreaTecnica(){
   tarefas.forEach(t=>{if(t.responsavel)set.add(t.responsavel);});
   return [...set].sort();
 }
+
+// ===== Rotinas (templates de tarefas) =====
+async function openRot(){
+  const{data,error}=await db.from('rotinas').select('*').order('created_at',{ascending:false});
+  if(error){rotinas=[];$('rot-conteudo').innerHTML='<div class="empty"><b>Tabela de rotinas ainda não existe</b>Rode o SQL e recarregue a página.</div>';return;}
+  rotinas=data||[];renderRot();
+}
+function renderRot(){
+  const r=selectedRotId?rotinas.find(x=>x.id===selectedRotId):null;
+  if(!r){renderRotLista();return;}
+  renderRotEdit(r);
+}
+function renderRotLista(){
+  $('rot-conteudo').innerHTML=`
+    <div class="toolbar">
+      <button class="btn-primary" id="rot-nova" style="flex:none" onclick="novaRot()">+ Nova rotina</button>
+      <p class="hint" style="margin:0;flex:1">Cadastre rotinas com várias tarefas. Depois é só clicar em <b>Executar</b> e todas vão pra aba Tarefas atribuídas aos responsáveis.</p>
+    </div>
+    <div class="list" style="margin-top:14px">
+      ${rotinas.length?rotinas.map(r=>{const n=(r.tarefas||[]).length;return`
+        <div class="row-item" style="cursor:default">
+          <div><div class="ri-main">${esc(r.nome||'')}</div>
+          <div class="ri-sub">${n} tarefa${n===1?'':'s'}${r.descricao?' · '+esc(r.descricao):''}</div></div>
+          <div class="item-actions">
+            <button class="btn-edit" onclick="abrirRot('${r.id}')">Editar</button>
+            <button class="btn-edit" onclick="executarRot('${r.id}')">Executar</button>
+            <button class="btn-del" onclick="excluirRot('${r.id}')">Excluir</button>
+          </div>
+        </div>`;}).join(''):'<div class="empty">Nenhuma rotina cadastrada ainda. Clique em + Nova rotina para começar.</div>'}
+    </div>`;
+}
+function renderRotEdit(r){
+  const tars=(r.tarefas||[]),nomes=colaboradoresAreaTecnica();
+  const respOpts='<option value="">— sem responsável definido —</option>'+nomes.map(n=>`<option>${esc(n)}</option>`).join('');
+  const priOpts=TAR_PRIO.map(p=>`<option ${p==='Média'?'selected':''}>${p}</option>`).join('');
+  $('rot-conteudo').innerHTML=`
+    <div class="toolbar">
+      <button class="btn-ghost" onclick="voltarRot()" style="flex:none">← Voltar</button>
+      <button class="btn-edit" onclick="executarRot('${r.id}')" style="flex:none">Executar rotina</button>
+      <button class="btn-del" onclick="excluirRot('${r.id}')" style="flex:none">Excluir rotina</button>
+    </div>
+    <div class="form-card" style="margin-top:14px">
+      <label>Nome da rotina *</label>
+      <input id="rot-nome" value="${esc(r.nome||'')}">
+      <label>Descrição</label>
+      <textarea id="rot-desc" placeholder="Opcional">${esc(r.descricao||'')}</textarea>
+      <div class="actions"><button class="btn-primary" onclick="salvarRot('${r.id}')">Salvar nome/descrição</button></div>
+    </div>
+    <div class="sec-title">Tarefas da rotina (${tars.length})</div>
+    <div class="list">
+      ${tars.length?tars.map((t,i)=>`
+        <div class="row-item" style="cursor:default;align-items:flex-start">
+          <div><div class="ri-main">${i+1}. ${esc(t.titulo||'')}</div>
+          <div class="ri-sub">Responsável: <b>${esc(t.responsavel||'— a definir —')}</b> · Prioridade: ${esc(t.prioridade||'Média')}${t.dias_prazo?' · Prazo: '+t.dias_prazo+' dia'+(t.dias_prazo===1?'':'s')+' após a execução':''}</div>
+          ${t.descricao?`<div class="ri-sub" style="margin-top:4px">${esc(t.descricao)}</div>`:''}</div>
+          <div class="item-actions">
+            <button class="btn-del" onclick="removeRotTar('${r.id}',${i})">Excluir</button>
+          </div>
+        </div>`).join(''):'<div class="empty">Nenhuma tarefa adicionada ainda.</div>'}
+    </div>
+    <div class="form-card" style="margin-top:14px">
+      <h3 style="font-family:var(--display);font-size:17px;margin-bottom:8px">+ Adicionar tarefa à rotina</h3>
+      <label>Título da tarefa *</label>
+      <input id="rt-titulo" placeholder="Ex.: Criar e-mail da 2B">
+      <label>Descrição</label>
+      <textarea id="rt-desc" placeholder="Opcional"></textarea>
+      <div class="row2">
+        <div><label>Responsável (opcional)</label>
+          <select id="rt-resp">${respOpts}</select>
+        </div>
+        <div><label>Prioridade</label>
+          <select id="rt-pri">${priOpts}</select>
+        </div>
+      </div>
+      <label>Prazo (dias após executar a rotina)</label>
+      <input id="rt-prazo" type="number" min="0" placeholder="Ex.: 1 (entregar 1 dia após executar)">
+      <div class="actions"><button class="btn-primary" onclick="addRotTar('${r.id}')">Adicionar tarefa</button></div>
+    </div>`;
+}
+async function novaRot(){
+  const nome=prompt('Nome da rotina (ex.: Contratação de novo colaborador):');
+  if(!nome||!nome.trim())return;
+  const{data,error}=await db.from('rotinas').insert({nome:nome.trim(),descricao:'',tarefas:[]}).select().single();
+  if(error){alert('Erro: '+error.message);return;}
+  rotinas=[data,...rotinas];selectedRotId=data.id;renderRot();toast('Rotina criada ✓');
+}
+function abrirRot(id){selectedRotId=id;renderRot();}
+function voltarRot(){selectedRotId=null;renderRot();}
+async function salvarRot(id){
+  const r=rotinas.find(x=>x.id===id);if(!r)return;
+  const nome=$('rot-nome').value.trim();if(!nome){alert('Informe o nome.');return;}
+  const dados={nome,descricao:$('rot-desc').value.trim()};
+  const{error}=await db.from('rotinas').update(dados).eq('id',id);
+  if(error){alert('Erro: '+error.message);return;}
+  Object.assign(r,dados);toast('Salvo ✓');
+}
+async function excluirRot(id){
+  if(!confirm('Excluir esta rotina? Não afeta as tarefas que já foram criadas a partir dela.'))return;
+  const{error}=await db.from('rotinas').delete().eq('id',id);
+  if(error){alert('Erro: '+error.message);return;}
+  rotinas=rotinas.filter(x=>x.id!==id);if(selectedRotId===id)selectedRotId=null;renderRot();toast('Rotina excluída');
+}
+async function addRotTar(id){
+  const r=rotinas.find(x=>x.id===id);if(!r)return;
+  const titulo=$('rt-titulo').value.trim();if(!titulo){alert('Informe o título.');return;}
+  const novaTar={titulo,descricao:$('rt-desc').value.trim(),responsavel:$('rt-resp').value||'',prioridade:$('rt-pri').value||'Média',dias_prazo:parseInt($('rt-prazo').value)||null};
+  const novaLista=[...(r.tarefas||[]),novaTar];
+  const{error}=await db.from('rotinas').update({tarefas:novaLista}).eq('id',id);
+  if(error){alert('Erro: '+error.message);return;}
+  r.tarefas=novaLista;renderRot();toast('Tarefa adicionada ✓');
+}
+async function removeRotTar(id,idx){
+  const r=rotinas.find(x=>x.id===id);if(!r)return;
+  if(!confirm('Remover esta tarefa da rotina?'))return;
+  const novaLista=(r.tarefas||[]).filter((_,i)=>i!==idx);
+  const{error}=await db.from('rotinas').update({tarefas:novaLista}).eq('id',id);
+  if(error){alert('Erro: '+error.message);return;}
+  r.tarefas=novaLista;renderRot();toast('Tarefa removida');
+}
+async function executarRot(id){
+  const r=rotinas.find(x=>x.id===id);if(!r)return;
+  const tars=r.tarefas||[];if(!tars.length){alert('Esta rotina não tem tarefas ainda.');return;}
+  const dataIni=prompt('Data de início da execução (deixe em branco = hoje, formato AAAA-MM-DD):',new Date().toISOString().slice(0,10));
+  if(dataIni===null)return;
+  const base=dataIni?new Date(dataIni+'T00:00'):new Date();
+  if(isNaN(base.getTime())){alert('Data inválida.');return;}
+  const inserts=tars.map(t=>{
+    let prazo=null;
+    if(t.dias_prazo!=null){const d=new Date(base);d.setDate(d.getDate()+(+t.dias_prazo||0));prazo=d.toISOString().slice(0,10);}
+    return{titulo:t.titulo,descricao:(t.descricao||'')+(r.nome?'\n\nRotina: '+r.nome:''),responsavel:t.responsavel||null,
+      responsavel_email:t.responsavel?emailFromNome(t.responsavel):null,
+      prioridade:t.prioridade||'Média',data_entrega:prazo,status:'A fazer',comentarios:[]};
+  });
+  if(!confirm(`Vai criar ${inserts.length} tarefa(s) a partir da rotina "${r.nome}". Continuar?`))return;
+  const{error}=await db.from('tarefas').insert(inserts);
+  if(error){alert('Erro: '+error.message);return;}
+  toast(inserts.length+' tarefa(s) criada(s) ✓');
+}
+$('nav-rot').onclick=()=>showView('rot');
 async function openTar(){
   const{data,error}=await db.from('tarefas').select('*').order('created_at',{ascending:false});
   if(error){tarefas=[];$('tar-kanban').innerHTML='<div class="empty"><b>Tabela de tarefas ainda não existe</b>Rode o SQL e recarregue a página.</div>';return;}
