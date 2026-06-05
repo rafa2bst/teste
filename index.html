@@ -161,6 +161,27 @@
   .stat-clickable:hover{transform:translateY(-1px);box-shadow:0 4px 10px rgba(0,0,0,.08)}
   .stat-clickable.active-filter{background:var(--accent-soft);box-shadow:inset 0 0 0 2px var(--accent)}
   .stat-clickable.active-filter b{color:var(--accent-dark)}
+  .kanban{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px}
+  @media(max-width:780px){.kanban{grid-template-columns:1fr}}
+  .kanban-col{background:#faf8f2;border:1px solid var(--line);border-radius:12px;padding:12px;min-height:160px}
+  .kanban-col h3{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+  .kanban-col h3 .ct{background:#fff;border:1px solid var(--line);color:var(--ink);padding:1px 8px;border-radius:10px;font-size:11px}
+  .task-card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:transform .1s, box-shadow .1s;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+  .task-card:hover{transform:translateY(-1px);box-shadow:var(--shadow)}
+  .task-card .tc-title{font-weight:600;font-size:14px;margin-bottom:6px;color:var(--ink)}
+  .task-card .tc-meta{display:flex;gap:8px;flex-wrap:wrap;font-size:11px;color:var(--ink-soft);align-items:center}
+  .pr-badge{padding:1px 8px;border-radius:6px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+  .pr-Baixa{background:#e6efe9;color:#175547}
+  .pr-Média{background:#fff4d6;color:#7a5618}
+  .pr-Alta{background:#fdd8ce;color:#7a2918}
+  .pr-Urgente{background:#a8412f;color:#fff}
+  .tc-overdue{color:#a8412f;font-weight:700}
+  .modal-bg{position:fixed;inset:0;background:rgba(20,20,20,.45);display:flex;align-items:flex-start;justify-content:center;z-index:100;padding:40px 14px;overflow-y:auto}
+  .modal-card{background:var(--card);border-radius:14px;padding:22px;max-width:560px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+  .modal-close{float:right;background:none;border:none;font-size:24px;cursor:pointer;color:var(--ink-soft);line-height:1;padding:0}
+  .modal-close:hover{color:var(--ink)}
+  .coment{background:#faf8f2;border-left:3px solid var(--accent);border-radius:0 8px 8px 0;padding:8px 10px;margin-bottom:6px;font-size:13px}
+  .coment-meta{font-size:11px;color:var(--ink-soft);margin-bottom:2px}
 </style>
 
 <!-- ===== LOGIN ===== -->
@@ -197,6 +218,7 @@
     <button id="nav-solo">Solicitar ocorrência</button>
     <button id="nav-solm">Manutenção (ticket)</button>
     <button id="nav-meus">Meus registros</button>
+    <button id="nav-mtar">Minhas tarefas</button>
     <button id="nav-rel">Patrimônio Notebooks</button>
     <button id="nav-fer">Férias</button>
     <button id="nav-fol">Folgas</button>
@@ -209,6 +231,7 @@
     <button id="nav-fat">Faturamento</button>
     <button id="nav-dash">Relatórios</button>
     <button id="nav-soladm">Pedidos de folgas</button>
+    <button id="nav-tar">Tarefas</button>
     <button id="nav-atadm">Pedidos de atestados</button>
     <button id="nav-ocadm">Pedidos de ocorrências</button>
     <button id="nav-mtadm">Tickets de manutenção</button>
@@ -960,6 +983,36 @@
     <div class="sec-title">Meus atestados / consultas autorizados</div>
     <div id="meus-at" class="list"></div>
   </div>
+
+  <!-- VIEW: TAREFAS (admin Kanban) -->
+  <div id="view-tar" style="display:none">
+    <div class="toolbar">
+      <button class="btn-primary" id="tar-nova" style="flex:none">+ Nova tarefa</button>
+      <div class="search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="tar-busca" placeholder="Buscar por título ou responsável...">
+      </div>
+      <select id="tar-fresp" style="width:auto;min-width:170px"><option value="">Todos os responsáveis</option></select>
+      <select id="tar-fpri" style="width:auto;min-width:140px">
+        <option value="">Todas prioridades</option><option>Urgente</option><option>Alta</option><option>Média</option><option>Baixa</option>
+      </select>
+    </div>
+    <div id="tar-kanban" class="kanban"></div>
+  </div>
+
+  <!-- VIEW: MINHAS TAREFAS (colaborador Kanban) -->
+  <div id="view-mtar" style="display:none">
+    <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
+      <h2 id="mtar-title">Minhas tarefas</h2>
+      <p class="hint">Tarefas atribuídas a você. Clique numa tarefa para abrir, atualizar o status e comentar.</p>
+    </div>
+    <div id="mtar-kanban" class="kanban"></div>
+  </div>
+
+  <!-- MODAL de tarefa (compartilhado) -->
+  <div id="task-modal-bg" class="modal-bg" style="display:none">
+    <div class="modal-card" id="task-modal" onclick="event.stopPropagation()"></div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -973,7 +1026,7 @@ const isAdmin=u=>!!u&&ADMIN_EMAILS.includes((u.email||'').toLowerCase());
 
 let maquinas=[],atribuicoes=[],manutencoes=[],isAdminUser=false,editingPatr=null,ferias=[],editingFeria=null,folgas=[],editingFolga=null,atestados=[],editingAtest=null,feCal=null,foCal=null,atCal=null,anivs=[],editingAniv=null,ocors=[],editingOcor=null,probs=[],editingProb=null,anCal=null,treins=[],editingTrein=null,anoms=[],editingAnom=null;
 const charts={};
-let currentEmail='',authMode='login',sols=[],ferReqs=[],atSols=[],ocSols=[],tickets=[],maqStatusFilter='',anomTratFilter='';
+let currentEmail='',authMode='login',sols=[],ferReqs=[],atSols=[],ocSols=[],tickets=[],maqStatusFilter='',anomTratFilter='',tarefas=[],currentTaskId=null;
 const $=id=>document.getElementById(id);
 const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const hoje=()=>new Date().toISOString().slice(0,10);
@@ -989,13 +1042,14 @@ async function showApp(user){
   $('login-screen').style.display='none';$('app').style.display='block';
   $('user-email').textContent=user.email;currentEmail=user.email||'';isAdminUser=isAdmin(user);
   $('nav').style.display='flex';
-  ['nav-cad','nav-rel','nav-fer','nav-fol','nav-ate','nav-aniv','nav-ocor','nav-prob','nav-trein','nav-anom','nav-fat','nav-dash','nav-soladm','nav-feradm','nav-atadm','nav-ocadm','nav-mtadm'].forEach(id=>$(id).style.display=isAdminUser?'':'none');
+  ['nav-cad','nav-rel','nav-fer','nav-fol','nav-ate','nav-aniv','nav-ocor','nav-prob','nav-trein','nav-anom','nav-fat','nav-dash','nav-soladm','nav-feradm','nav-atadm','nav-ocadm','nav-mtadm','nav-tar'].forEach(id=>$(id).style.display=isAdminUser?'':'none');
   $('nav-solf').style.display=isAdminUser?'none':'';
   $('nav-solfer').style.display=isAdminUser?'none':'';
   $('nav-solat').style.display=isAdminUser?'none':'';
   $('nav-solo').style.display=isAdminUser?'none':'';
   $('nav-solm').style.display=isAdminUser?'none':'';
   $('nav-meus').style.display=isAdminUser?'none':'';
+  $('nav-mtar').style.display=isAdminUser?'none':'';
   if(isAdminUser)await loadAll();
   if(isAdminUser)updatePendingBadges();
   showView(isAdminUser?'cadastro':'solfolga');
@@ -1101,7 +1155,7 @@ async function registrarManutencao(patr){
 
 // ===== Views =====
 function showView(v){
-  const adminViews=['cadastro','relatorios','ferias','folgas','atestados','aniv','ocor','prob','trein','anom','fat','dash','soladm','feradm','atadm','ocadm','mtadm'];
+  const adminViews=['cadastro','relatorios','ferias','folgas','atestados','aniv','ocor','prob','trein','anom','fat','dash','soladm','feradm','atadm','ocadm','mtadm','tar'];
   if(adminViews.includes(v)&&!isAdminUser)v='solfolga';
   $('view-cadastro').style.display=v==='cadastro'?'block':'none';
   $('view-relatorios').style.display=v==='relatorios'?'block':'none';
@@ -1125,6 +1179,8 @@ function showView(v){
   $('view-ocadm').style.display=v==='ocadm'?'block':'none';
   $('view-solm').style.display=v==='solm'?'block':'none';
   $('view-mtadm').style.display=v==='mtadm'?'block':'none';
+  $('view-tar').style.display=v==='tar'?'block':'none';
+  $('view-mtar').style.display=v==='mtar'?'block':'none';
   $('view-meus').style.display=v==='meus'?'block':'none';
   $('nav-cad').classList.toggle('active',v==='cadastro');
   $('nav-rel').classList.toggle('active',v==='relatorios');
@@ -1148,6 +1204,8 @@ function showView(v){
   $('nav-ocadm').classList.toggle('active',v==='ocadm');
   $('nav-solm').classList.toggle('active',v==='solm');
   $('nav-mtadm').classList.toggle('active',v==='mtadm');
+  $('nav-tar').classList.toggle('active',v==='tar');
+  $('nav-mtar').classList.toggle('active',v==='mtar');
   $('nav-meus').classList.toggle('active',v==='meus');
   if(v==='relatorios')renderRelatorios();
   if(v==='ferias')openFerias();
@@ -1170,6 +1228,8 @@ function showView(v){
   if(v==='ocadm')openOcAdm();
   if(v==='solm')openSolMan();
   if(v==='mtadm')openMtAdm();
+  if(v==='tar')openTar();
+  if(v==='mtar')openMtar();
   if(v==='meus')openMeus();
 }
 function showSub(s){
@@ -2152,6 +2212,168 @@ async function openMeus(){
     </div>`;}).join(''):'<div class="empty">Sem atestados/consultas autorizados.</div>';
 }
 
+// ===== Tarefas (Kanban) =====
+const TAR_STATUS=['A fazer','Em andamento','Concluída'];
+const TAR_PRIO=['Baixa','Média','Alta','Urgente'];
+function emailFromNome(nome){if(!nome)return'';return nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'.').replace(/[^a-z.]/g,'')+'@2bst.com.br';}
+function isOverdue(t){if(!t.data_entrega||t.status==='Concluída')return false;return t.data_entrega<new Date().toISOString().slice(0,10);}
+function taskCard(t){
+  const overdue=isOverdue(t);
+  return `<div class="task-card" data-task="${t.id}">
+    <div class="tc-title">${esc(t.titulo||'')}</div>
+    <div class="tc-meta">
+      <span class="pr-badge pr-${esc(t.prioridade||'Média')}">${esc(t.prioridade||'Média')}</span>
+      ${t.responsavel?`<span>${esc(t.responsavel)}</span>`:''}
+      ${t.data_entrega?`<span class="${overdue?'tc-overdue':''}">▢ ${fmt(t.data_entrega)}</span>`:''}
+      ${(t.comentarios&&t.comentarios.length)?`<span>💬 ${t.comentarios.length}</span>`:''}
+    </div>
+  </div>`;
+}
+function renderKanban(containerId,arr){
+  const cols=TAR_STATUS.map(st=>{
+    const itens=arr.filter(t=>(t.status||'A fazer')===st).sort((a,b)=>{
+      // urgente/alta primeiro, depois data
+      const ord={'Urgente':0,'Alta':1,'Média':2,'Baixa':3};
+      const da=ord[a.prioridade||'Média'],db=ord[b.prioridade||'Média'];
+      if(da!==db)return da-db;
+      return (a.data_entrega||'9999')<(b.data_entrega||'9999')?-1:1;
+    });
+    return `<div class="kanban-col">
+      <h3>${st} <span class="ct">${itens.length}</span></h3>
+      ${itens.length?itens.map(taskCard).join(''):'<div class="empty" style="padding:16px 8px">—</div>'}
+    </div>`;
+  }).join('');
+  $(containerId).innerHTML=cols;
+}
+function colaboradoresAreaTecnica(){
+  const set=new Set();
+  maquinas.forEach(m=>{if(m.colaborador&&norm(m.setor)==='area tecnica')set.add(m.colaborador);});
+  // adicionar nomes que já apareceram em tarefas e na aniversários (load lazy)
+  tarefas.forEach(t=>{if(t.responsavel)set.add(t.responsavel);});
+  return [...set].sort();
+}
+async function openTar(){
+  const{data,error}=await db.from('tarefas').select('*').order('created_at',{ascending:false});
+  if(error){tarefas=[];$('tar-kanban').innerHTML='<div class="empty"><b>Tabela de tarefas ainda não existe</b>Rode o SQL e recarregue a página.</div>';return;}
+  tarefas=data||[];
+  // popular filtro de responsáveis
+  const nomes=colaboradoresAreaTecnica(),selR=$('tar-fresp'),cur=selR.value;
+  selR.innerHTML='<option value="">Todos os responsáveis</option>'+nomes.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  if(cur)selR.value=cur;
+  renderTar();
+}
+function renderTar(){
+  const q=$('tar-busca').value.trim().toLowerCase(),fr=$('tar-fresp').value,fp=$('tar-fpri').value;
+  const arr=tarefas.filter(t=>{
+    if(fr&&t.responsavel!==fr)return false;
+    if(fp&&t.prioridade!==fp)return false;
+    if(q&&!((t.titulo||'')+' '+(t.responsavel||'')).toLowerCase().includes(q))return false;
+    return true;
+  });
+  renderKanban('tar-kanban',arr);
+}
+async function openMtar(){
+  const{data,error}=await db.from('tarefas').select('*').order('created_at',{ascending:false});
+  if(error){$('mtar-kanban').innerHTML='<div class="empty"><b>Tabela de tarefas ainda não existe</b>Peça ao administrador para rodar o SQL.</div>';return;}
+  tarefas=data||[];renderKanban('mtar-kanban',tarefas);
+}
+function openTaskModal(taskId){
+  currentTaskId=taskId;
+  const t=taskId?tarefas.find(x=>x.id===taskId):null;
+  const novo=!t;
+  const ehAdmin=isAdminUser;
+  const minhaTarefa=t&&t.responsavel_email===currentEmail;
+  const podeEditar=novo?ehAdmin:(ehAdmin||minhaTarefa);
+  const podeApagar=!novo&&ehAdmin;
+  const nomes=colaboradoresAreaTecnica();
+  const respOpt=nomes.map(n=>`<option ${t&&t.responsavel===n?'selected':''}>${esc(n)}</option>`).join('');
+  const priOpt=TAR_PRIO.map(p=>`<option ${(t?t.prioridade:'Média')===p?'selected':''}>${p}</option>`).join('');
+  const statusOpt=TAR_STATUS.map(s=>`<option ${(t?t.status:'A fazer')===s?'selected':''}>${s}</option>`).join('');
+  const comentarios=(t&&Array.isArray(t.comentarios))?t.comentarios:[];
+  const html=`
+    <button class="modal-close" onclick="closeTaskModal()">×</button>
+    <h2 style="margin-bottom:6px">${novo?'Nova tarefa':'Detalhe da tarefa'}</h2>
+    <p class="hint" style="margin-bottom:12px">${novo?'Atribuir uma tarefa a um colaborador.':(ehAdmin?'Você pode editar tudo.':'Você pode mudar o status e comentar.')}</p>
+    <label>Título *</label>
+    <input id="tm-titulo" value="${esc(t?t.titulo:'')}" ${ehAdmin?'':'disabled'} placeholder="Ex.: Incluir banco de dados na web">
+    <label>Descrição</label>
+    <textarea id="tm-desc" ${ehAdmin?'':'disabled'} placeholder="Detalhes da tarefa">${esc(t?t.descricao:'')}</textarea>
+    <div class="row2">
+      <div><label>Responsável ${ehAdmin?'*':''}</label>
+        <select id="tm-resp" ${ehAdmin?'':'disabled'}>
+          <option value="">— selecione —</option>${respOpt}
+        </select>
+      </div>
+      <div><label>Prioridade</label>
+        <select id="tm-pri" ${ehAdmin?'':'disabled'}>${priOpt}</select>
+      </div>
+    </div>
+    <div class="row2">
+      <div><label>Data de entrega</label><input id="tm-data" type="date" value="${t&&t.data_entrega?t.data_entrega:''}" ${ehAdmin?'':'disabled'}></div>
+      <div><label>Status</label><select id="tm-status" ${podeEditar?'':'disabled'}>${statusOpt}</select></div>
+    </div>
+    ${!novo?`
+      <div class="sec-title" style="margin-top:18px">Comentários (${comentarios.length})</div>
+      <div id="tm-coms" style="margin-bottom:10px">
+        ${comentarios.length?comentarios.map(c=>`
+          <div class="coment">
+            <div class="coment-meta">${esc(c.autor||'')} · ${fmtTs(c.ts)}</div>
+            <div>${esc(c.texto||'')}</div>
+          </div>`).join(''):'<div class="empty">Sem comentários ainda.</div>'}
+      </div>
+      <label>Novo comentário</label>
+      <textarea id="tm-novo-com" placeholder="Adicionar comentário..."></textarea>
+      <div class="actions" style="justify-content:flex-end;margin-bottom:14px">
+        <button class="btn-edit" onclick="adicionarComentario()">Adicionar comentário</button>
+      </div>
+    `:''}
+    <div class="actions" style="justify-content:space-between">
+      <div>${podeApagar?`<button class="btn-del" onclick="excluirTarefa()">Excluir tarefa</button>`:''}</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-ghost" onclick="closeTaskModal()">Fechar</button>
+        ${podeEditar?`<button class="btn-primary" onclick="salvarTarefa()" style="flex:none">${novo?'Criar tarefa':'Salvar alterações'}</button>`:''}
+      </div>
+    </div>`;
+  $('task-modal').innerHTML=html;$('task-modal-bg').style.display='flex';
+}
+function closeTaskModal(){$('task-modal-bg').style.display='none';currentTaskId=null;}
+async function salvarTarefa(){
+  const titulo=$('tm-titulo').value.trim();
+  if(!titulo){alert('Informe o título.');return;}
+  const responsavel=$('tm-resp').value;
+  if(isAdminUser&&!responsavel){alert('Selecione o responsável.');return;}
+  const dados={titulo,descricao:$('tm-desc').value.trim(),
+    responsavel,responsavel_email:responsavel?emailFromNome(responsavel):null,
+    prioridade:$('tm-pri').value,data_entrega:$('tm-data').value||null,status:$('tm-status').value};
+  const novo=!currentTaskId;
+  if(novo){dados.criado_por_email=currentEmail;}
+  if(dados.status==='Concluída'){dados.concluida_em=new Date().toISOString();}
+  let r;
+  if(novo){r=await db.from('tarefas').insert(dados);}
+  else{r=await db.from('tarefas').update(dados).eq('id',currentTaskId);}
+  if(r.error){alert('Erro: '+r.error.message);return;}
+  closeTaskModal();toast(novo?'Tarefa criada ✓':'Tarefa atualizada ✓');
+  if(isAdminUser)openTar();else openMtar();
+}
+async function adicionarComentario(){
+  if(!currentTaskId)return;
+  const txt=$('tm-novo-com').value.trim();if(!txt)return;
+  const t=tarefas.find(x=>x.id===currentTaskId);if(!t)return;
+  const hist=Array.isArray(t.comentarios)?[...t.comentarios]:[];
+  hist.push({ts:new Date().toISOString(),autor:isAdminUser?'Admin':(nomeFromEmail(currentEmail)||currentEmail),texto:txt});
+  const{error}=await db.from('tarefas').update({comentarios:hist}).eq('id',currentTaskId);
+  if(error){alert('Erro: '+error.message);return;}
+  // atualiza local e re-render do modal
+  t.comentarios=hist;openTaskModal(currentTaskId);
+}
+async function excluirTarefa(){
+  if(!currentTaskId||!isAdminUser)return;
+  if(!confirm('Excluir esta tarefa?'))return;
+  const{error}=await db.from('tarefas').delete().eq('id',currentTaskId);
+  if(error){alert('Erro: '+error.message);return;}
+  closeTaskModal();toast('Tarefa excluída');openTar();
+}
+
 // ===== Listeners =====
 $('btn-auth').onclick=doAuth;
 $('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doAuth();});
@@ -2172,7 +2394,13 @@ $('so-save').onclick=onSaveSolo;
 $('so-tempo').onchange=updateSoloFracao;
 $('oa-busca').oninput=renderOcAdm;$('oa-filtro').onchange=renderOcAdm;
 $('oa-lista').addEventListener('click',e=>{const ok=e.target.getAttribute('data-oa-ok'),no=e.target.getAttribute('data-oa-no');if(ok)aceitarSolo(ok);if(no)recusarSolo(no);});
+$('nav-tar').onclick=()=>showView('tar');
+$('nav-mtar').onclick=()=>showView('mtar');
 $('nav-solm').onclick=()=>showView('solm');
+$('tar-nova').onclick=()=>openTaskModal(null);
+$('tar-busca').oninput=renderTar;$('tar-fresp').onchange=renderTar;$('tar-fpri').onchange=renderTar;
+$('task-modal-bg').onclick=closeTaskModal;
+['tar-kanban','mtar-kanban'].forEach(id=>$(id).addEventListener('click',e=>{const card=e.target.closest('.task-card');if(card)openTaskModal(card.getAttribute('data-task'));}));
 $('nav-mtadm').onclick=()=>showView('mtadm');
 $('tk-save').onclick=onSaveSolMan;
 $('mt-busca').oninput=renderMtAdm;$('mt-filtro').onchange=renderMtAdm;
