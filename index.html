@@ -219,6 +219,7 @@
     <button id="nav-solm">Manutenção (ticket)</button>
     <button id="nav-meus">Meus registros</button>
     <button id="nav-mtar">Minhas tarefas</button>
+    <button id="nav-meutr">Meus treinamentos</button>
     <button id="nav-rel">Patrimônio Notebooks</button>
     <button id="nav-fer">Férias</button>
     <button id="nav-fol">Folgas</button>
@@ -233,6 +234,7 @@
     <button id="nav-soladm">Pedidos de folgas</button>
     <button id="nav-tar">Tarefas</button>
     <button id="nav-rot">Rotinas</button>
+    <button id="nav-onb">Onboarding</button>
     <button id="nav-atadm">Pedidos de atestados</button>
     <button id="nav-ocadm">Pedidos de ocorrências</button>
     <button id="nav-mtadm">Tickets de manutenção</button>
@@ -1015,6 +1017,21 @@
     <div id="rot-conteudo"></div>
   </div>
 
+  <!-- VIEW: ONBOARDING (catálogo + atribuições, admin) -->
+  <div id="view-onb" style="display:none">
+    <div id="onb-conteudo"></div>
+  </div>
+
+  <!-- VIEW: MEUS TREINAMENTOS (colaborador) -->
+  <div id="view-meutr" style="display:none">
+    <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
+      <h2 id="meutr-title">Meus treinamentos</h2>
+      <p class="hint">Treinamentos atribuídos a você. Assista pelo link, depois marque como concluído informando a data e o tempo levado.</p>
+    </div>
+    <div class="counts" id="meutr-kpis"></div>
+    <div id="meutr-lista"></div>
+  </div>
+
   <!-- MODAL de tarefa (compartilhado) -->
   <div id="task-modal-bg" class="modal-bg" style="display:none">
     <div class="modal-card" id="task-modal" onclick="event.stopPropagation()"></div>
@@ -1032,7 +1049,7 @@ const isAdmin=u=>!!u&&ADMIN_EMAILS.includes((u.email||'').toLowerCase());
 
 let maquinas=[],atribuicoes=[],manutencoes=[],isAdminUser=false,editingPatr=null,ferias=[],editingFeria=null,folgas=[],editingFolga=null,atestados=[],editingAtest=null,feCal=null,foCal=null,atCal=null,anivs=[],editingAniv=null,ocors=[],editingOcor=null,probs=[],editingProb=null,anCal=null,treins=[],editingTrein=null,anoms=[],editingAnom=null;
 const charts={};
-let currentEmail='',authMode='login',sols=[],ferReqs=[],atSols=[],ocSols=[],tickets=[],maqStatusFilter='',anomTratFilter='',tarefas=[],currentTaskId=null,rotinas=[],selectedRotId=null;
+let currentEmail='',authMode='login',sols=[],ferReqs=[],atSols=[],ocSols=[],tickets=[],maqStatusFilter='',anomTratFilter='',tarefas=[],currentTaskId=null,rotinas=[],selectedRotId=null,treinoCatalogo=[],treinoAtribs=[],onbSelectedColab='';
 const $=id=>document.getElementById(id);
 const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const hoje=()=>new Date().toISOString().slice(0,10);
@@ -1048,7 +1065,7 @@ async function showApp(user){
   $('login-screen').style.display='none';$('app').style.display='block';
   $('user-email').textContent=user.email;currentEmail=user.email||'';isAdminUser=isAdmin(user);
   $('nav').style.display='flex';
-  ['nav-cad','nav-rel','nav-fer','nav-fol','nav-ate','nav-aniv','nav-ocor','nav-prob','nav-trein','nav-anom','nav-fat','nav-dash','nav-soladm','nav-feradm','nav-atadm','nav-ocadm','nav-mtadm','nav-tar','nav-rot'].forEach(id=>$(id).style.display=isAdminUser?'':'none');
+  ['nav-cad','nav-rel','nav-fer','nav-fol','nav-ate','nav-aniv','nav-ocor','nav-prob','nav-trein','nav-anom','nav-fat','nav-dash','nav-soladm','nav-feradm','nav-atadm','nav-ocadm','nav-mtadm','nav-tar','nav-rot','nav-onb'].forEach(id=>$(id).style.display=isAdminUser?'':'none');
   $('nav-solf').style.display=isAdminUser?'none':'';
   $('nav-solfer').style.display=isAdminUser?'none':'';
   $('nav-solat').style.display=isAdminUser?'none':'';
@@ -1056,6 +1073,7 @@ async function showApp(user){
   $('nav-solm').style.display=isAdminUser?'none':'';
   $('nav-meus').style.display=isAdminUser?'none':'';
   $('nav-mtar').style.display=isAdminUser?'none':'';
+  $('nav-meutr').style.display=isAdminUser?'none':'';
   if(isAdminUser)await loadAll();
   if(isAdminUser)updatePendingBadges();
   showView(isAdminUser?'cadastro':'solfolga');
@@ -1161,7 +1179,7 @@ async function registrarManutencao(patr){
 
 // ===== Views =====
 function showView(v){
-  const adminViews=['cadastro','relatorios','ferias','folgas','atestados','aniv','ocor','prob','trein','anom','fat','dash','soladm','feradm','atadm','ocadm','mtadm','tar','rot'];
+  const adminViews=['cadastro','relatorios','ferias','folgas','atestados','aniv','ocor','prob','trein','anom','fat','dash','soladm','feradm','atadm','ocadm','mtadm','tar','rot','onb'];
   if(adminViews.includes(v)&&!isAdminUser)v='solfolga';
   $('view-cadastro').style.display=v==='cadastro'?'block':'none';
   $('view-relatorios').style.display=v==='relatorios'?'block':'none';
@@ -1187,6 +1205,8 @@ function showView(v){
   $('view-mtadm').style.display=v==='mtadm'?'block':'none';
   $('view-tar').style.display=v==='tar'?'block':'none';
   $('view-rot').style.display=v==='rot'?'block':'none';
+  $('view-onb').style.display=v==='onb'?'block':'none';
+  $('view-meutr').style.display=v==='meutr'?'block':'none';
   $('view-mtar').style.display=v==='mtar'?'block':'none';
   $('view-meus').style.display=v==='meus'?'block':'none';
   $('nav-cad').classList.toggle('active',v==='cadastro');
@@ -1213,6 +1233,8 @@ function showView(v){
   $('nav-mtadm').classList.toggle('active',v==='mtadm');
   $('nav-tar').classList.toggle('active',v==='tar');
   $('nav-rot').classList.toggle('active',v==='rot');
+  $('nav-onb').classList.toggle('active',v==='onb');
+  $('nav-meutr').classList.toggle('active',v==='meutr');
   $('nav-mtar').classList.toggle('active',v==='mtar');
   $('nav-meus').classList.toggle('active',v==='meus');
   if(v==='relatorios')renderRelatorios();
@@ -1238,6 +1260,8 @@ function showView(v){
   if(v==='mtadm')openMtAdm();
   if(v==='tar')openTar();
   if(v==='rot')openRot();
+  if(v==='onb')openOnb();
+  if(v==='meutr')openMeutr();
   if(v==='mtar')openMtar();
   if(v==='meus')openMeus();
 }
@@ -2400,6 +2424,171 @@ async function executarRot(id){
   toast(inserts.length+' tarefa(s) criada(s) ✓');
 }
 $('nav-rot').onclick=()=>showView('rot');
+
+// ===== Onboarding (catálogo + atribuições) =====
+async function openOnb(){
+  const r=await Promise.all([
+    db.from('treinamentos_catalogo').select('*').order('ordem'),
+    db.from('treinamento_atribuicoes').select('*').order('atribuido_em',{ascending:false})
+  ]);
+  if(r[0].error||r[1].error){$('onb-conteudo').innerHTML='<div class="empty"><b>Tabelas de onboarding ainda não existem</b>Rode o SQL e recarregue a página.</div>';return;}
+  treinoCatalogo=r[0].data||[];treinoAtribs=r[1].data||[];renderOnb();
+}
+function renderOnb(){if(onbSelectedColab){renderOnbDetail();}else{renderOnbList();}}
+function renderOnbList(){
+  // agrupar por colaborador
+  const grupos={};
+  treinoAtribs.forEach(a=>{const k=a.colaborador||'?';if(!grupos[k])grupos[k]={colab:k,email:a.colaborador_email,total:0,concluidos:0,pendentes:0};grupos[k].total++;if(a.status==='Concluído')grupos[k].concluidos++;else grupos[k].pendentes++;});
+  const lista=Object.values(grupos).sort((a,b)=>a.colab.localeCompare(b.colab));
+  $('onb-conteudo').innerHTML=`
+    <div class="toolbar">
+      <button class="btn-primary" id="onb-novo" onclick="iniciarOnboarding()" style="flex:none">+ Atribuir treinamentos a um colaborador</button>
+      <p class="hint" style="margin:0;flex:1">Catálogo: <b>${treinoCatalogo.length} treinamentos</b> disponíveis. Atribua a um novo colaborador e ele verá em "Meus treinamentos".</p>
+    </div>
+    <div class="counts" style="margin-top:14px">
+      <div class="stat"><b>${treinoCatalogo.length}</b><span>Treinamentos no catálogo</span></div>
+      <div class="stat s-uso"><b>${lista.length}</b><span>Colaboradores com treinos</span></div>
+      <div class="stat s-disp"><b>${treinoAtribs.filter(a=>a.status==='Concluído').length}</b><span>Concluídos</span></div>
+      <div class="stat s-manut"><b>${treinoAtribs.filter(a=>a.status!=='Concluído').length}</b><span>Pendentes</span></div>
+    </div>
+    <div class="sec-title">Colaboradores em onboarding</div>
+    <div class="list">
+      ${lista.length?lista.map(g=>{const pct=g.total?Math.round(100*g.concluidos/g.total):0;return`
+        <div class="row-item" style="cursor:pointer" onclick="abrirColabOnb('${esc(g.colab).replace(/'/g,"\\'")}')">
+          <div><div class="ri-main">${esc(g.colab)}</div>
+          <div class="ri-sub">${g.concluidos}/${g.total} concluídos · ${pct}%${g.email?' · '+esc(g.email):''}</div></div>
+          <div class="item-actions">
+            <button class="btn-edit" onclick="event.stopPropagation();abrirColabOnb('${esc(g.colab).replace(/'/g,"\\'")}')">Ver detalhes</button>
+            <button class="btn-del" onclick="event.stopPropagation();removerColabOnb('${esc(g.colab).replace(/'/g,"\\'")}')">Remover todos</button>
+          </div>
+        </div>`;}).join(''):'<div class="empty">Nenhum colaborador em onboarding ainda. Clique em + Atribuir treinamentos para começar.</div>'}
+    </div>`;
+}
+function renderOnbDetail(){
+  const atribs=treinoAtribs.filter(a=>a.colaborador===onbSelectedColab).sort((a,b)=>{const ta=treinoCatalogo.find(c=>c.id===a.treinamento_id),tb=treinoCatalogo.find(c=>c.id===b.treinamento_id);return ((ta?ta.ordem:9999)-(tb?tb.ordem:9999));});
+  const concluidos=atribs.filter(a=>a.status==='Concluído').length;
+  const totalMin=atribs.filter(a=>a.tempo_levado_min).reduce((s,a)=>s+a.tempo_levado_min,0);
+  $('onb-conteudo').innerHTML=`
+    <div class="toolbar">
+      <button class="btn-ghost" onclick="voltarOnb()" style="flex:none">← Voltar</button>
+      <button class="btn-del" onclick="removerColabOnb('${esc(onbSelectedColab).replace(/'/g,"\\'")}')" style="flex:none">Remover todos os treinos deste colaborador</button>
+    </div>
+    <h2 style="margin-top:14px">${esc(onbSelectedColab)}</h2>
+    <div class="counts" style="margin-top:8px">
+      <div class="stat s-uso"><b>${concluidos}</b><span>Concluídos</span></div>
+      <div class="stat s-manut"><b>${atribs.length-concluidos}</b><span>Pendentes</span></div>
+      <div class="stat"><b>${atribs.length}</b><span>Total</span></div>
+      <div class="stat s-disp"><b>${totalMin}</b><span>Min. assistidos</span></div>
+    </div>
+    <div class="sec-title">Treinamentos atribuídos</div>
+    <div class="list">
+      ${atribs.length?atribs.map(a=>{const t=treinoCatalogo.find(c=>c.id===a.treinamento_id)||{};return`
+        <div class="row-item" style="cursor:default;align-items:flex-start">
+          <div><div class="ri-main">${esc(t.nome||'(removido do catálogo)')}</div>
+          <div class="ri-sub">${esc(t.categoria||'')} · ${esc(t.formato||'')}${t.duracao_minutos?' · '+t.duracao_minutos+' min estim.':''}</div>
+          ${t.link?`<div class="ri-sub" style="margin-top:4px"><a href="${esc(t.link)}" target="_blank" rel="noopener" style="color:var(--accent-dark);word-break:break-all">${esc(t.link.length>80?t.link.slice(0,80)+'…':t.link)}</a></div>`:''}
+          ${a.status==='Concluído'?`<div class="ri-sub" style="margin-top:4px;color:var(--accent-dark)"><b>Concluído</b> em ${fmt(a.data_assistido)}${a.tempo_levado_min?' · levou '+a.tempo_levado_min+' min':''}${a.observacao?' · '+esc(a.observacao):''}</div>`:''}</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="badge ${a.status==='Concluído'?'b-uso':'b-manut'}">${esc(a.status||'Pendente')}</span>
+            <div class="item-actions">
+              <button class="btn-del" onclick="removerAtrib('${a.id}')">Remover</button>
+            </div>
+          </div>
+        </div>`;}).join(''):'<div class="empty">Sem treinamentos atribuídos.</div>'}
+    </div>`;
+}
+function abrirColabOnb(nome){onbSelectedColab=nome;renderOnb();}
+function voltarOnb(){onbSelectedColab='';renderOnb();}
+async function iniciarOnboarding(){
+  const nome=prompt('Nome completo do colaborador (ex.: Gabriel Silva):');
+  if(!nome||!nome.trim())return;
+  const n=nome.trim();
+  const email=emailFromNome(n);
+  if(!confirm(`Atribuir os ${treinoCatalogo.length} treinamentos a "${n}" (${email})?`))return;
+  const inserts=treinoCatalogo.map(t=>({treinamento_id:t.id,colaborador:n,colaborador_email:email,status:'Pendente'}));
+  const{error}=await db.from('treinamento_atribuicoes').insert(inserts);
+  if(error){alert('Erro: '+error.message);return;}
+  toast(`${inserts.length} treinamentos atribuídos a ${n} ✓`);openOnb();
+}
+async function removerColabOnb(nome){
+  if(!confirm(`Remover TODOS os treinamentos atribuídos a "${nome}"? Esta ação não pode ser desfeita.`))return;
+  const{error}=await db.from('treinamento_atribuicoes').delete().eq('colaborador',nome);
+  if(error){alert('Erro: '+error.message);return;}
+  if(onbSelectedColab===nome)onbSelectedColab='';
+  toast('Removido');openOnb();
+}
+async function removerAtrib(id){
+  if(!confirm('Remover este treinamento?'))return;
+  const{error}=await db.from('treinamento_atribuicoes').delete().eq('id',id);
+  if(error){alert('Erro: '+error.message);return;}
+  treinoAtribs=treinoAtribs.filter(a=>a.id!==id);renderOnb();toast('Removido');
+}
+$('nav-onb').onclick=()=>showView('onb');
+
+// ===== Meus treinamentos (colaborador) =====
+async function openMeutr(){
+  const r=await Promise.all([
+    db.from('treinamentos_catalogo').select('*').order('ordem'),
+    db.from('treinamento_atribuicoes').select('*').eq('colaborador_email',currentEmail).order('atribuido_em',{ascending:true})
+  ]);
+  if(r[0].error||r[1].error){$('meutr-lista').innerHTML='<div class="empty"><b>Tabelas de onboarding ainda não existem</b>Peça ao administrador para rodar o SQL.</div>';return;}
+  treinoCatalogo=r[0].data||[];const meus=r[1].data||[];
+  renderMeutr(meus);
+}
+function renderMeutr(meus){
+  const concluidos=meus.filter(a=>a.status==='Concluído').length;
+  const pendentes=meus.length-concluidos;
+  const totalMin=meus.filter(a=>a.tempo_levado_min).reduce((s,a)=>s+a.tempo_levado_min,0);
+  $('meutr-kpis').innerHTML=[
+    ['Total',meus.length,''],['Concluídos',concluidos,'s-uso'],['Pendentes',pendentes,'s-manut'],['Min. assistidos',totalMin,'s-disp']
+  ].map(k=>`<div class="stat ${k[2]}"><b>${k[1]}</b><span>${esc(k[0])}</span></div>`).join('');
+  if(!meus.length){$('meutr-lista').innerHTML='<div class="empty">Você ainda não tem treinamentos atribuídos.</div>';return;}
+  // Agrupar por categoria
+  const porCat={};
+  meus.forEach(a=>{const t=treinoCatalogo.find(c=>c.id===a.treinamento_id);if(!t)return;const cat=t.categoria||'Geral';if(!porCat[cat])porCat[cat]=[];porCat[cat].push({a,t});});
+  // ordenar dentro da categoria por ordem
+  Object.values(porCat).forEach(arr=>arr.sort((x,y)=>(x.t.ordem||0)-(y.t.ordem||0)));
+  let html='';
+  Object.keys(porCat).sort().forEach(cat=>{
+    html+=`<div class="sec-title">${esc(cat)} (${porCat[cat].length})</div><div class="list">`;
+    porCat[cat].forEach(({a,t})=>{
+      const done=a.status==='Concluído';
+      html+=`<div class="row-item" style="cursor:default;align-items:flex-start">
+        <div><div class="ri-main">${esc(t.nome||'')}</div>
+        <div class="ri-sub">${esc(t.formato||'')}${t.duracao_minutos?' · '+t.duracao_minutos+' min estim.':''}</div>
+        ${t.link?`<div class="ri-sub" style="margin-top:4px"><a href="${esc(t.link)}" target="_blank" rel="noopener" style="color:var(--accent-dark);word-break:break-all">${esc(t.link.length>80?t.link.slice(0,80)+'…':t.link)}</a></div>`:''}
+        ${done?`<div class="ri-sub" style="margin-top:4px;color:var(--accent-dark)"><b>Concluído</b> em ${fmt(a.data_assistido)}${a.tempo_levado_min?' · levou '+a.tempo_levado_min+' min':''}${a.observacao?' · '+esc(a.observacao):''}</div>`:''}</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="badge ${done?'b-uso':'b-manut'}">${done?'Concluído':'Pendente'}</span>
+          <div class="item-actions">
+            ${done?`<button class="btn-edit" onclick="marcarTreino('${a.id}',true)">Reabrir</button>`:`<button class="btn-edit" onclick="marcarTreino('${a.id}',false)">Marcar concluído</button>`}
+          </div>
+        </div>
+      </div>`;
+    });
+    html+='</div>';
+  });
+  $('meutr-lista').innerHTML=html;
+}
+async function marcarTreino(id,reabrir){
+  if(reabrir){
+    if(!confirm('Marcar este treinamento como pendente de novo?'))return;
+    const{error}=await db.from('treinamento_atribuicoes').update({status:'Pendente',data_assistido:null,tempo_levado_min:null}).eq('id',id);
+    if(error){alert('Erro: '+error.message);return;}
+    toast('Reaberto');openMeutr();return;
+  }
+  const data=prompt('Data em que assistiu (AAAA-MM-DD, deixe em branco para hoje):',new Date().toISOString().slice(0,10));
+  if(data===null)return;
+  const tempo=prompt('Tempo que levou em minutos (ex.: 45):','');
+  if(tempo===null)return;
+  const obs=prompt('Observação (opcional):','');
+  if(obs===null)return;
+  const dados={status:'Concluído',data_assistido:data||new Date().toISOString().slice(0,10),tempo_levado_min:parseInt(tempo)||null,observacao:obs||null};
+  const{error}=await db.from('treinamento_atribuicoes').update(dados).eq('id',id);
+  if(error){alert('Erro: '+error.message);return;}
+  toast('Marcado como concluído ✓');openMeutr();
+}
+$('nav-meutr').onclick=()=>showView('meutr');
 async function openTar(){
   const{data,error}=await db.from('tarefas').select('*').order('created_at',{ascending:false});
   if(error){tarefas=[];$('tar-kanban').innerHTML='<div class="empty"><b>Tabela de tarefas ainda não existe</b>Rode o SQL e recarregue a página.</div>';return;}
