@@ -2249,23 +2249,35 @@ async function openMeus(){
 const TAR_STATUS=['A fazer','Em andamento','Concluída'];
 const TAR_PRIO=['Baixa','Média','Alta','Urgente'];
 function emailFromNome(nome){if(!nome)return'';return nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'.').replace(/[^a-z.]/g,'')+'@2bst.com.br';}
+function childrenOf(id){return tarefas.filter(t=>t.parent_id===id);}
+function statusParent(t){const filhos=childrenOf(t.id);if(!filhos.length)return t.status||'A fazer';if(filhos.every(f=>f.status==='Concluída'))return 'Concluída';if(filhos.some(f=>f.status==='Em andamento'||f.status==='Concluída'))return 'Em andamento';return 'A fazer';}
 function isOverdue(t){if(!t.data_entrega||t.status==='Concluída')return false;return t.data_entrega<new Date().toISOString().slice(0,10);}
 function taskCard(t){
   const overdue=isOverdue(t);
+  const filhos=childrenOf(t.id);
+  const ehChecklist=filhos.length>0;
+  const concluidos=filhos.filter(f=>f.status==='Concluída').length;
   return `<div class="task-card" data-task="${t.id}">
-    <div class="tc-title">${esc(t.titulo||'')}</div>
+    <div class="tc-title">${ehChecklist?'☑ ':''}${esc(t.titulo||'')}</div>
     <div class="tc-meta">
       <span class="pr-badge pr-${esc(t.prioridade||'Média')}">${esc(t.prioridade||'Média')}</span>
       ${t.responsavel?`<span>${esc(t.responsavel)}</span>`:''}
       ${t.data_entrega?`<span class="${overdue?'tc-overdue':''}">▢ ${fmt(t.data_entrega)}</span>`:''}
+      ${ehChecklist?`<span style="font-weight:600;color:var(--accent-dark)">${concluidos}/${filhos.length}</span>`:''}
       ${(t.comentarios&&t.comentarios.length)?`<span>💬 ${t.comentarios.length}</span>`:''}
     </div>
   </div>`;
 }
 function renderKanban(containerId,arr){
+  // Esconde tarefas-filho (elas só aparecem dentro do modal do checklist)
+  // Filhos do colaborador ainda aparecem na sua Kanban porque ele é responsável
+  const ehAdminKanban=(containerId==='tar-kanban');
+  const visiveis=ehAdminKanban?arr.filter(t=>!t.parent_id):arr;
   const cols=TAR_STATUS.map(st=>{
-    const itens=arr.filter(t=>(t.status||'A fazer')===st).sort((a,b)=>{
-      // urgente/alta primeiro, depois data
+    const itens=visiveis.filter(t=>{
+      const statusEfetivo=childrenOf(t.id).length?statusParent(t):(t.status||'A fazer');
+      return statusEfetivo===st;
+    }).sort((a,b)=>{
       const ord={'Urgente':0,'Alta':1,'Média':2,'Baixa':3};
       const da=ord[a.prioridade||'Média'],db=ord[b.prioridade||'Média'];
       if(da!==db)return da-db;
@@ -2407,21 +2419,35 @@ async function removeRotTar(id,idx){
 async function executarRot(id){
   const r=rotinas.find(x=>x.id===id);if(!r)return;
   const tars=r.tarefas||[];if(!tars.length){alert('Esta rotina não tem tarefas ainda.');return;}
-  const dataIni=prompt('Data de início da execução (deixe em branco = hoje, formato AAAA-MM-DD):',new Date().toISOString().slice(0,10));
+  const subject=prompt(`Executar "${r.nome}"\n\nPara quem é este checklist? (ex.: nome do novo colaborador — pode deixar em branco)`,'');
+  if(subject===null)return;
+  const dataIni=prompt('Data de início (AAAA-MM-DD, deixe em branco = hoje):',new Date().toISOString().slice(0,10));
   if(dataIni===null)return;
   const base=dataIni?new Date(dataIni+'T00:00'):new Date();
   if(isNaN(base.getTime())){alert('Data inválida.');return;}
+  const subj=(subject||'').trim();
+  const tituloPai=subj?`${r.nome} — ${subj}`:r.nome;
+  if(!confirm(`Vai criar o checklist "${tituloPai}" com ${tars.length} ite${tars.length===1?'m':'ns'}. Continuar?`))return;
+  // 1) Cria a tarefa-pai (checklist)
+  const{data:pai,error:e1}=await db.from('tarefas').insert({
+    titulo:tituloPai,descricao:(r.descricao||'')+(subj?`\nPara: ${subj}`:''),
+    responsavel:null,responsavel_email:null,
+    prioridade:'Média',status:'A fazer',comentarios:[]
+  }).select().single();
+  if(e1){alert('Erro ao criar o checklist: '+e1.message);return;}
+  // 2) Cria as tarefas-filho (os itens do checklist)
   const inserts=tars.map(t=>{
     let prazo=null;
     if(t.dias_prazo!=null){const d=new Date(base);d.setDate(d.getDate()+(+t.dias_prazo||0));prazo=d.toISOString().slice(0,10);}
-    return{titulo:t.titulo,descricao:(t.descricao||'')+(r.nome?'\n\nRotina: '+r.nome:''),responsavel:t.responsavel||null,
+    return{titulo:t.titulo,descricao:(t.descricao||'')+(r.nome?'\n\nRotina: '+r.nome:'')+(subj?`\nPara: ${subj}`:''),
+      responsavel:t.responsavel||null,
       responsavel_email:t.responsavel?emailFromNome(t.responsavel):null,
-      prioridade:t.prioridade||'Média',data_entrega:prazo,status:'A fazer',comentarios:[]};
+      prioridade:t.prioridade||'Média',data_entrega:prazo,status:'A fazer',comentarios:[],
+      parent_id:pai.id};
   });
-  if(!confirm(`Vai criar ${inserts.length} tarefa(s) a partir da rotina "${r.nome}". Continuar?`))return;
-  const{error}=await db.from('tarefas').insert(inserts);
-  if(error){alert('Erro: '+error.message);return;}
-  toast(inserts.length+' tarefa(s) criada(s) ✓');
+  const{error:e2}=await db.from('tarefas').insert(inserts);
+  if(e2){alert('Erro ao criar os itens: '+e2.message);return;}
+  toast(`Checklist "${tituloPai}" criado com ${inserts.length} item(ns) ✓`);
 }
 $('nav-rot').onclick=()=>showView('rot');
 
@@ -2622,21 +2648,50 @@ function openTaskModal(taskId){
   const minhaTarefa=t&&t.responsavel_email===currentEmail;
   const podeEditar=novo?ehAdmin:(ehAdmin||minhaTarefa);
   const podeApagar=!novo&&ehAdmin;
+  const filhos=t?tarefas.filter(x=>x.parent_id===t.id):[];
+  const ehChecklist=filhos.length>0;
+  const pai=t&&t.parent_id?tarefas.find(x=>x.id===t.parent_id):null;
+  const concluidos=filhos.filter(f=>f.status==='Concluída').length;
   const nomes=colaboradoresAreaTecnica();
   const respOpt=nomes.map(n=>`<option ${t&&t.responsavel===n?'selected':''}>${esc(n)}</option>`).join('');
   const priOpt=TAR_PRIO.map(p=>`<option ${(t?t.prioridade:'Média')===p?'selected':''}>${p}</option>`).join('');
   const statusOpt=TAR_STATUS.map(s=>`<option ${(t?t.status:'A fazer')===s?'selected':''}>${s}</option>`).join('');
   const comentarios=(t&&Array.isArray(t.comentarios))?t.comentarios:[];
+  const paiHtml=pai?`
+    <div class="hint" style="margin-bottom:12px;padding:8px 12px;background:#faf8f2;border-left:3px solid var(--accent);border-radius:4px">
+      ☑ Parte do checklist: <a href="#" onclick="event.preventDefault();openTaskModal('${pai.id}');" style="color:var(--accent-dark);font-weight:600">${esc(pai.titulo||'')}</a>
+    </div>`:'';
+  const checklistHtml=ehChecklist?`
+    <div class="sec-title" style="margin-top:18px">☑ Itens do checklist (${concluidos}/${filhos.length} concluídos)</div>
+    <div class="list" style="margin-bottom:10px">
+      ${filhos.slice().sort((a,b)=>(a.created_at||'').localeCompare(b.created_at||'')).map(f=>{
+        const done=f.status==='Concluída';
+        const podeClicar=ehAdmin||f.responsavel_email===currentEmail;
+        const stBadge=done?'b-uso':(f.status==='Em andamento'?'b-disp':'b-manut');
+        return `<div class="row-item" style="cursor:default;align-items:flex-start;gap:10px">
+          <button onclick="toggleChecklistItem('${f.id}')" ${podeClicar?'':'disabled'} title="${done?'Reabrir':'Marcar como concluída'}" style="font-size:16px;width:30px;height:30px;border-radius:6px;border:1px solid var(--line);background:${done?'#1f6f5c':'#fff'};color:${done?'#fff':'var(--ink-soft)'};cursor:${podeClicar?'pointer':'not-allowed'};flex-shrink:0">${done?'✓':'☐'}</button>
+          <div style="flex:1;min-width:0">
+            <div class="ri-main" style="${done?'text-decoration:line-through;color:var(--ink-soft)':''}">${esc(f.titulo||'')}</div>
+            <div class="ri-sub">
+              ${f.responsavel?'👤 <b>'+esc(f.responsavel)+'</b>':'<i>sem responsável</i>'}${f.data_entrega?' · ▢ '+fmt(f.data_entrega):''}${f.comentarios&&f.comentarios.length?' · 💬 '+f.comentarios.length:''}
+            </div>
+          </div>
+          <span class="badge ${stBadge}" style="margin-right:6px">${esc(f.status||'A fazer')}</span>
+          <button class="btn-edit" onclick="openTaskModal('${f.id}')">Abrir</button>
+        </div>`;
+      }).join('')}
+    </div>`:'';
   const html=`
     <button class="modal-close" onclick="closeTaskModal()">×</button>
-    <h2 style="margin-bottom:6px">${novo?'Nova tarefa':'Detalhe da tarefa'}</h2>
-    <p class="hint" style="margin-bottom:12px">${novo?'Atribuir uma tarefa a um colaborador.':(ehAdmin?'Você pode editar tudo.':'Você pode mudar o status e comentar.')}</p>
+    <h2 style="margin-bottom:6px">${novo?'Nova tarefa':(ehChecklist?'Checklist':'Detalhe da tarefa')}</h2>
+    <p class="hint" style="margin-bottom:12px">${novo?'Atribuir uma tarefa a um colaborador.':(ehChecklist?'Cada item pode ter um responsável diferente. Clique no quadradinho para concluir, ou em Abrir para ver detalhes do item.':(ehAdmin?'Você pode editar tudo.':'Você pode mudar o status e comentar.'))}</p>
+    ${paiHtml}
     <label>Título *</label>
     <input id="tm-titulo" value="${esc(t?t.titulo:'')}" ${ehAdmin?'':'disabled'} placeholder="Ex.: Incluir banco de dados na web">
     <label>Descrição</label>
     <textarea id="tm-desc" ${ehAdmin?'':'disabled'} placeholder="Detalhes da tarefa">${esc(t?t.descricao:'')}</textarea>
     <div class="row2">
-      <div><label>Responsável ${ehAdmin?'*':''}</label>
+      <div><label>Responsável ${ehAdmin&&!ehChecklist?'*':''}</label>
         <select id="tm-resp" ${ehAdmin?'':'disabled'}>
           <option value="">— selecione —</option>${respOpt}
         </select>
@@ -2647,8 +2702,9 @@ function openTaskModal(taskId){
     </div>
     <div class="row2">
       <div><label>Data de entrega</label><input id="tm-data" type="date" value="${t&&t.data_entrega?t.data_entrega:''}" ${ehAdmin?'':'disabled'}></div>
-      <div><label>Status</label><select id="tm-status" ${podeEditar?'':'disabled'}>${statusOpt}</select></div>
+      <div><label>Status ${ehChecklist?'(calculado dos itens)':''}</label><select id="tm-status" ${(podeEditar&&!ehChecklist)?'':'disabled'}>${statusOpt}</select></div>
     </div>
+    ${checklistHtml}
     ${!novo?`
       <div class="sec-title" style="margin-top:18px">Comentários (${comentarios.length})</div>
       <div id="tm-coms" style="margin-bottom:10px">
@@ -2665,13 +2721,26 @@ function openTaskModal(taskId){
       </div>
     `:''}
     <div class="actions" style="justify-content:space-between">
-      <div>${podeApagar?`<button class="btn-del" onclick="excluirTarefa()">Excluir tarefa</button>`:''}</div>
+      <div>${podeApagar?`<button class="btn-del" onclick="excluirTarefa()">${ehChecklist?'Excluir checklist (e todos os itens)':'Excluir tarefa'}</button>`:''}</div>
       <div style="display:flex;gap:8px">
         <button class="btn-ghost" onclick="closeTaskModal()">Fechar</button>
         ${podeEditar?`<button class="btn-primary" onclick="salvarTarefa()" style="flex:none">${novo?'Criar tarefa':'Salvar alterações'}</button>`:''}
       </div>
     </div>`;
-  $('task-modal').innerHTML=html;$('task-modal-bg').style.display='flex';
+  $('task-modal').innerHTML=html;$('task-modal-bg').style.display='flex';$('task-modal').scrollTop=0;
+}
+async function toggleChecklistItem(id){
+  const t=tarefas.find(x=>x.id===id);if(!t)return;
+  const novoStatus=t.status==='Concluída'?'A fazer':'Concluída';
+  const dados={status:novoStatus,concluida_em:novoStatus==='Concluída'?new Date().toISOString():null};
+  const{error}=await db.from('tarefas').update(dados).eq('id',id);
+  if(error){alert('Erro: '+error.message);return;}
+  Object.assign(t,dados);
+  // Re-render modal se mostrando o pai
+  if(currentTaskId&&currentTaskId===t.parent_id){openTaskModal(t.parent_id);}
+  else if(currentTaskId===id){openTaskModal(id);}
+  // Re-render kanban embaixo (recarrega dados pra ter os pais com contagem certinha)
+  if(isAdminUser)openTar();else openMtar();
 }
 function closeTaskModal(){$('task-modal-bg').style.display='none';currentTaskId=null;}
 async function salvarTarefa(){
