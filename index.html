@@ -221,6 +221,7 @@
     <button id="nav-mtar">Minhas tarefas</button>
     <button id="nav-meutr">Meus treinamentos</button>
     <button id="nav-rel">Patrimônio Notebooks</button>
+    <button id="nav-eq">Equipe</button>
     <button id="nav-fer">Férias</button>
     <button id="nav-fol">Folgas</button>
     <button id="nav-ate">Atestados</button>
@@ -1017,6 +1018,20 @@
     <div id="rot-conteudo"></div>
   </div>
 
+  <!-- VIEW: EQUIPE (cadastro completo, admin) -->
+  <div id="view-eq" style="display:none">
+    <div class="toolbar">
+      <button class="btn-primary" id="eq-novo" onclick="novoEq()" style="flex:none">+ Novo colaborador</button>
+      <div class="search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="eq-busca" placeholder="Buscar por nome, e-mail, ramal..." oninput="renderEq()">
+      </div>
+      <select id="eq-floc" style="width:auto;min-width:170px" onchange="renderEq()"><option value="">Todas alocações</option></select>
+    </div>
+    <div class="counts" id="eq-kpis" style="margin-top:14px"></div>
+    <div id="eq-lista" style="margin-top:14px"></div>
+  </div>
+
   <!-- VIEW: ONBOARDING (catálogo + atribuições, admin) -->
   <div id="view-onb" style="display:none">
     <div id="onb-conteudo"></div>
@@ -1030,6 +1045,11 @@
     </div>
     <div class="counts" id="meutr-kpis"></div>
     <div id="meutr-lista"></div>
+  </div>
+
+  <!-- MODAL de colaborador (equipe) -->
+  <div id="eq-modal-bg" class="modal-bg" style="display:none" onclick="closeEqModal()">
+    <div class="modal-card" id="eq-modal" onclick="event.stopPropagation()"></div>
   </div>
 
   <!-- MODAL de tarefa (compartilhado) -->
@@ -1049,11 +1069,11 @@ const isAdmin=u=>!!u&&ADMIN_EMAILS.includes((u.email||'').toLowerCase());
 
 let maquinas=[],atribuicoes=[],manutencoes=[],isAdminUser=false,editingPatr=null,ferias=[],editingFeria=null,folgas=[],editingFolga=null,atestados=[],editingAtest=null,feCal=null,foCal=null,atCal=null,anivs=[],editingAniv=null,ocors=[],editingOcor=null,probs=[],editingProb=null,anCal=null,treins=[],editingTrein=null,anoms=[],editingAnom=null;
 const charts={};
-let currentEmail='',authMode='login',sols=[],ferReqs=[],atSols=[],ocSols=[],tickets=[],maqStatusFilter='',anomTratFilter='',tarefas=[],currentTaskId=null,rotinas=[],selectedRotId=null,treinoCatalogo=[],treinoAtribs=[],onbSelectedColab='';
+let currentEmail='',authMode='login',sols=[],ferReqs=[],atSols=[],ocSols=[],tickets=[],maqStatusFilter='',anomTratFilter='',tarefas=[],currentTaskId=null,rotinas=[],selectedRotId=null,treinoCatalogo=[],treinoAtribs=[],onbSelectedColab='',equipe=[];
 const $=id=>document.getElementById(id);
 const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const hoje=()=>new Date().toISOString().slice(0,10);
-const fmt=d=>{if(!d)return'';const[y,m,dd]=String(d).split('-');return`${dd}/${m}/${y}`;};
+const fmt=d=>{if(!d)return'';const[y,m,dd]=String(d).split('-');return`${dd}-${m}-${y}`;};
 const stClass=s=>s==='Em uso'?'b-uso':s==='Disponível'?'b-disp':s==='Manutenção'?'b-manut':'b-desc';
 let toastTimer;
 function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2600);}
@@ -1065,7 +1085,7 @@ async function showApp(user){
   $('login-screen').style.display='none';$('app').style.display='block';
   $('user-email').textContent=user.email;currentEmail=user.email||'';isAdminUser=isAdmin(user);
   $('nav').style.display='flex';
-  ['nav-cad','nav-rel','nav-fer','nav-fol','nav-ate','nav-aniv','nav-ocor','nav-prob','nav-trein','nav-anom','nav-fat','nav-dash','nav-soladm','nav-feradm','nav-atadm','nav-ocadm','nav-mtadm','nav-tar','nav-rot','nav-onb'].forEach(id=>$(id).style.display=isAdminUser?'':'none');
+  ['nav-cad','nav-rel','nav-eq','nav-fer','nav-fol','nav-ate','nav-aniv','nav-ocor','nav-prob','nav-trein','nav-anom','nav-fat','nav-dash','nav-soladm','nav-feradm','nav-atadm','nav-ocadm','nav-mtadm','nav-tar','nav-rot','nav-onb'].forEach(id=>$(id).style.display=isAdminUser?'':'none');
   $('nav-solf').style.display=isAdminUser?'none':'';
   $('nav-solfer').style.display=isAdminUser?'none':'';
   $('nav-solat').style.display=isAdminUser?'none':'';
@@ -1179,7 +1199,7 @@ async function registrarManutencao(patr){
 
 // ===== Views =====
 function showView(v){
-  const adminViews=['cadastro','relatorios','ferias','folgas','atestados','aniv','ocor','prob','trein','anom','fat','dash','soladm','feradm','atadm','ocadm','mtadm','tar','rot','onb'];
+  const adminViews=['cadastro','relatorios','eq','ferias','folgas','atestados','aniv','ocor','prob','trein','anom','fat','dash','soladm','feradm','atadm','ocadm','mtadm','tar','rot','onb'];
   if(adminViews.includes(v)&&!isAdminUser)v='solfolga';
   $('view-cadastro').style.display=v==='cadastro'?'block':'none';
   $('view-relatorios').style.display=v==='relatorios'?'block':'none';
@@ -1206,6 +1226,7 @@ function showView(v){
   $('view-tar').style.display=v==='tar'?'block':'none';
   $('view-rot').style.display=v==='rot'?'block':'none';
   $('view-onb').style.display=v==='onb'?'block':'none';
+  $('view-eq').style.display=v==='eq'?'block':'none';
   $('view-meutr').style.display=v==='meutr'?'block':'none';
   $('view-mtar').style.display=v==='mtar'?'block':'none';
   $('view-meus').style.display=v==='meus'?'block':'none';
@@ -1234,6 +1255,7 @@ function showView(v){
   $('nav-tar').classList.toggle('active',v==='tar');
   $('nav-rot').classList.toggle('active',v==='rot');
   $('nav-onb').classList.toggle('active',v==='onb');
+  $('nav-eq').classList.toggle('active',v==='eq');
   $('nav-meutr').classList.toggle('active',v==='meutr');
   $('nav-mtar').classList.toggle('active',v==='mtar');
   $('nav-meus').classList.toggle('active',v==='meus');
@@ -1261,6 +1283,7 @@ function showView(v){
   if(v==='tar')openTar();
   if(v==='rot')openRot();
   if(v==='onb')openOnb();
+  if(v==='eq')openEq();
   if(v==='meutr')openMeutr();
   if(v==='mtar')openMtar();
   if(v==='meus')openMeus();
@@ -2123,7 +2146,7 @@ async function onSaveSolMan(){
 
 const TK_BADGE={'Aberto':'b-manut','Iniciado':'b-disp','Em andamento':'b-disp','Fazendo testes':'b-disp','Aguardando peças':'b-manut','Aguardando colaborador':'b-manut','Resolvido':'b-uso','Finalizado':'b-uso','Cancelado':'b-desc'};
 const TK_STATUS_OPCOES=['Iniciado','Em andamento','Fazendo testes','Aguardando peças','Aguardando colaborador','Finalizado','Cancelado'];
-function fmtTs(s){if(!s)return'';const d=new Date(s);return d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});}
+function fmtTs(s){if(!s)return'';const d=new Date(s);const dd=String(d.getDate()).padStart(2,'0'),mm=String(d.getMonth()+1).padStart(2,'0'),yy=String(d.getFullYear()).slice(-2),hh=String(d.getHours()).padStart(2,'0'),mi=String(d.getMinutes()).padStart(2,'0');return`${dd}-${mm}-${yy} ${hh}:${mi}`;}
 function renderTimeline(t){
   const evs=Array.isArray(t.historico)?t.historico:[];
   const inicio=`<div class="tl-row"><span class="tl-when">${fmtTs(t.created_at)}</span><span class="tl-status">Aberto</span><span class="tl-comment">${esc(t.descricao||'')}</span></div>`;
@@ -2292,6 +2315,7 @@ function renderKanban(containerId,arr){
 }
 function colaboradoresAreaTecnica(){
   const set=new Set();
+  set.add('Rafael Andrade'); // admin sempre disponível para receber tarefas
   maquinas.forEach(m=>{if(m.colaborador&&norm(m.setor)==='area tecnica')set.add(m.colaborador);});
   // adicionar nomes que já apareceram em tarefas e na aniversários (load lazy)
   tarefas.forEach(t=>{if(t.responsavel)set.add(t.responsavel);});
@@ -2450,6 +2474,129 @@ async function executarRot(id){
   toast(`Checklist "${tituloPai}" criado com ${inserts.length} item(ns) ✓`);
 }
 $('nav-rot').onclick=()=>showView('rot');
+
+// ===== Equipe (cadastro completo do time) =====
+function mesesDesde(d){if(!d)return null;const[y,m,dd]=String(d).split('-').map(n=>parseInt(n));const dt=new Date(y,(m||1)-1,dd||1),now=new Date();let mm=(now.getFullYear()-dt.getFullYear())*12+(now.getMonth()-dt.getMonth());if(now.getDate()<dt.getDate())mm--;return mm<0?0:mm;}
+function fmtTempo(meses){if(meses==null)return'—';if(meses===0)return'menos de 1 mês';if(meses<12)return meses+' mês'+(meses===1?'':'es');const a=Math.floor(meses/12),m=meses%12;return a+' ano'+(a===1?'':'s')+(m?' e '+m+' mês'+(m===1?'':'es'):'');}
+function fmtAniv(d){if(!d)return'—';const[,m,dd]=String(d).split('-');return`${dd}-${m}`;}
+function fmtHora(t){if(!t)return'';return String(t).slice(0,5);}
+async function openEq(){
+  const{data,error}=await db.from('equipe').select('*').order('nome_completo');
+  if(error){$('eq-lista').innerHTML='<div class="empty"><b>Tabela de equipe ainda não existe</b>Rode o SQL e recarregue a página.</div>';return;}
+  equipe=data||[];
+  // popular filtro de alocações
+  const locs=[...new Set(equipe.map(c=>c.alocacao).filter(Boolean))].sort();
+  const sel=$('eq-floc'),cur=sel.value;
+  sel.innerHTML='<option value="">Todas alocações</option>'+locs.map(l=>`<option value="${esc(l)}">${esc(l)}</option>`).join('');
+  if(cur)sel.value=cur;
+  renderEq();
+}
+function renderEq(){
+  const q=$('eq-busca').value.trim().toLowerCase(),fl=$('eq-floc').value;
+  const arr=equipe.filter(c=>{
+    if(fl&&c.alocacao!==fl)return false;
+    if(q){const blob=[c.nome_completo,c.nome_curto,c.email,c.ramal,c.cargo,c.nome_sgd,c.alocacao].filter(Boolean).join(' ').toLowerCase();if(!blob.includes(q))return false;}
+    return true;
+  });
+  const semIni=equipe.filter(c=>!c.inicio_alocacao).length;
+  const semCargo=equipe.filter(c=>!c.cargo).length;
+  $('eq-kpis').innerHTML=[
+    ['Total no time',equipe.length,''],['Sem início de alocação',semIni,semIni?'s-manut':'s-uso'],['Sem cargo',semCargo,semCargo?'s-manut':'s-uso'],['Filtrados',arr.length,'s-disp']
+  ].map(k=>`<div class="stat ${k[2]}"><b>${k[1]}</b><span>${esc(k[0])}</span></div>`).join('');
+  if(!arr.length){$('eq-lista').innerHTML='<div class="empty">Nenhum colaborador encontrado.</div>';return;}
+  $('eq-lista').innerHTML='<div class="list">'+arr.map(c=>{
+    const tAloc=mesesDesde(c.inicio_alocacao),t2B=mesesDesde(c.admissao);
+    const semIniBadge=!c.inicio_alocacao?'<span class="badge b-manut" style="margin-left:6px">sem início</span>':'';
+    const semCargoBadge=!c.cargo?'<span class="badge b-manut" style="margin-left:6px">sem cargo</span>':'';
+    return`<div class="row-item" style="cursor:default;align-items:flex-start">
+      <div style="flex:1;min-width:0">
+        <div class="ri-main">${esc(c.nome_completo||'')} ${c.nome_curto?'<span style="color:var(--ink-soft);font-weight:400;font-size:14px">('+esc(c.nome_curto)+')</span>':''}</div>
+        <div class="ri-sub"><b>${esc(c.cargo||'—')}</b>${semCargoBadge} · Alocação: <b>${esc(c.alocacao||'—')}</b> ${c.inicio_alocacao?'desde <b>'+fmt(c.inicio_alocacao)+'</b> ('+fmtTempo(tAloc)+')':semIniBadge}</div>
+        <div class="ri-sub">📅 Admissão: <b>${fmt(c.admissao)}</b> · 🏢 Na 2B há <b>${fmtTempo(t2B)}</b>${c.data_fim_experiencia?' · Fim experiência: '+fmt(c.data_fim_experiencia):''}</div>
+        <div class="ri-sub">🕐 ${fmtHora(c.horario_inicial)} — ${fmtHora(c.horario_final)} · ☎️ Ramal: <b>${esc(c.ramal||'—')}</b> · 🎂 ${fmtAniv(c.aniversario)}</div>
+        <div class="ri-sub">✉️ ${esc(c.email||'—')}${c.nome_sgd?' · 🔍 SGD: '+esc(c.nome_sgd):''}</div>
+      </div>
+      <div class="item-actions">
+        <button class="btn-edit" onclick="openEqModal('${c.id}')">Editar</button>
+        <button class="btn-del" onclick="excluirEq('${c.id}')">Excluir</button>
+      </div>
+    </div>`;
+  }).join('')+'</div>';
+}
+function novoEq(){openEqModal(null);}
+function openEqModal(id){
+  const c=id?equipe.find(x=>x.id===id):null;
+  const novo=!c;
+  const tAloc=c?mesesDesde(c.inicio_alocacao):null,t2B=c?mesesDesde(c.admissao):null;
+  $('eq-modal').innerHTML=`
+    <button class="modal-close" onclick="closeEqModal()">×</button>
+    <h2 style="margin-bottom:6px">${novo?'Novo colaborador':'Editar colaborador'}</h2>
+    <p class="hint" style="margin-bottom:12px">${novo?'Cadastre um novo membro do time.':'Os campos vazios em destaque (início de alocação e cargo) são os que mais precisam ser preenchidos.'}</p>
+    <label>Nome completo *</label>
+    <input id="eqm-nome" value="${esc(c?.nome_completo||'')}" placeholder="Ex.: Gabriel Santos da Silva">
+    <div class="row2">
+      <div><label>Nome curto</label><input id="eqm-curto" value="${esc(c?.nome_curto||'')}" placeholder="Ex.: Gabriel Silva"></div>
+      <div><label>Aniversário</label><input id="eqm-aniv" type="date" value="${c?.aniversario||''}"></div>
+    </div>
+    <div class="row2">
+      <div><label>Cargo${!c?.cargo&&!novo?' ⚠ vazio':''}</label><input id="eqm-cargo" value="${esc(c?.cargo||'')}" placeholder="Ex.: Analista de Suporte" style="${!c?.cargo&&!novo?'background:#fff8e0':''}"></div>
+      <div><label>Alocação</label><input id="eqm-aloc" value="${esc(c?.alocacao||'')}" placeholder="Ex.: Fone, Chat, Web..."></div>
+    </div>
+    <div class="row2">
+      <div><label>Início da alocação${!c?.inicio_alocacao&&!novo?' ⚠ vazio':''}</label><input id="eqm-iniAloc" type="date" value="${c?.inicio_alocacao||''}" style="${!c?.inicio_alocacao&&!novo?'background:#fff8e0':''}"></div>
+      <div><label>Tempo nesta alocação <span style="color:var(--ink-soft);font-weight:400">(calculado)</span></label><input value="${fmtTempo(tAloc)}" disabled style="background:#f4f1ea"></div>
+    </div>
+    <div class="row2">
+      <div><label>Admissão</label><input id="eqm-adm" type="date" value="${c?.admissao||''}"></div>
+      <div><label>Tempo na 2B <span style="color:var(--ink-soft);font-weight:400">(calculado em meses)</span></label><input value="${t2B!=null?t2B+' meses':'—'}" disabled style="background:#f4f1ea"></div>
+    </div>
+    <div class="row2">
+      <div><label>Fim da experiência</label><input id="eqm-fimExp" type="date" value="${c?.data_fim_experiencia||''}"></div>
+      <div><label>Ramal</label><input id="eqm-ramal" value="${esc(c?.ramal||'')}" placeholder="Ex.: 5800"></div>
+    </div>
+    <div class="row2">
+      <div><label>Horário inicial</label><input id="eqm-hIni" type="time" value="${c?.horario_inicial?String(c.horario_inicial).slice(0,5):''}"></div>
+      <div><label>Horário final</label><input id="eqm-hFim" type="time" value="${c?.horario_final?String(c.horario_final).slice(0,5):''}"></div>
+    </div>
+    <label>E-mail</label>
+    <input id="eqm-email" type="email" value="${esc(c?.email||'')}" placeholder="nome.sobrenome@2bst.com.br">
+    <label>Nome no SGD</label>
+    <input id="eqm-sgd" value="${esc(c?.nome_sgd||'')}" placeholder="Ex.: nome.sobrenome">
+    <div class="actions" style="justify-content:space-between;margin-top:16px">
+      <div>${!novo?`<button class="btn-del" onclick="excluirEq('${c.id}')">Excluir</button>`:''}</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-ghost" onclick="closeEqModal()">Fechar</button>
+        <button class="btn-primary" onclick="salvarEq('${c?.id||''}')" style="flex:none">${novo?'Cadastrar':'Salvar alterações'}</button>
+      </div>
+    </div>`;
+  $('eq-modal-bg').style.display='flex';$('eq-modal').scrollTop=0;
+}
+function closeEqModal(){$('eq-modal-bg').style.display='none';}
+async function salvarEq(id){
+  const nome=$('eqm-nome').value.trim();if(!nome){alert('Nome completo é obrigatório.');return;}
+  const dados={
+    nome_completo:nome,nome_curto:$('eqm-curto').value.trim()||null,
+    aniversario:$('eqm-aniv').value||null,alocacao:$('eqm-aloc').value.trim()||null,
+    inicio_alocacao:$('eqm-iniAloc').value||null,
+    horario_inicial:$('eqm-hIni').value||null,horario_final:$('eqm-hFim').value||null,
+    admissao:$('eqm-adm').value||null,data_fim_experiencia:$('eqm-fimExp').value||null,
+    cargo:$('eqm-cargo').value.trim()||null,ramal:$('eqm-ramal').value.trim()||null,
+    email:$('eqm-email').value.trim()||null,nome_sgd:$('eqm-sgd').value.trim()||null
+  };
+  let error;
+  if(id){({error}=await db.from('equipe').update(dados).eq('id',id));}
+  else{({error}=await db.from('equipe').insert(dados));}
+  if(error){alert('Erro: '+error.message);return;}
+  closeEqModal();toast(id?'Alterações salvas ✓':'Colaborador cadastrado ✓');openEq();
+}
+async function excluirEq(id){
+  const c=equipe.find(x=>x.id===id);
+  if(!confirm(`Excluir "${c?c.nome_completo:'este colaborador'}" do cadastro? Não afeta outros registros (férias, tarefas etc).`))return;
+  const{error}=await db.from('equipe').delete().eq('id',id);
+  if(error){alert('Erro: '+error.message);return;}
+  closeEqModal();toast('Excluído');openEq();
+}
+$('nav-eq').onclick=()=>showView('eq');
 
 // ===== Onboarding (catálogo + atribuições) =====
 async function openOnb(){
