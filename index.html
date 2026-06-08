@@ -218,6 +218,7 @@
     <button id="nav-solo">Solicitar ocorrência</button>
     <button id="nav-solm">Manutenção (ticket)</button>
     <button id="nav-meus">Meus registros</button>
+    <button id="nav-mho">Meus Dias no escritório</button>
     <button id="nav-mtar">Minhas tarefas</button>
     <button id="nav-meutr">Meus treinamentos</button>
     <button id="nav-rel">Patrimônio Notebooks</button>
@@ -225,6 +226,7 @@
     <button id="nav-us">Usuários</button>
     <button id="nav-fer">Férias</button>
     <button id="nav-fol">Folgas</button>
+    <button id="nav-ho">Home Office</button>
     <button id="nav-ate">Atestados</button>
     <button id="nav-aniv">Aniversários</button>
     <button id="nav-ocor">Ocorrências</button>
@@ -1033,6 +1035,43 @@
     <div id="rot-conteudo"></div>
   </div>
 
+  <!-- VIEW: HOME OFFICE (admin) -->
+  <div id="view-ho" style="display:none">
+    <div class="form-card">
+      <h3 style="font-family:var(--display);font-size:18px;margin-bottom:8px">Lançar dia de Home Office</h3>
+      <div class="row2">
+        <div><label>Colaborador *</label>
+          <select id="ho-colab"><option value="">— selecione —</option></select>
+        </div>
+        <div><label>Data *</label><input id="ho-data" type="date"></div>
+      </div>
+      <label>Observação (opcional)</label>
+      <input id="ho-obs" placeholder="Ex.: confirmado por e-mail">
+      <div class="actions"><button class="btn-primary" onclick="lancarHo()">Lançar home office</button></div>
+    </div>
+    <div class="toolbar" style="margin-top:14px">
+      <div class="search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="ho-busca" placeholder="Buscar por nome..." oninput="renderHo()">
+      </div>
+      <select id="ho-fmes" style="width:auto;min-width:170px" onchange="renderHo()"><option value="">Todos os meses</option></select>
+      <select id="ho-fcolab" style="width:auto;min-width:170px" onchange="renderHo()"><option value="">Todos os colaboradores</option></select>
+      <button class="btn-del" onclick="zerarTabelaUma('home_office','lançamentos de home office',openHo)" style="flex:none;font-size:12px;padding:6px 10px;background:#fbf4f4;color:#a64141;border-color:#d9b3b3" title="Apaga todos os lançamentos">🗑 Zerar</button>
+    </div>
+    <div class="counts" id="ho-kpis" style="margin-top:14px"></div>
+    <div id="ho-lista" style="margin-top:14px"></div>
+  </div>
+
+  <!-- VIEW: MEUS HOME OFFICE (colaborador) -->
+  <div id="view-mho" style="display:none">
+    <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
+      <h2>Meus Dias no escritório</h2>
+      <p class="hint">Aqui você vê todos os seus dias no escritório que foram lançados pelo administrador.</p>
+    </div>
+    <div class="counts" id="mho-kpis"></div>
+    <div id="mho-lista" style="margin-top:14px"></div>
+  </div>
+
   <!-- VIEW: USUARIOS (gestão de acessos, admin) -->
   <div id="view-us" style="display:none">
     <div class="toolbar">
@@ -1109,7 +1148,7 @@ const isAdmin=u=>!!u&&ADMIN_EMAILS.includes((u.email||'').toLowerCase());
 
 let maquinas=[],atribuicoes=[],manutencoes=[],isAdminUser=false,editingPatr=null,ferias=[],editingFeria=null,folgas=[],editingFolga=null,atestados=[],editingAtest=null,feCal=null,foCal=null,atCal=null,anivs=[],editingAniv=null,ocors=[],editingOcor=null,probs=[],editingProb=null,anCal=null,treins=[],editingTrein=null,anoms=[],editingAnom=null;
 const charts={};
-let currentEmail='',authMode='login',sols=[],ferReqs=[],atSols=[],ocSols=[],tickets=[],maqStatusFilter='',anomTratFilter='',tarefas=[],currentTaskId=null,rotinas=[],selectedRotId=null,treinoCatalogo=[],treinoAtribs=[],onbSelectedColab='',equipe=[],usuarios=[];
+let currentEmail='',authMode='login',sols=[],ferReqs=[],atSols=[],ocSols=[],tickets=[],maqStatusFilter='',anomTratFilter='',tarefas=[],currentTaskId=null,rotinas=[],selectedRotId=null,treinoCatalogo=[],treinoAtribs=[],onbSelectedColab='',equipe=[],usuarios=[],homeOffice=[];
 const $=id=>document.getElementById(id);
 const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const hoje=()=>new Date().toISOString().slice(0,10);
@@ -1127,7 +1166,7 @@ async function showApp(user){
   // Registra último login (silenciosamente; ignora erro se a tabela não existir)
   try{await db.from('usuarios').update({ultimo_login:new Date().toISOString()}).eq('email',user.email);}catch(e){}
   $('nav').style.display='flex';
-  ['nav-cad','nav-rel','nav-eq','nav-us','nav-fer','nav-fol','nav-ate','nav-aniv','nav-ocor','nav-prob','nav-trein','nav-anom','nav-fat','nav-dash','nav-soladm','nav-feradm','nav-atadm','nav-ocadm','nav-mtadm','nav-tar','nav-rot','nav-onb'].forEach(id=>$(id).style.display=isAdminUser?'':'none');
+  ['nav-cad','nav-rel','nav-eq','nav-us','nav-fer','nav-fol','nav-ho','nav-ate','nav-aniv','nav-ocor','nav-prob','nav-trein','nav-anom','nav-fat','nav-dash','nav-soladm','nav-feradm','nav-atadm','nav-ocadm','nav-mtadm','nav-tar','nav-rot','nav-onb'].forEach(id=>$(id).style.display=isAdminUser?'':'none');
   $('nav-solf').style.display=isAdminUser?'none':'';
   $('nav-solfer').style.display=isAdminUser?'none':'';
   $('nav-solat').style.display=isAdminUser?'none':'';
@@ -1136,6 +1175,7 @@ async function showApp(user){
   $('nav-meus').style.display=isAdminUser?'none':'';
   $('nav-mtar').style.display=isAdminUser?'none':'';
   $('nav-meutr').style.display=isAdminUser?'none':'';
+  $('nav-mho').style.display=isAdminUser?'none':'';
   if(isAdminUser)await loadAll();
   if(isAdminUser)updatePendingBadges();
   showView(isAdminUser?'cadastro':'solfolga');
@@ -1241,7 +1281,7 @@ async function registrarManutencao(patr){
 
 // ===== Views =====
 function showView(v){
-  const adminViews=['cadastro','relatorios','eq','us','ferias','folgas','atestados','aniv','ocor','prob','trein','anom','fat','dash','soladm','feradm','atadm','ocadm','mtadm','tar','rot','onb'];
+  const adminViews=['cadastro','relatorios','eq','us','ferias','folgas','ho','atestados','aniv','ocor','prob','trein','anom','fat','dash','soladm','feradm','atadm','ocadm','mtadm','tar','rot','onb'];
   if(adminViews.includes(v)&&!isAdminUser)v='solfolga';
   $('view-cadastro').style.display=v==='cadastro'?'block':'none';
   $('view-relatorios').style.display=v==='relatorios'?'block':'none';
@@ -1270,6 +1310,8 @@ function showView(v){
   $('view-onb').style.display=v==='onb'?'block':'none';
   $('view-eq').style.display=v==='eq'?'block':'none';
   $('view-us').style.display=v==='us'?'block':'none';
+  $('view-ho').style.display=v==='ho'?'block':'none';
+  $('view-mho').style.display=v==='mho'?'block':'none';
   $('view-meutr').style.display=v==='meutr'?'block':'none';
   $('view-mtar').style.display=v==='mtar'?'block':'none';
   $('view-meus').style.display=v==='meus'?'block':'none';
@@ -1300,6 +1342,8 @@ function showView(v){
   $('nav-onb').classList.toggle('active',v==='onb');
   $('nav-eq').classList.toggle('active',v==='eq');
   $('nav-us').classList.toggle('active',v==='us');
+  $('nav-ho').classList.toggle('active',v==='ho');
+  $('nav-mho').classList.toggle('active',v==='mho');
   $('nav-meutr').classList.toggle('active',v==='meutr');
   $('nav-mtar').classList.toggle('active',v==='mtar');
   $('nav-meus').classList.toggle('active',v==='meus');
@@ -1329,6 +1373,8 @@ function showView(v){
   if(v==='onb')openOnb();
   if(v==='eq')openEq();
   if(v==='us')openUs();
+  if(v==='ho')openHo();
+  if(v==='mho')openMho();
   if(v==='meutr')openMeutr();
   if(v==='mtar')openMtar();
   if(v==='meus')openMeus();
@@ -2526,9 +2572,13 @@ function fmtTempo(meses){if(meses==null)return'—';if(meses===0)return'menos de
 function fmtAniv(d){if(!d)return'—';const[,m,dd]=String(d).split('-');return`${dd}-${m}`;}
 function fmtHora(t){if(!t)return'';return String(t).slice(0,5);}
 async function openEq(){
-  const{data,error}=await db.from('equipe').select('*').order('nome_completo');
-  if(error){$('eq-lista').innerHTML='<div class="empty"><b>Tabela de equipe ainda não existe</b>Rode o SQL e recarregue a página.</div>';return;}
-  equipe=data||[];
+  const r=await Promise.all([
+    db.from('equipe').select('*').order('nome_completo'),
+    db.from('home_office').select('*').order('data')
+  ]);
+  if(r[0].error){$('eq-lista').innerHTML='<div class="empty"><b>Tabela de equipe ainda não existe</b>Rode o SQL e recarregue a página.</div>';return;}
+  equipe=r[0].data||[];
+  homeOffice=r[1].error?[]:(r[1].data||[]);
   // popular filtro de alocações
   const locs=[...new Set(equipe.map(c=>c.alocacao).filter(Boolean))].sort();
   const sel=$('eq-floc'),cur=sel.value;
@@ -2553,6 +2603,9 @@ function renderEq(){
     const tAloc=mesesDesde(c.inicio_alocacao),t2B=mesesDesde(c.admissao);
     const semIniBadge=!c.inicio_alocacao?'<span class="badge b-manut" style="margin-left:6px">sem início</span>':'';
     const semCargoBadge=!c.cargo?'<span class="badge b-manut" style="margin-left:6px">sem cargo</span>':'';
+    const hoje=new Date().toISOString().slice(0,10);
+    const meusHo=homeOffice.filter(h=>h.colaborador_email===c.email&&h.data>=hoje).sort((a,b)=>a.data.localeCompare(b.data));
+    const hoLinha=meusHo.length?`<div class="ri-sub">🏠 Home office: ${meusHo.slice(0,3).map(h=>diaSemana(h.data)+' '+fmt(h.data)).join(' · ')}${meusHo.length>3?' · +'+(meusHo.length-3)+' mais':''}</div>`:'';
     return`<div class="row-item" style="cursor:default;align-items:flex-start">
       <div style="flex:1;min-width:0">
         <div class="ri-main">${esc(c.nome_completo||'')} ${c.nome_curto?'<span style="color:var(--ink-soft);font-weight:400;font-size:14px">('+esc(c.nome_curto)+')</span>':''}</div>
@@ -2560,6 +2613,7 @@ function renderEq(){
         <div class="ri-sub">📅 Admissão: <b>${fmt(c.admissao)}</b> · 🏢 Na 2B há <b>${fmtTempo(t2B)}</b>${c.data_fim_experiencia?' · Fim experiência: '+fmt(c.data_fim_experiencia):''}</div>
         <div class="ri-sub">🕐 ${fmtHora(c.horario_inicial)} — ${fmtHora(c.horario_final)} · ☎️ Ramal: <b>${esc(c.ramal||'—')}</b> · 🎂 ${fmtAniv(c.aniversario)}</div>
         <div class="ri-sub">✉️ ${esc(c.email||'—')}${c.nome_sgd?' · 🔍 SGD: '+esc(c.nome_sgd):''}</div>
+        ${hoLinha}
       </div>
       <div class="item-actions">
         <button class="btn-edit" onclick="openEqModal('${c.id}')">Editar</button>
@@ -2642,6 +2696,111 @@ async function excluirEq(id){
   closeEqModal();toast('Excluído');openEq();
 }
 $('nav-eq').onclick=()=>showView('eq');
+
+// ===== Home Office =====
+const DIA_SEMANA=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+function diaSemana(d){if(!d)return'';const[y,m,dd]=String(d).split('-').map(n=>parseInt(n));return DIA_SEMANA[new Date(y,m-1,dd).getDay()];}
+function nomeMes(d){const[y,m]=String(d).split('-');const meses=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];return meses[+m-1]+'/'+y;}
+async function openHo(){
+  // garante equipe carregada para o dropdown
+  if(!equipe.length){try{const{data}=await db.from('equipe').select('*').order('nome_completo');equipe=data||[];}catch(e){}}
+  const{data,error}=await db.from('home_office').select('*').order('data',{ascending:false});
+  if(error){$('ho-lista').innerHTML='<div class="empty"><b>Tabela de home office ainda não existe</b>Rode o SQL e recarregue a página.</div>';return;}
+  homeOffice=data||[];
+  // popular dropdown de colaboradores (form e filtro)
+  const opts='<option value="">— selecione —</option>'+equipe.map(e=>`<option value="${esc(e.nome_curto||e.nome_completo)}" data-email="${esc(e.email||'')}">${esc(e.nome_curto||e.nome_completo)}${e.email?' ('+esc(e.email)+')':''}</option>`).join('');
+  $('ho-colab').innerHTML=opts;
+  // filtros
+  const meses=[...new Set(homeOffice.map(h=>String(h.data).slice(0,7)))].sort().reverse();
+  const fmes=$('ho-fmes'),cm=fmes.value;
+  fmes.innerHTML='<option value="">Todos os meses</option>'+meses.map(m=>`<option value="${m}">${nomeMes(m)}</option>`).join('');
+  if(cm)fmes.value=cm;
+  const colabs=[...new Set(homeOffice.map(h=>h.colaborador).filter(Boolean))].sort();
+  const fcol=$('ho-fcolab'),cc=fcol.value;
+  fcol.innerHTML='<option value="">Todos os colaboradores</option>'+colabs.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  if(cc)fcol.value=cc;
+  renderHo();
+}
+function renderHo(){
+  const q=$('ho-busca').value.trim().toLowerCase(),fm=$('ho-fmes').value,fc=$('ho-fcolab').value;
+  const hoje=new Date().toISOString().slice(0,10);
+  const arr=homeOffice.filter(h=>{
+    if(fm&&String(h.data).slice(0,7)!==fm)return false;
+    if(fc&&h.colaborador!==fc)return false;
+    if(q&&!(h.colaborador||'').toLowerCase().includes(q))return false;
+    return true;
+  });
+  const mesAtual=hoje.slice(0,7);
+  const esteMes=homeOffice.filter(h=>String(h.data).slice(0,7)===mesAtual).length;
+  const futuros=homeOffice.filter(h=>h.data>=hoje).length;
+  $('ho-kpis').innerHTML=[
+    ['Total lançamentos',homeOffice.length,''],['Este mês',esteMes,'s-disp'],['Hoje ou no futuro',futuros,'s-uso'],['Filtrados',arr.length,'']
+  ].map(k=>`<div class="stat ${k[2]}"><b>${k[1]}</b><span>${esc(k[0])}</span></div>`).join('');
+  if(!arr.length){$('ho-lista').innerHTML='<div class="empty">Nenhum lançamento de home office encontrado.</div>';return;}
+  $('ho-lista').innerHTML='<div class="list">'+arr.map(h=>{
+    const futuro=h.data>=hoje;
+    return`<div class="row-item" style="cursor:default">
+      <div style="flex:1">
+        <div class="ri-main">${esc(h.colaborador)} <span style="color:var(--ink-soft);font-weight:400;font-size:14px">· 🏠 ${diaSemana(h.data)}, ${fmt(h.data)}</span>${futuro?'<span class="badge b-uso" style="margin-left:8px">próximo</span>':''}</div>
+        ${h.observacao?`<div class="ri-sub">${esc(h.observacao)}</div>`:''}
+      </div>
+      <div class="item-actions">
+        <button class="btn-del" onclick="excluirHo('${h.id}')">Excluir</button>
+      </div>
+    </div>`;
+  }).join('')+'</div>';
+}
+async function lancarHo(){
+  const sel=$('ho-colab'),colab=sel.value,data=$('ho-data').value;
+  if(!colab||!data){alert('Selecione colaborador e data.');return;}
+  const opt=sel.options[sel.selectedIndex];
+  const email=opt.getAttribute('data-email')||emailFromNome(colab);
+  const obs=$('ho-obs').value.trim()||null;
+  const{error}=await db.from('home_office').insert({colaborador:colab,colaborador_email:email,data,observacao:obs});
+  if(error){alert('Erro: '+error.message);return;}
+  $('ho-data').value='';$('ho-obs').value='';toast('Home office lançado ✓');openHo();
+}
+async function excluirHo(id){
+  if(!confirm('Excluir este lançamento?'))return;
+  const{error}=await db.from('home_office').delete().eq('id',id);
+  if(error){alert('Erro: '+error.message);return;}
+  toast('Excluído');openHo();
+}
+$('nav-ho').onclick=()=>showView('ho');
+
+// ===== Meus Home Office (colaborador) =====
+async function openMho(){
+  const{data,error}=await db.from('home_office').select('*').eq('colaborador_email',currentEmail).order('data',{ascending:false});
+  if(error){$('mho-lista').innerHTML='<div class="empty"><b>Tabela de home office ainda não existe</b>Peça ao administrador para rodar o SQL.</div>';return;}
+  const meus=data||[];
+  const hoje=new Date().toISOString().slice(0,10);
+  const futuros=meus.filter(h=>h.data>=hoje);
+  const passados=meus.filter(h=>h.data<hoje);
+  const mesAtual=hoje.slice(0,7);
+  const esteMes=meus.filter(h=>String(h.data).slice(0,7)===mesAtual).length;
+  $('mho-kpis').innerHTML=[
+    ['Total',meus.length,''],['Este mês',esteMes,'s-disp'],['Próximos',futuros.length,'s-uso'],['Já realizados',passados.length,'']
+  ].map(k=>`<div class="stat ${k[2]}"><b>${k[1]}</b><span>${esc(k[0])}</span></div>`).join('');
+  if(!meus.length){$('mho-lista').innerHTML='<div class="empty">Você ainda não tem dias de home office lançados.</div>';return;}
+  let html='';
+  if(futuros.length){
+    html+='<div class="sec-title">Próximos</div><div class="list">'+futuros.map(h=>`
+      <div class="row-item" style="cursor:default">
+        <div style="flex:1"><div class="ri-main">🏠 ${diaSemana(h.data)}, ${fmt(h.data)}</div>
+        ${h.observacao?`<div class="ri-sub">${esc(h.observacao)}</div>`:''}</div>
+        <span class="badge b-uso">próximo</span>
+      </div>`).join('')+'</div>';
+  }
+  if(passados.length){
+    html+='<div class="sec-title">Histórico</div><div class="list">'+passados.map(h=>`
+      <div class="row-item" style="cursor:default">
+        <div style="flex:1"><div class="ri-main">🏠 ${diaSemana(h.data)}, ${fmt(h.data)}</div>
+        ${h.observacao?`<div class="ri-sub">${esc(h.observacao)}</div>`:''}</div>
+      </div>`).join('')+'</div>';
+  }
+  $('mho-lista').innerHTML=html;
+}
+$('nav-mho').onclick=()=>showView('mho');
 
 // ===== Usuários (gestão de acessos) =====
 async function openUs(){
