@@ -218,6 +218,7 @@
     <button id="nav-solo">Solicitar ocorrência</button>
     <button id="nav-solm">Manutenção (ticket)</button>
     <button id="nav-meus">Meus registros</button>
+    <button id="nav-mcad">Meu cadastro</button>
     <button id="nav-mho">Meus Dias no escritório</button>
     <button id="nav-mtar">Minhas tarefas</button>
     <button id="nav-meutr">Meus treinamentos</button>
@@ -1062,6 +1063,11 @@
     <div id="ho-lista" style="margin-top:14px"></div>
   </div>
 
+  <!-- VIEW: MEU CADASTRO (colaborador) -->
+  <div id="view-mcad" style="display:none">
+    <div id="mcad-conteudo"></div>
+  </div>
+
   <!-- VIEW: MEUS HOME OFFICE (colaborador) -->
   <div id="view-mho" style="display:none">
     <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
@@ -1176,6 +1182,7 @@ async function showApp(user){
   $('nav-mtar').style.display=isAdminUser?'none':'';
   $('nav-meutr').style.display=isAdminUser?'none':'';
   $('nav-mho').style.display=isAdminUser?'none':'';
+  $('nav-mcad').style.display=isAdminUser?'none':'';
   if(isAdminUser)await loadAll();
   if(isAdminUser)updatePendingBadges();
   showView(isAdminUser?'cadastro':'solfolga');
@@ -1312,6 +1319,7 @@ function showView(v){
   $('view-us').style.display=v==='us'?'block':'none';
   $('view-ho').style.display=v==='ho'?'block':'none';
   $('view-mho').style.display=v==='mho'?'block':'none';
+  $('view-mcad').style.display=v==='mcad'?'block':'none';
   $('view-meutr').style.display=v==='meutr'?'block':'none';
   $('view-mtar').style.display=v==='mtar'?'block':'none';
   $('view-meus').style.display=v==='meus'?'block':'none';
@@ -1344,6 +1352,7 @@ function showView(v){
   $('nav-us').classList.toggle('active',v==='us');
   $('nav-ho').classList.toggle('active',v==='ho');
   $('nav-mho').classList.toggle('active',v==='mho');
+  $('nav-mcad').classList.toggle('active',v==='mcad');
   $('nav-meutr').classList.toggle('active',v==='meutr');
   $('nav-mtar').classList.toggle('active',v==='mtar');
   $('nav-meus').classList.toggle('active',v==='meus');
@@ -1375,6 +1384,7 @@ function showView(v){
   if(v==='us')openUs();
   if(v==='ho')openHo();
   if(v==='mho')openMho();
+  if(v==='mcad')openMcad();
   if(v==='meutr')openMeutr();
   if(v==='mtar')openMtar();
   if(v==='meus')openMeus();
@@ -2801,6 +2811,53 @@ async function openMho(){
   $('mho-lista').innerHTML=html;
 }
 $('nav-mho').onclick=()=>showView('mho');
+
+// ===== Meu cadastro (colaborador ve os proprios dados) =====
+async function openMcad(){
+  const r=await Promise.all([
+    db.from('equipe').select('*').eq('email',currentEmail).maybeSingle(),
+    db.from('home_office').select('*').eq('colaborador_email',currentEmail).order('data')
+  ]);
+  if(r[0].error&&r[0].error.code!=='PGRST116'){$('mcad-conteudo').innerHTML='<div class="empty"><b>Não foi possível carregar seu cadastro.</b>'+esc(r[0].error.message)+'</div>';return;}
+  const c=r[0].data;
+  if(!c){$('mcad-conteudo').innerHTML='<div class="empty"><b>Seu cadastro ainda não foi feito.</b>Peça ao administrador para cadastrar você na aba Equipe usando o e-mail <code>'+esc(currentEmail)+'</code>.</div>';return;}
+  const ho=r[1].error?[]:(r[1].data||[]);
+  const hoje=new Date().toISOString().slice(0,10);
+  const futuros=ho.filter(h=>h.data>=hoje);
+  const tAloc=mesesDesde(c.inicio_alocacao),t2B=mesesDesde(c.admissao);
+  const linha=(label,val)=>`<div class="ri-sub" style="padding:6px 0;border-bottom:1px solid var(--line)"><span style="color:var(--ink-soft);display:inline-block;min-width:170px">${esc(label)}</span><b>${val}</b></div>`;
+  $('mcad-conteudo').innerHTML=`
+    <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
+      <h2>${esc(c.nome_completo||'')}</h2>
+      <p class="hint">Estes são os seus dados cadastrados. Para alterações, fale com o administrador.</p>
+    </div>
+    <div class="form-card">
+      ${linha('Nome completo',esc(c.nome_completo||'—'))}
+      ${linha('Nome curto',esc(c.nome_curto||'—'))}
+      ${linha('Cargo',esc(c.cargo||'—'))}
+      ${linha('Alocação',esc(c.alocacao||'—'))}
+      ${linha('Início da alocação',c.inicio_alocacao?fmt(c.inicio_alocacao)+' <span style=\"color:var(--ink-soft);font-weight:400\">('+fmtTempo(tAloc)+')</span>':'—')}
+      ${linha('Admissão',c.admissao?fmt(c.admissao)+' <span style=\"color:var(--ink-soft);font-weight:400\">(na 2B há '+fmtTempo(t2B)+')</span>':'—')}
+      ${c.data_fim_experiencia?linha('Fim da experiência',fmt(c.data_fim_experiencia)):''}
+      ${linha('Horário',c.horario_inicial?fmtHora(c.horario_inicial)+' — '+fmtHora(c.horario_final):'—')}
+      ${linha('Ramal',esc(c.ramal||'—'))}
+      ${linha('Aniversário',fmtAniv(c.aniversario))}
+      ${linha('E-mail',esc(c.email||'—'))}
+      ${linha('Nome no SGD',esc(c.nome_sgd||'—'))}
+    </div>
+    ${futuros.length?`
+      <div class="sec-title" style="margin-top:24px">🏠 Próximos dias no escritório</div>
+      <div class="list">
+        ${futuros.slice(0,5).map(h=>`
+          <div class="row-item" style="cursor:default">
+            <div style="flex:1"><div class="ri-main">${diaSemana(h.data)}, ${fmt(h.data)}</div>
+            ${h.observacao?`<div class="ri-sub">${esc(h.observacao)}</div>`:''}</div>
+          </div>`).join('')}
+      </div>
+      ${futuros.length>5?`<p class="hint" style="margin-top:8px">+${futuros.length-5} a mais — veja todos em "Meus Dias no escritório".</p>`:''}
+    `:''}`;
+}
+$('nav-mcad').onclick=()=>showView('mcad');
 
 // ===== Usuários (gestão de acessos) =====
 async function openUs(){
