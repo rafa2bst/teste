@@ -1154,7 +1154,7 @@ const isAdmin=u=>!!u&&ADMIN_EMAILS.includes((u.email||'').toLowerCase());
 
 let maquinas=[],atribuicoes=[],manutencoes=[],isAdminUser=false,editingPatr=null,ferias=[],editingFeria=null,folgas=[],editingFolga=null,atestados=[],editingAtest=null,feCal=null,foCal=null,atCal=null,anivs=[],editingAniv=null,ocors=[],editingOcor=null,probs=[],editingProb=null,anCal=null,treins=[],editingTrein=null,anoms=[],editingAnom=null;
 const charts={};
-let currentEmail='',authMode='login',sols=[],ferReqs=[],atSols=[],ocSols=[],tickets=[],maqStatusFilter='',anomTratFilter='',tarefas=[],currentTaskId=null,rotinas=[],selectedRotId=null,treinoCatalogo=[],treinoAtribs=[],onbSelectedColab='',equipe=[],usuarios=[],homeOffice=[];
+let currentEmail='',authMode='login',sols=[],ferReqs=[],atSols=[],ocSols=[],tickets=[],maqStatusFilter='',anomTratFilter='',tarefas=[],currentTaskId=null,rotinas=[],selectedRotId=null,treinoCatalogo=[],treinoAtribs=[],onbSelectedColab='',equipe=[],usuarios=[],homeOffice=[],folgasAniv=[];
 const $=id=>document.getElementById(id);
 const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const hoje=()=>new Date().toISOString().slice(0,10);
@@ -1738,19 +1738,69 @@ function fillAnivColab(){
   sel.innerHTML='<option value="">— selecione —</option>'+[...nomes].sort().map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
   if(cur)sel.value=cur;
 }
-async function openAniv(){const{data,error}=await db.from('aniversarios').select('*');if(error){anivs=[];$('an-lista').innerHTML='<div class="empty"><b>Tabela de aniversários ainda não existe</b>Rode o SQL e recarregue a página.</div>';return;}anivs=(data||[]).sort((a,b)=>((a.data_nascimento||'').slice(5)<(b.data_nascimento||'').slice(5)?-1:1));fillAnivColab();renderAniv();renderAnivCalendar();}
+async function openAniv(){
+  const r=await Promise.all([
+    db.from('aniversarios').select('*'),
+    db.from('folga_aniversario').select('*'),
+    db.from('equipe').select('nome_completo,nome_curto,email,admissao')
+  ]);
+  if(r[0].error){anivs=[];$('an-lista').innerHTML='<div class="empty"><b>Tabela de aniversários ainda não existe</b>Rode o SQL e recarregue a página.</div>';return;}
+  anivs=(r[0].data||[]).sort((a,b)=>((a.data_nascimento||'').slice(5)<(b.data_nascimento||'').slice(5)?-1:1));
+  folgasAniv=r[1].error?[]:(r[1].data||[]);
+  if(!equipe.length&&!r[2].error)equipe=r[2].data||[];
+  fillAnivColab();renderAniv();renderAnivCalendar();
+}
 function renderAniv(){
   const q=$('an-busca').value.trim().toLowerCase();
   const arr=anivs.filter(a=>!q||(a.colaborador||'').toLowerCase().includes(q));
-  $('an-lista').innerHTML=arr.length?arr.map(a=>{const p=a.data_nascimento?a.data_nascimento.split('-'):null;const dia=p?p[2]+'/'+p[1]:'—';return`
-    <div class="row-item" style="cursor:default;align-items:flex-start">
-      <div><div class="ri-main">${esc(a.colaborador)}</div>
+  const anoAtual=new Date().getFullYear();
+  $('an-lista').innerHTML=arr.length?arr.map(a=>{
+    const p=a.data_nascimento?a.data_nascimento.split('-'):null;
+    const dia=p?p[2]+'-'+p[1]:'—';
+    // match com equipe pra pegar email e admissão
+    const nm=(a.colaborador||'').toLowerCase();
+    const eq=equipe.find(e=>(e.nome_completo||'').toLowerCase()===nm)||equipe.find(e=>(e.nome_curto||'').toLowerCase()===nm);
+    const email=eq&&eq.email?eq.email:emailFromNome(a.colaborador||'');
+    const admYear=eq&&eq.admissao?parseInt(String(eq.admissao).slice(0,4)):(anoAtual-3);
+    const folgas=folgasAniv.filter(f=>f.colaborador===a.colaborador);
+    const years=[];for(let y=admYear;y<=anoAtual;y++)years.push(y);
+    const chips=years.map(y=>{
+      const fo=folgas.find(f=>f.ano===y);
+      if(fo){return`<span class="badge b-uso" style="margin:2px 4px 2px 0;cursor:pointer" onclick="marcarFolgaAniv('${esc(a.colaborador).replace(/'/g,"\\'")}','${esc(email).replace(/'/g,"\\'")}',${y})" title="Tirada em ${fmt(fo.data_tirada)}. Clique para alterar ou remover.">✓ ${y} (${fmt(fo.data_tirada)})</span>`;}
+      const isAtual=y===anoAtual;
+      const cls=isAtual?'b-disp':'';
+      const ico=isAtual?'⏳':'○';
+      return`<span class="badge ${cls}" style="margin:2px 4px 2px 0;cursor:pointer;background:#f4f1ea" onclick="marcarFolgaAniv('${esc(a.colaborador).replace(/'/g,"\\'")}','${esc(email).replace(/'/g,"\\'")}',${y})" title="Clique para marcar como tirada">${ico} ${y}</span>`;
+    }).join('');
+    return`<div class="row-item" style="cursor:default;align-items:flex-start">
+      <div style="flex:1;min-width:0"><div class="ri-main">${esc(a.colaborador)}</div>
       <div class="ri-sub">🎂 ${dia}</div>
-      <label class="ri-sub" style="display:flex;align-items:center;gap:6px;margin-top:6px;cursor:pointer">
-        <input type="checkbox" data-aniv-folga="${a.id}" ${a.folga_tirada?'checked':''} style="width:auto"> Folga aniversário tirada${a.folga_tirada&&a.folga_ano?' ('+a.folga_ano+')':''}
-      </label></div>
+      <div class="ri-sub" style="margin-top:6px">Folga de aniversário: ${chips}</div></div>
       <div class="item-actions"><button class="btn-edit" data-an-edit="${a.id}">Editar</button><button class="btn-del" data-an-del="${a.id}">Excluir</button></div>
-    </div>`;}).join(''):'<div class="empty">Nenhum aniversário cadastrado.</div>';
+    </div>`;
+  }).join(''):'<div class="empty">Nenhum aniversário cadastrado.</div>';
+}
+async function marcarFolgaAniv(colaborador,email,ano){
+  const existing=folgasAniv.find(f=>f.colaborador===colaborador&&f.ano===ano);
+  if(existing){
+    const opt=prompt(`Folga ${ano} — ${colaborador}\nTirada em: ${fmt(existing.data_tirada)}${existing.observacao?'\nObs: '+existing.observacao:''}\n\nDigite a nova data (AAAA-MM-DD) para alterar,\nou digite REMOVER para apagar:`,existing.data_tirada);
+    if(opt===null||opt==='')return;
+    if(opt.trim().toUpperCase()==='REMOVER'){
+      const{error}=await db.from('folga_aniversario').delete().eq('id',existing.id);
+      if(error){alert('Erro: '+error.message);return;}
+      toast('Removido');await openAniv();return;
+    }
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(opt.trim())){alert('Data inválida. Use AAAA-MM-DD (ex.: 2024-08-15).');return;}
+    const{error}=await db.from('folga_aniversario').update({data_tirada:opt.trim()}).eq('id',existing.id);
+    if(error){alert('Erro: '+error.message);return;}
+    toast('Data atualizada ✓');await openAniv();return;
+  }
+  const data=prompt(`Em que data ${colaborador} tirou a folga de aniversário de ${ano}?\n\nFormato: AAAA-MM-DD (ex.: ${ano}-08-15)`,ano+'-');
+  if(data===null||!data.trim())return;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(data.trim())){alert('Data inválida. Use AAAA-MM-DD.');return;}
+  const{error}=await db.from('folga_aniversario').insert({colaborador,colaborador_email:email,ano,data_tirada:data.trim()});
+  if(error){alert('Erro: '+error.message);return;}
+  toast(`Folga ${ano} marcada ✓`);await openAniv();
 }
 async function toggleFolgaAniv(id,checked){const dados=checked?{folga_tirada:true,folga_ano:new Date().getFullYear()}:{folga_tirada:false,folga_ano:null};const{error}=await db.from('aniversarios').update(dados).eq('id',id);if(error){alert('Erro: '+error.message);return;}await openAniv();toast(checked?'Folga marcada ✓':'Folga desmarcada');}
 async function onSaveAniv(){const colaborador=$('an-colab').value.trim(),data=$('an-data').value;if(!colaborador){alert('Informe o colaborador.');return;}if(!data){alert('Informe a data de nascimento.');return;}$('an-save').disabled=true;let error;if(editingAniv){({error}=await db.from('aniversarios').update({colaborador,data_nascimento:data}).eq('id',editingAniv));}else{({error}=await db.from('aniversarios').insert({colaborador,data_nascimento:data}));}$('an-save').disabled=false;if(error){alert('Erro: '+error.message);return;}clearAniv();toast(editingAniv?'Atualizado ✓':'Aniversário salvo ✓');await openAniv();}
