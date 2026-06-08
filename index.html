@@ -222,6 +222,7 @@
     <button id="nav-meutr">Meus treinamentos</button>
     <button id="nav-rel">Patrimônio Notebooks</button>
     <button id="nav-eq">Equipe</button>
+    <button id="nav-us">Usuários</button>
     <button id="nav-fer">Férias</button>
     <button id="nav-fol">Folgas</button>
     <button id="nav-ate">Atestados</button>
@@ -1018,6 +1019,23 @@
     <div id="rot-conteudo"></div>
   </div>
 
+  <!-- VIEW: USUARIOS (gestão de acessos, admin) -->
+  <div id="view-us" style="display:none">
+    <div class="toolbar">
+      <div class="search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="us-busca" placeholder="Buscar por e-mail..." oninput="renderUs()">
+      </div>
+      <select id="us-fstatus" style="width:auto;min-width:150px" onchange="renderUs()">
+        <option value="">Todos</option><option value="ativo">Apenas ativos</option><option value="inativo">Apenas inativos</option>
+      </select>
+      <button class="btn-edit" onclick="openUs()" style="flex:none">↻ Atualizar</button>
+    </div>
+    <p class="hint" style="margin-top:10px">Lista de todos os usuários que se cadastraram. Você pode reenviar e-mail de redefinição de senha, marcar como ativo/inativo e ver quando se cadastrou e o último login.</p>
+    <div class="counts" id="us-kpis" style="margin-top:14px"></div>
+    <div id="us-lista" style="margin-top:14px"></div>
+  </div>
+
   <!-- VIEW: EQUIPE (cadastro completo, admin) -->
   <div id="view-eq" style="display:none">
     <div class="toolbar">
@@ -1069,7 +1087,7 @@ const isAdmin=u=>!!u&&ADMIN_EMAILS.includes((u.email||'').toLowerCase());
 
 let maquinas=[],atribuicoes=[],manutencoes=[],isAdminUser=false,editingPatr=null,ferias=[],editingFeria=null,folgas=[],editingFolga=null,atestados=[],editingAtest=null,feCal=null,foCal=null,atCal=null,anivs=[],editingAniv=null,ocors=[],editingOcor=null,probs=[],editingProb=null,anCal=null,treins=[],editingTrein=null,anoms=[],editingAnom=null;
 const charts={};
-let currentEmail='',authMode='login',sols=[],ferReqs=[],atSols=[],ocSols=[],tickets=[],maqStatusFilter='',anomTratFilter='',tarefas=[],currentTaskId=null,rotinas=[],selectedRotId=null,treinoCatalogo=[],treinoAtribs=[],onbSelectedColab='',equipe=[];
+let currentEmail='',authMode='login',sols=[],ferReqs=[],atSols=[],ocSols=[],tickets=[],maqStatusFilter='',anomTratFilter='',tarefas=[],currentTaskId=null,rotinas=[],selectedRotId=null,treinoCatalogo=[],treinoAtribs=[],onbSelectedColab='',equipe=[],usuarios=[];
 const $=id=>document.getElementById(id);
 const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const hoje=()=>new Date().toISOString().slice(0,10);
@@ -1084,8 +1102,10 @@ function showLogin(){$('login-screen').style.display='flex';$('app').style.displ
 async function showApp(user){
   $('login-screen').style.display='none';$('app').style.display='block';
   $('user-email').textContent=user.email;currentEmail=user.email||'';isAdminUser=isAdmin(user);
+  // Registra último login (silenciosamente; ignora erro se a tabela não existir)
+  try{await db.from('usuarios').update({ultimo_login:new Date().toISOString()}).eq('email',user.email);}catch(e){}
   $('nav').style.display='flex';
-  ['nav-cad','nav-rel','nav-eq','nav-fer','nav-fol','nav-ate','nav-aniv','nav-ocor','nav-prob','nav-trein','nav-anom','nav-fat','nav-dash','nav-soladm','nav-feradm','nav-atadm','nav-ocadm','nav-mtadm','nav-tar','nav-rot','nav-onb'].forEach(id=>$(id).style.display=isAdminUser?'':'none');
+  ['nav-cad','nav-rel','nav-eq','nav-us','nav-fer','nav-fol','nav-ate','nav-aniv','nav-ocor','nav-prob','nav-trein','nav-anom','nav-fat','nav-dash','nav-soladm','nav-feradm','nav-atadm','nav-ocadm','nav-mtadm','nav-tar','nav-rot','nav-onb'].forEach(id=>$(id).style.display=isAdminUser?'':'none');
   $('nav-solf').style.display=isAdminUser?'none':'';
   $('nav-solfer').style.display=isAdminUser?'none':'';
   $('nav-solat').style.display=isAdminUser?'none':'';
@@ -1199,7 +1219,7 @@ async function registrarManutencao(patr){
 
 // ===== Views =====
 function showView(v){
-  const adminViews=['cadastro','relatorios','eq','ferias','folgas','atestados','aniv','ocor','prob','trein','anom','fat','dash','soladm','feradm','atadm','ocadm','mtadm','tar','rot','onb'];
+  const adminViews=['cadastro','relatorios','eq','us','ferias','folgas','atestados','aniv','ocor','prob','trein','anom','fat','dash','soladm','feradm','atadm','ocadm','mtadm','tar','rot','onb'];
   if(adminViews.includes(v)&&!isAdminUser)v='solfolga';
   $('view-cadastro').style.display=v==='cadastro'?'block':'none';
   $('view-relatorios').style.display=v==='relatorios'?'block':'none';
@@ -1227,6 +1247,7 @@ function showView(v){
   $('view-rot').style.display=v==='rot'?'block':'none';
   $('view-onb').style.display=v==='onb'?'block':'none';
   $('view-eq').style.display=v==='eq'?'block':'none';
+  $('view-us').style.display=v==='us'?'block':'none';
   $('view-meutr').style.display=v==='meutr'?'block':'none';
   $('view-mtar').style.display=v==='mtar'?'block':'none';
   $('view-meus').style.display=v==='meus'?'block':'none';
@@ -1256,6 +1277,7 @@ function showView(v){
   $('nav-rot').classList.toggle('active',v==='rot');
   $('nav-onb').classList.toggle('active',v==='onb');
   $('nav-eq').classList.toggle('active',v==='eq');
+  $('nav-us').classList.toggle('active',v==='us');
   $('nav-meutr').classList.toggle('active',v==='meutr');
   $('nav-mtar').classList.toggle('active',v==='mtar');
   $('nav-meus').classList.toggle('active',v==='meus');
@@ -1284,6 +1306,7 @@ function showView(v){
   if(v==='rot')openRot();
   if(v==='onb')openOnb();
   if(v==='eq')openEq();
+  if(v==='us')openUs();
   if(v==='meutr')openMeutr();
   if(v==='mtar')openMtar();
   if(v==='meus')openMeus();
@@ -2597,6 +2620,76 @@ async function excluirEq(id){
   closeEqModal();toast('Excluído');openEq();
 }
 $('nav-eq').onclick=()=>showView('eq');
+
+// ===== Usuários (gestão de acessos) =====
+async function openUs(){
+  const{data,error}=await db.from('usuarios').select('*').order('criado_em',{ascending:false});
+  if(error){$('us-lista').innerHTML='<div class="empty"><b>Tabela de usuários ainda não existe</b>Rode o SQL e recarregue a página.</div>';return;}
+  usuarios=data||[];renderUs();
+}
+function renderUs(){
+  const q=$('us-busca').value.trim().toLowerCase(),fs=$('us-fstatus').value;
+  const arr=usuarios.filter(u=>{
+    if(fs==='ativo'&&!u.ativo)return false;
+    if(fs==='inativo'&&u.ativo)return false;
+    if(q&&!(u.email||'').toLowerCase().includes(q))return false;
+    return true;
+  });
+  const ativos=usuarios.filter(u=>u.ativo).length;
+  const inativos=usuarios.length-ativos;
+  const ult30=usuarios.filter(u=>{if(!u.criado_em)return false;const d=new Date(u.criado_em);return(Date.now()-d.getTime())<30*86400000;}).length;
+  $('us-kpis').innerHTML=[
+    ['Total cadastrados',usuarios.length,''],['Ativos',ativos,'s-uso'],['Inativos',inativos,inativos?'s-manut':''],['Cadastros nos últimos 30 dias',ult30,'s-disp']
+  ].map(k=>`<div class="stat ${k[2]}"><b>${k[1]}</b><span>${esc(k[0])}</span></div>`).join('');
+  if(!arr.length){$('us-lista').innerHTML='<div class="empty">Nenhum usuário encontrado.</div>';return;}
+  $('us-lista').innerHTML='<div class="list">'+arr.map(u=>{
+    const ehAdmin=u.email==='rafael.andrade.sa@gmail.com';
+    return`<div class="row-item" style="cursor:default;align-items:flex-start">
+      <div style="flex:1;min-width:0">
+        <div class="ri-main">${esc(u.email||'(sem e-mail)')}${ehAdmin?' <span class="badge b-disp" style="margin-left:6px">admin</span>':''}</div>
+        <div class="ri-sub">Cadastrado em <b>${fmtTs(u.criado_em)}</b>${u.ultimo_login?' · Último login: <b>'+fmtTs(u.ultimo_login)+'</b>':' · <i>ainda não logou</i>'}</div>
+        ${u.obs?`<div class="ri-sub" style="margin-top:4px"><i>${esc(u.obs)}</i></div>`:''}
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+        <span class="badge ${u.ativo?'b-uso':'b-desc'}">${u.ativo?'Ativo':'Inativo'}</span>
+        <div class="item-actions">
+          <button class="btn-edit" onclick="resetSenhaUs('${esc(u.email).replace(/'/g,"\\'")}')">Resetar senha</button>
+          ${ehAdmin?'':`<button class="btn-edit" onclick="toggleAtivoUs('${u.id}',${!u.ativo})">${u.ativo?'Desativar':'Ativar'}</button>`}
+          <button class="btn-edit" onclick="anotarUs('${u.id}')">Observação</button>
+          ${ehAdmin?'':`<button class="btn-del" onclick="excluirUs('${u.id}','${esc(u.email).replace(/'/g,"\\'")}')">Excluir</button>`}
+        </div>
+      </div>
+    </div>`;
+  }).join('')+'</div>';
+}
+async function resetSenhaUs(email){
+  if(!confirm(`Enviar e-mail de redefinição de senha para ${email}?\n\nO usuário vai receber um link no e-mail, clica nele e cria uma nova senha.`))return;
+  const{error}=await db.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin+window.location.pathname});
+  if(error){alert('Erro: '+error.message);return;}
+  toast('E-mail de redefinição enviado ✓');
+}
+async function toggleAtivoUs(id,novo){
+  const u=usuarios.find(x=>x.id===id);
+  if(!confirm(`${novo?'Ativar':'Desativar'} o usuário "${u?u.email:''}"?\n\nObservação: este controle é uma marcação visual. Para bloquear o login de fato no Supabase Auth, é preciso configurar uma Edge Function (posso te ajudar com isso depois se precisar).`))return;
+  const{error}=await db.from('usuarios').update({ativo:novo}).eq('id',id);
+  if(error){alert('Erro: '+error.message);return;}
+  toast(novo?'Ativado':'Desativado');openUs();
+}
+async function anotarUs(id){
+  const u=usuarios.find(x=>x.id===id);if(!u)return;
+  const obs=prompt('Observação sobre este usuário:',u.obs||'');
+  if(obs===null)return;
+  const{error}=await db.from('usuarios').update({obs:obs.trim()||null}).eq('id',id);
+  if(error){alert('Erro: '+error.message);return;}
+  toast('Observação salva ✓');openUs();
+}
+async function excluirUs(id,email){
+  if(!confirm(`Excluir o REGISTRO de "${email}" desta lista?\n\nIMPORTANTE: isso apaga só o registro local. A conta de autenticação no Supabase Auth não é removida (precisa apagar manualmente em Authentication > Users no painel do Supabase, ou usar uma Edge Function).`))return;
+  const{error}=await db.from('usuarios').delete().eq('id',id);
+  if(error){alert('Erro: '+error.message);return;}
+  toast('Registro removido');openUs();
+}
+$('nav-us').onclick=()=>showView('us');
 
 // ===== Onboarding (catálogo + atribuições) =====
 async function openOnb(){
