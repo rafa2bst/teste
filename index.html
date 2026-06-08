@@ -376,7 +376,8 @@
         <select id="fe-ftec" style="width:auto;min-width:170px">
           <option value="">Todos os técnicos</option>
         </select>
-      </div>
+            <button class="btn-del" onclick="zerarTabelaUma('ferias','lançamentos de férias',openFer)" style="flex:none;font-size:12px;padding:6px 10px;background:#fbf4f4;color:#a64141;border-color:#d9b3b3" title="Apaga todos os lançamentos de férias">🗑 Zerar</button>
+    </div>
       <div id="fe-lista" class="list"></div>
     </div>
   </div>
@@ -437,7 +438,8 @@
           <option>Folga Abono</option>
           <option>Abono Gestor</option>
         </select>
-      </div>
+            <button class="btn-del" onclick="zerarTabelaUma('folgas','folgas',openFol)" style="flex:none;font-size:12px;padding:6px 10px;background:#fbf4f4;color:#a64141;border-color:#d9b3b3" title="Apaga todos os folgas">🗑 Zerar</button>
+    </div>
       <div id="fo-lista" class="list"></div>
     </div>
   </div>
@@ -516,7 +518,8 @@
           <option>Óbito</option>
           <option>Acompanhamento terceiros</option>
         </select>
-      </div>
+            <button class="btn-del" onclick="zerarTabelaUma('atestados','atestados',openAte)" style="flex:none;font-size:12px;padding:6px 10px;background:#fbf4f4;color:#a64141;border-color:#d9b3b3" title="Apaga todos os atestados">🗑 Zerar</button>
+    </div>
       <div id="at-lista" class="list"></div>
     </div>
   </div>
@@ -596,7 +599,8 @@
           <option>Queda de Internet</option><option>Ações RH</option><option>Feedback</option>
           <option>Apoio da equipe</option><option>Problemas técnicos</option><option>Outros</option>
         </select>
-      </div>
+            <button class="btn-del" onclick="zerarTabelaUma('ocorrencias','ocorrências',openOcor)" style="flex:none;font-size:12px;padding:6px 10px;background:#fbf4f4;color:#a64141;border-color:#d9b3b3" title="Apaga todos os ocorrências">🗑 Zerar</button>
+    </div>
       <div id="oc-lista" class="list"></div>
     </div>
   </div>
@@ -636,7 +640,8 @@
         <select id="pr-filtro" style="width:auto;min-width:150px">
           <option value="">Todos</option><option>Aberto</option><option>Finalizado</option>
         </select>
-      </div>
+            <button class="btn-del" onclick="zerarTabelaUma('problemas','problemas',openProb)" style="flex:none;font-size:12px;padding:6px 10px;background:#fbf4f4;color:#a64141;border-color:#d9b3b3" title="Apaga todos os problemas">🗑 Zerar</button>
+    </div>
       <div id="pr-lista" class="list"></div>
     </div>
   </div>
@@ -676,7 +681,8 @@
         <select id="tr-filtro" style="width:auto;min-width:150px">
           <option value="">Todos</option><option>Planejado</option><option>Concluído</option>
         </select>
-      </div>
+            <button class="btn-del" onclick="zerarTabelaUma('treinamentos','treinamentos lançados',openTrein)" style="flex:none;font-size:12px;padding:6px 10px;background:#fbf4f4;color:#a64141;border-color:#d9b3b3" title="Apaga todos os treinamentos lançados">🗑 Zerar</button>
+    </div>
       <div id="tr-lista" class="list"></div>
     </div>
   </div>
@@ -722,6 +728,8 @@
       <label style="margin:0">Ano</label>
       <input id="fat-ano" type="number" style="width:110px">
       <button class="btn-primary" id="fat-save" style="flex:none">Salvar faturamento</button>
+          <button class="btn-del" onclick="zerarTabelaUma('anomalias','anomalias',openAnom)" style="flex:none;font-size:12px;padding:6px 10px;background:#fbf4f4;color:#a64141;border-color:#d9b3b3" title="Apaga todos os anomalias">🗑 Zerar</button>
+          <button class="btn-del" onclick="zerarTabelaUma('faturamento','lançamentos de faturamento',openFat)" style="flex:none;font-size:12px;padding:6px 10px;background:#fbf4f4;color:#a64141;border-color:#d9b3b3" title="Apaga todos os lançamentos de faturamento">🗑 Zerar</button>
     </div>
     <div id="fat-grid" style="overflow-x:auto"></div>
   </div>
@@ -778,6 +786,7 @@
       <select id="sa-filtro" style="width:auto;min-width:150px">
         <option value="Pendente">Pendentes</option><option value="">Todas</option><option value="Aprovada">Aprovadas</option><option value="Recusada">Recusadas</option>
       </select>
+          <button class="btn-del" onclick="zerarTabelaUma('solicitacoes_folga','pedidos de folga',openSolAdm)" style="flex:none;font-size:12px;padding:6px 10px;background:#fbf4f4;color:#a64141;border-color:#d9b3b3" title="Apaga todos os pedidos de folga">🗑 Zerar</button>
     </div>
     <div id="sa-lista" class="list"></div>
   </div>
@@ -819,6 +828,7 @@
       <select id="fa-filtro" style="width:auto;min-width:150px">
         <option value="Pendente">Pendentes</option><option value="">Todas</option><option value="Aprovada">Aprovadas</option><option value="Recusada">Recusadas</option>
       </select>
+          <button class="btn-del" onclick="zerarTabelaUma('solicitacoes_ferias','pedidos de férias',openFerAdm)" style="flex:none;font-size:12px;padding:6px 10px;background:#fbf4f4;color:#a64141;border-color:#d9b3b3" title="Apaga todos os pedidos de férias">🗑 Zerar</button>
     </div>
     <div id="fa-lista" class="list"></div>
   </div>
@@ -868,6 +878,7 @@
       <select id="aa-filtro" style="width:auto;min-width:160px">
         <option value="Pendente">Pendentes</option><option value="">Todos</option><option value="Aprovada">Aprovados</option><option value="Recusada">Recusados</option>
       </select>
+          <button class="btn-del" onclick="zerarTabelaUma('solicitacoes_atestado','pedidos de atestado',openAtAdm)" style="flex:none;font-size:12px;padding:6px 10px;background:#fbf4f4;color:#a64141;border-color:#d9b3b3" title="Apaga todos os pedidos de atestado">🗑 Zerar</button>
     </div>
     <div id="aa-lista" class="list"></div>
   </div>
@@ -926,6 +937,7 @@
       <select id="oa-filtro" style="width:auto;min-width:160px">
         <option value="Pendente">Pendentes</option><option value="">Todas</option><option value="Aprovada">Aprovadas</option><option value="Recusada">Recusadas</option>
       </select>
+          <button class="btn-del" onclick="zerarTabelaUma('solicitacoes_ocorrencia','pedidos de ocorrência',openOcAdm)" style="flex:none;font-size:12px;padding:6px 10px;background:#fbf4f4;color:#a64141;border-color:#d9b3b3" title="Apaga todos os pedidos de ocorrência">🗑 Zerar</button>
     </div>
     <div id="oa-lista" class="list"></div>
   </div>
@@ -971,6 +983,7 @@
         <option value="Resolvido">Resolvidos</option>
         <option value="Cancelado">Cancelados</option>
       </select>
+          <button class="btn-del" onclick="zerarTabelaUma('tickets_manutencao','tickets de manutenção',openMtAdm)" style="flex:none;font-size:12px;padding:6px 10px;background:#fbf4f4;color:#a64141;border-color:#d9b3b3" title="Apaga todos os tickets de manutenção">🗑 Zerar</button>
     </div>
     <div id="mt-lista" class="list"></div>
   </div>
@@ -1001,6 +1014,7 @@
       <select id="tar-fpri" style="width:auto;min-width:140px">
         <option value="">Todas prioridades</option><option>Urgente</option><option>Alta</option><option>Média</option><option>Baixa</option>
       </select>
+          <button class="btn-del" onclick="zerarTabelaUma('tarefas','tarefas',openTar)" style="flex:none;font-size:12px;padding:6px 10px;background:#fbf4f4;color:#a64141;border-color:#d9b3b3" title="Apaga todos os tarefas">🗑 Zerar</button>
     </div>
     <div id="tar-kanban" class="kanban"></div>
   </div>
@@ -1034,6 +1048,14 @@
     <p class="hint" style="margin-top:10px">Lista de todos os usuários que se cadastraram. Você pode reenviar e-mail de redefinição de senha, marcar como ativo/inativo e ver quando se cadastrou e o último login.</p>
     <div class="counts" id="us-kpis" style="margin-top:14px"></div>
     <div id="us-lista" style="margin-top:14px"></div>
+
+    <!-- Zona de perigo -->
+    <div style="margin-top:36px;padding:18px;border:1.5px solid #d9b3b3;background:#fbf4f4;border-radius:12px">
+      <h3 style="color:#a64141;margin-bottom:8px;font-family:var(--display);font-size:18px">⚠ Zona de perigo</h3>
+      <p style="font-size:14px;line-height:1.5;margin-bottom:10px"><b>Zerar todos os lançamentos</b> apaga: férias, folgas, atestados, ocorrências, problemas, treinamentos (lançados), anomalias, faturamento, atribuições/manutenções de patrimônio, solicitações pendentes, tickets de manutenção, tarefas e atribuições de onboarding.</p>
+      <p style="font-size:14px;line-height:1.5;margin-bottom:14px"><b>MANTÉM intactos:</b> aniversários, patrimônio (notebooks), equipe, rotinas (templates), catálogo de treinamentos e usuários cadastrados.</p>
+      <button class="btn-del" onclick="zerarLancamentos()" style="background:#a64141;color:#fff;border-color:#a64141;font-weight:600">Zerar todos os lançamentos</button>
+    </div>
   </div>
 
   <!-- VIEW: EQUIPE (cadastro completo, admin) -->
@@ -2691,6 +2713,47 @@ async function excluirUs(id,email){
 }
 $('nav-us').onclick=()=>showView('us');
 
+async function zerarTabelaUma(tabela,label,reloadFn){
+  let count=0;
+  try{const r=await db.from(tabela).select('*',{count:'exact',head:true});count=r.count||0;}catch(e){alert('Erro: '+e.message);return;}
+  if(count===0){alert(`Não há ${label} para apagar.`);return;}
+  if(!confirm(`Vai APAGAR ${count} ${label}.\n\nEsta ação não pode ser desfeita. Continuar?`))return;
+  const c=prompt('Para confirmar, digite ZERAR (em maiúsculas):');
+  if(c!=='ZERAR'){alert('Cancelado.');return;}
+  const{error}=await db.from(tabela).delete().not('id','is',null);
+  if(error){alert('Erro: '+error.message);return;}
+  toast(`${count} ${label} apagados ✓`);
+  if(reloadFn)reloadFn();
+}
+
+async function zerarLancamentos(){
+  const tabelas=['atribuicoes','manutencoes','colaboradores','ferias','folgas','atestados','ocorrencias','problemas','treinamentos','anomalias','faturamento','solicitacoes_folga','solicitacoes_ferias','solicitacoes_atestado','solicitacoes_ocorrencia','tickets_manutencao','tarefas','treinamento_atribuicoes'];
+  // 1ª etapa: contar tudo
+  const contagens={};let total=0;
+  for(const t of tabelas){
+    try{const{count}=await db.from(t).select('*',{count:'exact',head:true});contagens[t]=count||0;total+=count||0;}catch(e){contagens[t]=0;}
+  }
+  if(total===0){alert('Não há lançamentos para apagar. O sistema já está zerado.');return;}
+  const linhas=Object.entries(contagens).filter(([,n])=>n>0).map(([t,n])=>`  • ${t}: ${n}`).join('\n');
+  if(!confirm(`Vai APAGAR ${total} registros das tabelas a seguir:\n\n${linhas}\n\nMANTÉM intactos:\n  • maquinas (patrimônio)\n  • aniversarios\n  • equipe (cadastro do time)\n  • rotinas (templates)\n  • treinamentos_catalogo\n  • usuarios (acessos)\n\nContinuar?`))return;
+  // 2ª etapa: confirmação digitada
+  const c=prompt('Para confirmar, digite ZERAR (em maiúsculas):');
+  if(c!=='ZERAR'){alert('Cancelado. Nada foi apagado.');return;}
+  // Executa
+  const erros=[],apagadas={};
+  for(const t of tabelas){
+    if(contagens[t]===0)continue;
+    const{error}=await db.from(t).delete().not('id','is',null);
+    if(error){erros.push(`${t}: ${error.message}`);}else{apagadas[t]=contagens[t];}
+  }
+  const totalApagado=Object.values(apagadas).reduce((s,n)=>s+n,0);
+  let msg=`✓ ${totalApagado} registros apagados.`;
+  if(erros.length)msg+=`\n\n⚠ Erros em algumas tabelas (provavelmente porque ainda não existem no banco):\n${erros.join('\n')}`;
+  msg+=`\n\nO sistema está pronto para os colaboradores começarem a usar. A página vai recarregar.`;
+  alert(msg);
+  window.location.reload();
+}
+
 // ===== Onboarding (catálogo + atribuições) =====
 async function openOnb(){
   const r=await Promise.all([
@@ -2710,6 +2773,7 @@ function renderOnbList(){
     <div class="toolbar">
       <button class="btn-primary" id="onb-novo" onclick="iniciarOnboarding()" style="flex:none">+ Atribuir treinamentos a um colaborador</button>
       <p class="hint" style="margin:0;flex:1">Catálogo: <b>${treinoCatalogo.length} treinamentos</b> disponíveis. Atribua a um novo colaborador e ele verá em "Meus treinamentos".</p>
+      <button class="btn-del" onclick="zerarTabelaUma('treinamento_atribuicoes','atribuições de treinamentos',openOnb)" style="flex:none;font-size:12px;padding:6px 10px;background:#fbf4f4;color:#a64141;border-color:#d9b3b3" title="Apaga apenas as atribuições, mantém o catálogo">🗑 Zerar atribuições</button>
     </div>
     <div class="counts" style="margin-top:14px">
       <div class="stat"><b>${treinoCatalogo.length}</b><span>Treinamentos no catálogo</span></div>
