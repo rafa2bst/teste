@@ -32,32 +32,21 @@
   .brand h1{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(26px,5vw,38px);letter-spacing:-.5px;line-height:1.05}
   .brand p{color:var(--ink-soft);font-size:14px;margin-top:6px}
 
-  .nav{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;position:relative}
-  .nav button{background:transparent;border:1px solid var(--line);color:var(--ink-soft);border-radius:999px;padding:9px 18px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap}
+  .nav{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;position:fixed;left:-100%;top:0;height:100vh;width:88%;max-width:320px;background:var(--paper);padding:60px 18px 24px;flex-direction:column;flex-wrap:nowrap;overflow-y:auto;margin:0;border-right:1px solid var(--line);box-shadow:6px 0 22px rgba(0,0,0,.10);z-index:100;transition:left .3s ease}
+  .nav.open{left:0}
+  .nav button{background:transparent;border:1px solid var(--line);color:var(--ink-soft);border-radius:10px;padding:11px 14px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;text-align:left;width:100%}
   .nav button.active{background:var(--ink);color:#fff;border-color:var(--ink)}
-  .nav-group{position:relative}
-  .nav-group .group-label{display:inline-flex;align-items:center;gap:6px}
-  .nav-group .group-label::after{content:'▾';font-size:10px;opacity:.6;margin-left:2px}
-  .nav-group.has-active .group-label{background:var(--ink);color:#fff;border-color:var(--ink)}
-  .nav-group .group-items{display:none;position:absolute;top:calc(100% + 6px);left:0;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:6px;min-width:220px;flex-direction:column;gap:2px;z-index:60;box-shadow:0 10px 28px rgba(0,0,0,.10)}
-  .nav-group.open .group-items{display:flex}
-  .nav-group .group-items button{text-align:left;border:none;border-radius:8px;padding:9px 14px;font-weight:500;color:var(--ink);white-space:nowrap}
-  .nav-group .group-items button:hover{background:rgba(0,0,0,.05)}
-  .nav-group .group-items button.active{background:var(--ink);color:#fff}
-  .hamburger{display:none;background:transparent;border:1px solid var(--line);border-radius:8px;width:42px;height:42px;font-size:20px;cursor:pointer;align-items:center;justify-content:center;color:var(--ink)}
+  .nav-group{position:relative;width:100%}
+  .nav-group .group-label{width:100%;display:block;border:none;background:transparent !important;color:var(--ink-soft) !important;text-align:left;padding:16px 4px 6px;font-size:11px;text-transform:uppercase;font-weight:700;letter-spacing:.08em;cursor:default;pointer-events:none}
+  .nav-group .group-label::after{display:none}
+  .nav-group .group-items{display:flex;flex-direction:column;gap:4px;width:100%}
+  .nav-group .group-items button:hover{background:rgba(0,0,0,.04)}
+  .nav-close{position:absolute;top:14px;right:14px;background:transparent;border:none;font-size:24px;cursor:pointer;color:var(--ink-soft);line-height:1;padding:6px 10px;border-radius:8px}
+  .nav-close:hover{background:rgba(0,0,0,.06)}
+  .hamburger{display:inline-flex;background:transparent;border:1px solid var(--line);border-radius:10px;width:42px;height:42px;font-size:20px;cursor:pointer;align-items:center;justify-content:center;color:var(--ink);flex-shrink:0}
+  .hamburger:hover{background:rgba(0,0,0,.04)}
   .nav-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:90;opacity:0;pointer-events:none;transition:opacity .25s}
   .nav-overlay.show{opacity:1;pointer-events:auto}
-  @media (max-width:900px){
-    .hamburger{display:inline-flex}
-    .nav{position:fixed;left:-100%;top:0;height:100vh;width:86%;max-width:340px;background:var(--paper);padding:64px 18px 24px;flex-direction:column;flex-wrap:nowrap;overflow-y:auto;gap:6px;margin:0;border-right:1px solid var(--line);box-shadow:6px 0 22px rgba(0,0,0,.12);z-index:100;transition:left .3s ease}
-    .nav.open{left:0}
-    .nav-group{width:100%}
-    .nav-group .group-label{width:100%;display:block;border:none;background:transparent !important;color:var(--ink-soft) !important;text-align:left;padding:14px 0 6px;font-size:12px;text-transform:uppercase;font-weight:700;letter-spacing:.06em;cursor:default;pointer-events:none}
-    .nav-group .group-label::after{display:none}
-    .nav-group .group-items{display:flex;position:static;border:none;padding:0;box-shadow:none;background:transparent;min-width:0;width:100%;gap:4px}
-    .nav-group .group-items button{width:100%;border:1px solid var(--line);border-radius:10px;padding:11px 14px;font-weight:600}
-    .nav-group.has-active .group-label{background:transparent !important;color:var(--ink-soft) !important}
-  }
   .subnav{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
   .subnav button{background:#fff;border:1px solid var(--line);color:var(--ink-soft);border-radius:8px;padding:7px 14px;font-size:13.5px;font-weight:600;cursor:pointer}
   .subnav button.active{background:var(--accent-soft);color:var(--accent-dark);border-color:var(--accent)}
@@ -238,6 +227,7 @@
 
   <div class="nav-overlay" id="nav-overlay"></div>
   <nav class="nav" id="nav" style="display:none">
+    <button class="nav-close" id="nav-close-btn" aria-label="Fechar menu">×</button>
 
     <!-- ===== ADMIN ===== -->
     <div class="nav-group" data-group="cad">
@@ -1311,38 +1301,17 @@ function hideEmptyGroups(){
 }
 
 function setupNavMenu(){
-  // Hamburger toggle
-  const hamb=$('hamb-btn'),overlay=$('nav-overlay'),nav=$('nav');
+  const hamb=$('hamb-btn'),overlay=$('nav-overlay'),nav=$('nav'),closeBtn=$('nav-close-btn');
   function openDrawer(){nav.classList.add('open');overlay.classList.add('show');}
-  function closeDrawer(){nav.classList.remove('open');overlay.classList.remove('show');document.querySelectorAll('.nav-group.open').forEach(g=>g.classList.remove('open'));}
+  function closeDrawer(){nav.classList.remove('open');overlay.classList.remove('show');}
   hamb.onclick=()=>{nav.classList.contains('open')?closeDrawer():openDrawer();};
+  closeBtn.onclick=closeDrawer;
   overlay.onclick=closeDrawer;
-  // Dropdown toggle no desktop (clicar no rótulo do grupo abre/fecha)
-  document.querySelectorAll('.nav-group .group-label').forEach(lbl=>{
-    lbl.addEventListener('click',e=>{
-      // mobile: o label não responde a clique (pointer-events:none)
-      if(window.innerWidth<=900)return;
-      e.stopPropagation();
-      const g=lbl.closest('.nav-group');
-      const wasOpen=g.classList.contains('open');
-      document.querySelectorAll('.nav-group.open').forEach(x=>x.classList.remove('open'));
-      if(!wasOpen)g.classList.add('open');
-    });
-  });
-  // Fecha dropdown ao clicar em qualquer botão do grupo (desktop) ou ao clicar fora
+  // Ao clicar em qualquer botão dentro de um grupo, fecha o menu
   document.querySelectorAll('.nav-group .group-items button').forEach(b=>{
-    b.addEventListener('click',()=>{
-      document.querySelectorAll('.nav-group.open').forEach(x=>x.classList.remove('open'));
-      // mobile: fecha o drawer também
-      if(window.innerWidth<=900)closeDrawer();
-    });
+    b.addEventListener('click',()=>closeDrawer());
   });
-  document.addEventListener('click',e=>{
-    if(window.innerWidth<=900)return;
-    if(!e.target.closest('.nav-group')){document.querySelectorAll('.nav-group.open').forEach(g=>g.classList.remove('open'));}
-  });
-  // Esc fecha
-  document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeDrawer();document.querySelectorAll('.nav-group.open').forEach(g=>g.classList.remove('open'));}});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDrawer();});
 }
 setupNavMenu();
 function setAuthMode(m){authMode=m;$('login-error').style.display='none';$('signup-extra').style.display=m==='signup'?'block':'none';$('btn-auth').textContent=m==='signup'?'Criar conta':'Entrar';$('auth-sub').textContent=m==='signup'?'Crie seu login com e-mail e senha.':'Acesso restrito. Entre com seu e-mail e senha.';$('auth-toggle').textContent=m==='signup'?'Já tenho conta — entrar':'Criar login';}
