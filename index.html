@@ -32,9 +32,32 @@
   .brand h1{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(26px,5vw,38px);letter-spacing:-.5px;line-height:1.05}
   .brand p{color:var(--ink-soft);font-size:14px;margin-top:6px}
 
-  .nav{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap}
-  .nav button{background:transparent;border:1px solid var(--line);color:var(--ink-soft);border-radius:999px;padding:9px 18px;font-size:14px;font-weight:600;cursor:pointer}
+  .nav{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;position:relative}
+  .nav button{background:transparent;border:1px solid var(--line);color:var(--ink-soft);border-radius:999px;padding:9px 18px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap}
   .nav button.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .nav-group{position:relative}
+  .nav-group .group-label{display:inline-flex;align-items:center;gap:6px}
+  .nav-group .group-label::after{content:'▾';font-size:10px;opacity:.6;margin-left:2px}
+  .nav-group.has-active .group-label{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .nav-group .group-items{display:none;position:absolute;top:calc(100% + 6px);left:0;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:6px;min-width:220px;flex-direction:column;gap:2px;z-index:60;box-shadow:0 10px 28px rgba(0,0,0,.10)}
+  .nav-group.open .group-items{display:flex}
+  .nav-group .group-items button{text-align:left;border:none;border-radius:8px;padding:9px 14px;font-weight:500;color:var(--ink);white-space:nowrap}
+  .nav-group .group-items button:hover{background:rgba(0,0,0,.05)}
+  .nav-group .group-items button.active{background:var(--ink);color:#fff}
+  .hamburger{display:none;background:transparent;border:1px solid var(--line);border-radius:8px;width:42px;height:42px;font-size:20px;cursor:pointer;align-items:center;justify-content:center;color:var(--ink)}
+  .nav-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:90;opacity:0;pointer-events:none;transition:opacity .25s}
+  .nav-overlay.show{opacity:1;pointer-events:auto}
+  @media (max-width:900px){
+    .hamburger{display:inline-flex}
+    .nav{position:fixed;left:-100%;top:0;height:100vh;width:86%;max-width:340px;background:var(--paper);padding:64px 18px 24px;flex-direction:column;flex-wrap:nowrap;overflow-y:auto;gap:6px;margin:0;border-right:1px solid var(--line);box-shadow:6px 0 22px rgba(0,0,0,.12);z-index:100;transition:left .3s ease}
+    .nav.open{left:0}
+    .nav-group{width:100%}
+    .nav-group .group-label{width:100%;display:block;border:none;background:transparent !important;color:var(--ink-soft) !important;text-align:left;padding:14px 0 6px;font-size:12px;text-transform:uppercase;font-weight:700;letter-spacing:.06em;cursor:default;pointer-events:none}
+    .nav-group .group-label::after{display:none}
+    .nav-group .group-items{display:flex;position:static;border:none;padding:0;box-shadow:none;background:transparent;min-width:0;width:100%;gap:4px}
+    .nav-group .group-items button{width:100%;border:1px solid var(--line);border-radius:10px;padding:11px 14px;font-weight:600}
+    .nav-group.has-active .group-label{background:transparent !important;color:var(--ink-soft) !important}
+  }
   .subnav{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
   .subnav button{background:#fff;border:1px solid var(--line);color:var(--ink-soft);border-radius:8px;padding:7px 14px;font-size:13.5px;font-weight:600;cursor:pointer}
   .subnav button.active{background:var(--accent-soft);color:var(--accent-dark);border-color:var(--accent)}
@@ -207,43 +230,110 @@
 <div id="app" class="wrap" style="display:none">
   <div class="session-bar">Logado como <b id="user-email"></b><button class="btn-logout" id="btn-logout">Sair</button></div>
   <header class="top">
-    <div class="brand"><h1>Área de Gestão Área Técnica</h1><p>Máquinas, colaboradores, histórico e manutenções</p></div>
+    <div style="display:flex;align-items:center;gap:14px">
+      <button class="hamburger" id="hamb-btn" aria-label="Abrir menu">☰</button>
+      <div class="brand"><h1>Área de Gestão Área Técnica</h1><p>Máquinas, colaboradores, histórico e manutenções</p></div>
+    </div>
   </header>
 
+  <div class="nav-overlay" id="nav-overlay"></div>
   <nav class="nav" id="nav" style="display:none">
-    <button id="nav-cad" class="active">Cadastrar / Atualizar</button>
-    <button id="nav-solf">Solicitar folga</button>
-    <button id="nav-solfer">Solicitar férias</button>
-    <button id="nav-solat">Solicitar atestado/consulta</button>
-    <button id="nav-solo">Solicitar ocorrência</button>
-    <button id="nav-solm">Manutenção (ticket)</button>
-    <button id="nav-meus">Meus registros</button>
-    <button id="nav-mcad">Meu cadastro</button>
-    <button id="nav-mho">Meus Dias no escritório</button>
-    <button id="nav-mtar">Minhas tarefas</button>
-    <button id="nav-meutr">Meus treinamentos</button>
-    <button id="nav-rel">Patrimônio Notebooks</button>
-    <button id="nav-eq">Equipe</button>
-    <button id="nav-us">Usuários</button>
-    <button id="nav-fer">Férias</button>
-    <button id="nav-fol">Folgas</button>
-    <button id="nav-ho">Home Office</button>
-    <button id="nav-ate">Atestados</button>
-    <button id="nav-aniv">Aniversários</button>
-    <button id="nav-ocor">Ocorrências</button>
-    <button id="nav-prob">Problemas</button>
-    <button id="nav-trein">Treinamentos</button>
-    <button id="nav-anom">Anomalias</button>
-    <button id="nav-fat">Faturamento</button>
-    <button id="nav-dash">Relatórios</button>
-    <button id="nav-soladm">Pedidos de folgas</button>
-    <button id="nav-tar">Tarefas</button>
-    <button id="nav-rot">Rotinas</button>
-    <button id="nav-onb">Onboarding</button>
-    <button id="nav-atadm">Pedidos de atestados</button>
-    <button id="nav-ocadm">Pedidos de ocorrências</button>
-    <button id="nav-mtadm">Tickets de manutenção</button>
-    <button id="nav-feradm">Pedidos de férias</button>
+
+    <!-- ===== ADMIN ===== -->
+    <div class="nav-group" data-group="cad">
+      <button class="group-label">📋 Cadastros</button>
+      <div class="group-items">
+        <button id="nav-cad" class="active">Cadastrar / Atualizar</button>
+        <button id="nav-eq">Equipe</button>
+        <button id="nav-us">Usuários</button>
+        <button id="nav-aniv">Aniversários</button>
+      </div>
+    </div>
+
+    <div class="nav-group" data-group="pat">
+      <button class="group-label">💻 Patrimônio</button>
+      <div class="group-items">
+        <button id="nav-rel">Notebooks</button>
+        <button id="nav-mtadm">Tickets de manutenção</button>
+      </div>
+    </div>
+
+    <div class="nav-group" data-group="aus">
+      <button class="group-label">📅 Ausências</button>
+      <div class="group-items">
+        <button id="nav-fer">Férias</button>
+        <button id="nav-fol">Folgas</button>
+        <button id="nav-ho">Home Office</button>
+        <button id="nav-ate">Atestados</button>
+      </div>
+    </div>
+
+    <div class="nav-group" data-group="ope">
+      <button class="group-label">⚙️ Operacional</button>
+      <div class="group-items">
+        <button id="nav-ocor">Ocorrências</button>
+        <button id="nav-prob">Problemas</button>
+        <button id="nav-trein">Treinamentos</button>
+        <button id="nav-anom">Anomalias</button>
+        <button id="nav-fat">Faturamento</button>
+      </div>
+    </div>
+
+    <div class="nav-group" data-group="sol">
+      <button class="group-label">📨 Solicitações</button>
+      <div class="group-items">
+        <button id="nav-soladm">Pedidos de folgas</button>
+        <button id="nav-feradm">Pedidos de férias</button>
+        <button id="nav-atadm">Pedidos de atestados</button>
+        <button id="nav-ocadm">Pedidos de ocorrências</button>
+      </div>
+    </div>
+
+    <div class="nav-group" data-group="tar">
+      <button class="group-label">✅ Tarefas & Onboarding</button>
+      <div class="group-items">
+        <button id="nav-tar">Tarefas</button>
+        <button id="nav-rot">Rotinas</button>
+        <button id="nav-onb">Onboarding</button>
+      </div>
+    </div>
+
+    <div class="nav-group" data-group="rep">
+      <button class="group-label">📈 Relatórios</button>
+      <div class="group-items">
+        <button id="nav-dash">Relatórios</button>
+      </div>
+    </div>
+
+    <!-- ===== COLABORADOR ===== -->
+    <div class="nav-group" data-group="meu">
+      <button class="group-label">👤 Meus dados</button>
+      <div class="group-items">
+        <button id="nav-mcad">Meu cadastro</button>
+        <button id="nav-meus">Meus registros</button>
+      </div>
+    </div>
+
+    <div class="nav-group" data-group="trab">
+      <button class="group-label">✅ Meu trabalho</button>
+      <div class="group-items">
+        <button id="nav-mtar">Minhas tarefas</button>
+        <button id="nav-meutr">Meus treinamentos</button>
+        <button id="nav-mho">Meus Dias no escritório</button>
+      </div>
+    </div>
+
+    <div class="nav-group" data-group="solic">
+      <button class="group-label">✋ Solicitar</button>
+      <div class="group-items">
+        <button id="nav-solf">Folga</button>
+        <button id="nav-solfer">Férias</button>
+        <button id="nav-solat">Atestado/consulta</button>
+        <button id="nav-solo">Ocorrência</button>
+        <button id="nav-solm">Manutenção (ticket)</button>
+      </div>
+    </div>
+
   </nav>
 
   <!-- VIEW: CADASTRO -->
@@ -976,6 +1066,7 @@
       <div class="stat s-desc stat-clickable" data-filter-target="mt-filtro" data-filter-value="Cancelado"><b id="mt-c-ca">0</b><span>Cancelados</span></div>
     </div>
     <div class="toolbar">
+      <button class="btn-primary" onclick="abrirNovoTicket()" style="flex:none">+ Abrir ticket</button>
       <div class="search">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
         <input id="mt-busca" placeholder="Buscar por colaborador ou patrimônio...">
@@ -1132,6 +1223,27 @@
     <div id="meutr-lista"></div>
   </div>
 
+  <!-- MODAL de NOVO TICKET (admin abrindo manualmente) -->
+  <div id="ntk-modal-bg" class="modal-bg" style="display:none" onclick="fecharNovoTicket()">
+    <div class="modal-card" id="ntk-modal" onclick="event.stopPropagation()">
+      <button class="modal-close" onclick="fecharNovoTicket()">×</button>
+      <h2 style="margin-bottom:6px">Abrir novo ticket de manutenção</h2>
+      <p class="hint" style="margin-bottom:12px">Você (admin/coordenador) está abrindo um ticket em nome de um colaborador.</p>
+      <label>Colaborador *</label>
+      <select id="ntk-colab" onchange="onChangeNtkColab()"><option value="">— selecione —</option></select>
+      <label>Patrimônio *</label>
+      <input id="ntk-pat" list="ntk-pat-list" placeholder="Ex.: 1234"><datalist id="ntk-pat-list"></datalist>
+      <label>Descrição do problema *</label>
+      <textarea id="ntk-desc" placeholder="Ex.: tela apagando sozinha"></textarea>
+      <label>Observação (opcional)</label>
+      <input id="ntk-obs" placeholder="Detalhe adicional, contexto, urgência etc.">
+      <div class="actions" style="justify-content:flex-end;margin-top:14px;gap:8px">
+        <button class="btn-ghost" onclick="fecharNovoTicket()">Cancelar</button>
+        <button class="btn-primary" onclick="salvarNovoTicket()" style="flex:none">Abrir ticket</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL de colaborador (equipe) -->
   <div id="eq-modal-bg" class="modal-bg" style="display:none" onclick="closeEqModal()">
     <div class="modal-card" id="eq-modal" onclick="event.stopPropagation()"></div>
@@ -1183,10 +1295,56 @@ async function showApp(user){
   $('nav-meutr').style.display=isAdminUser?'none':'';
   $('nav-mho').style.display=isAdminUser?'none':'';
   $('nav-mcad').style.display=isAdminUser?'none':'';
+  hideEmptyGroups();
   if(isAdminUser)await loadAll();
   if(isAdminUser)updatePendingBadges();
   showView(isAdminUser?'cadastro':'solfolga');
 }
+
+function hideEmptyGroups(){
+  document.querySelectorAll('.nav-group').forEach(g=>{
+    const items=g.querySelectorAll('.group-items > button');
+    let hasVisible=false;
+    items.forEach(b=>{if(b.style.display!=='none')hasVisible=true;});
+    g.style.display=hasVisible?'':'none';
+  });
+}
+
+function setupNavMenu(){
+  // Hamburger toggle
+  const hamb=$('hamb-btn'),overlay=$('nav-overlay'),nav=$('nav');
+  function openDrawer(){nav.classList.add('open');overlay.classList.add('show');}
+  function closeDrawer(){nav.classList.remove('open');overlay.classList.remove('show');document.querySelectorAll('.nav-group.open').forEach(g=>g.classList.remove('open'));}
+  hamb.onclick=()=>{nav.classList.contains('open')?closeDrawer():openDrawer();};
+  overlay.onclick=closeDrawer;
+  // Dropdown toggle no desktop (clicar no rótulo do grupo abre/fecha)
+  document.querySelectorAll('.nav-group .group-label').forEach(lbl=>{
+    lbl.addEventListener('click',e=>{
+      // mobile: o label não responde a clique (pointer-events:none)
+      if(window.innerWidth<=900)return;
+      e.stopPropagation();
+      const g=lbl.closest('.nav-group');
+      const wasOpen=g.classList.contains('open');
+      document.querySelectorAll('.nav-group.open').forEach(x=>x.classList.remove('open'));
+      if(!wasOpen)g.classList.add('open');
+    });
+  });
+  // Fecha dropdown ao clicar em qualquer botão do grupo (desktop) ou ao clicar fora
+  document.querySelectorAll('.nav-group .group-items button').forEach(b=>{
+    b.addEventListener('click',()=>{
+      document.querySelectorAll('.nav-group.open').forEach(x=>x.classList.remove('open'));
+      // mobile: fecha o drawer também
+      if(window.innerWidth<=900)closeDrawer();
+    });
+  });
+  document.addEventListener('click',e=>{
+    if(window.innerWidth<=900)return;
+    if(!e.target.closest('.nav-group')){document.querySelectorAll('.nav-group.open').forEach(g=>g.classList.remove('open'));}
+  });
+  // Esc fecha
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeDrawer();document.querySelectorAll('.nav-group.open').forEach(g=>g.classList.remove('open'));}});
+}
+setupNavMenu();
 function setAuthMode(m){authMode=m;$('login-error').style.display='none';$('signup-extra').style.display=m==='signup'?'block':'none';$('btn-auth').textContent=m==='signup'?'Criar conta':'Entrar';$('auth-sub').textContent=m==='signup'?'Crie seu login com e-mail e senha.':'Acesso restrito. Entre com seu e-mail e senha.';$('auth-toggle').textContent=m==='signup'?'Já tenho conta — entrar':'Criar login';}
 function doAuth(){authMode==='signup'?doSignup():doLogin();}
 async function doLogin(){
@@ -1278,11 +1436,19 @@ async function deleteMachine(patr){
 
 // ===== Manutenção =====
 async function registrarManutencao(patr){
-  const desc=$('mt-desc').value.trim(),data=$('mt-data').value||hoje(),marcar=$('mt-marcar').checked;
-  if(!desc){alert('Descreva a manutenção.');return;}
-  const{error}=await db.from('manutencoes').insert({patrimonio:patr,descricao:desc,data});
+  const motivo=$('mt-motivo').value.trim(),desc=$('mt-desc').value.trim();
+  const envio=$('mt-envio').value,retorno=$('mt-retorno').value;
+  const marcar=$('mt-marcar').checked;
+  if(!motivo){alert('Informe o motivo da manutenção.');return;}
+  if(!envio){alert('Informe a data de envio.');return;}
+  if(retorno&&retorno<envio){alert('Data de retorno não pode ser anterior à de envio.');return;}
+  const dados={patrimonio:patr,motivo,descricao:desc||null,data_envio:envio,data_retorno:retorno||null,data:envio};
+  const{error}=await db.from('manutencoes').insert(dados);
   if(error){alert('Erro: '+error.message);return;}
-  if(marcar)await db.from('maquinas').update({status:'Manutenção'}).eq('patrimonio',patr);
+  if(marcar){
+    const novoStatus=retorno?'Em uso':'Manutenção';
+    await db.from('maquinas').update({status:novoStatus}).eq('patrimonio',patr);
+  }
   await loadAll();renderMaquinaDetalhe(patr);toast('Manutenção registrada ✓');
 }
 
@@ -1356,6 +1522,10 @@ function showView(v){
   $('nav-meutr').classList.toggle('active',v==='meutr');
   $('nav-mtar').classList.toggle('active',v==='mtar');
   $('nav-meus').classList.toggle('active',v==='meus');
+  // Sincroniza marcação visual do grupo (rótulo destacado quando um botão dentro está ativo)
+  document.querySelectorAll('.nav-group').forEach(g=>{
+    g.classList.toggle('has-active',!!g.querySelector('.group-items > button.active'));
+  });
   if(v==='relatorios')renderRelatorios();
   if(v==='ferias')openFerias();
   if(v==='folgas')openFolgas();
@@ -1443,9 +1613,21 @@ function renderMaquinaDetalhe(patr){
         <div class="hist-row"><span>${esc(a.colaborador)}${!a.data_fim?'<span class="tag-now">atual</span>':''}</span>
         <span class="hr-period">${a.data_inicio?fmt(a.data_inicio):'início n/d'} → ${a.data_fim?fmt(a.data_fim):'hoje'}</span></div>`).join(''):'<div class="empty">Sem histórico de atribuição.</div>'}</div>
 
-      <div class="sec-title">Manutenções (${mans.length})</div>
-      <div class="hist">${mans.length?mans.map(x=>`
-        <div class="hist-row"><span>${esc(x.descricao)}</span><span class="hr-period">${x.data?fmt(x.data):''}</span></div>`).join(''):'<div class="empty">Nenhuma manutenção registrada.</div>'}</div>
+      <div class="sec-title">Histórico de manutenções (${mans.length})</div>
+      <div class="hist">${mans.length?mans.map(x=>{
+        const enviado=x.data_envio||x.data;
+        const retornou=x.data_retorno;
+        const naManut=enviado&&!retornou;
+        const dias=(enviado&&retornou)?Math.round((new Date(retornou)-new Date(enviado))/86400000):null;
+        const motivo=x.motivo||x.descricao||'';
+        const detalhes=(x.motivo&&x.descricao)?x.descricao:'';
+        return`<div class="hist-row" style="flex-direction:column;align-items:stretch;gap:4px;padding:8px 10px">
+          <div style="display:flex;justify-content:space-between;gap:10px">
+            <span><b>${esc(motivo)}</b>${naManut?' <span class="badge b-manut" style="margin-left:6px">em manutenção</span>':dias!=null?` <span style="color:var(--ink-soft);font-size:12px">(${dias} dia${dias===1?'':'s'})</span>`:''}</span>
+            <span class="hr-period">${enviado?'enviado '+fmt(enviado):''}${retornou?' → retornou '+fmt(retornou):naManut?' → ainda na manutenção':''}</span>
+          </div>
+          ${detalhes?`<div class="ri-sub" style="font-size:13px">${esc(detalhes)}</div>`:''}
+        </div>`;}).join(''):'<div class="empty">Nenhuma manutenção registrada.</div>'}</div>
 
       <div class="sec-title">Tickets desta máquina (${(tickets.filter(t=>t.patrimonio===patr)).length})</div>
       ${(()=>{const tks=tickets.filter(t=>t.patrimonio===patr).sort((a,b)=>(a.created_at<b.created_at?1:-1));return tks.length?tks.map(t=>`
@@ -1459,15 +1641,19 @@ function renderMaquinaDetalhe(patr){
         </div>`).join(''):'<div class="empty">Nenhum ticket aberto para esta máquina.</div>';})()}
 
       <div class="mini-form">
-        <div class="sec-title" style="margin-top:0">Registrar manutenção / ticket</div>
-        <input id="mt-desc" placeholder="Ex.: Colocada memória de 8GB">
+        <div class="sec-title" style="margin-top:0">Registrar manutenção</div>
+        <label>Motivo da manutenção *</label>
+        <input id="mt-motivo" placeholder="Ex.: Tela quebrada, bateria com defeito, limpeza preventiva">
+        <label>Detalhes (opcional)</label>
+        <input id="mt-desc" placeholder="Ex.: Tela substituída por uma nova, bateria trocada">
         <div class="row2">
-          <input id="mt-data" type="date">
-          <button class="btn-primary" id="mt-save" style="flex:none">Registrar</button>
+          <div><label>Data de envio *</label><input id="mt-envio" type="date"></div>
+          <div><label>Data de retorno (em branco = ainda na manutenção)</label><input id="mt-retorno" type="date"></div>
         </div>
         <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;margin-top:10px;font-weight:500;color:var(--ink)">
-          <input type="checkbox" id="mt-marcar" style="width:auto"> Marcar esta máquina como "Em manutenção"
+          <input type="checkbox" id="mt-marcar" style="width:auto"> Atualizar status da máquina automaticamente (Em manutenção se sem retorno · Em uso se já retornou)
         </label>
+        <div class="actions"><button class="btn-primary" id="mt-save" style="flex:none">Registrar</button></div>
       </div>
     </div>`;
   $('maq-back').onclick=()=>renderMaquinaLista();
@@ -2315,6 +2501,38 @@ function renderMyTickets(rows){
       </div>
       ${renderTimeline(t)}
     </div>`).join(''):'<div class="empty">Você ainda não abriu tickets.</div>';
+}
+async function abrirNovoTicket(){
+  // garante equipe e maquinas carregados
+  if(!equipe.length){try{const{data}=await db.from('equipe').select('*').order('nome_completo');equipe=data||[];}catch(e){}}
+  if(!maquinas.length){try{const{data}=await db.from('maquinas').select('*');maquinas=data||[];}catch(e){}}
+  const opts='<option value="">— selecione —</option>'+equipe.map(e=>`<option value="${esc(e.nome_curto||e.nome_completo)}" data-email="${esc(e.email||'')}">${esc(e.nome_curto||e.nome_completo)}${e.email?' ('+esc(e.email)+')':''}</option>`).join('');
+  $('ntk-colab').innerHTML=opts;
+  $('ntk-pat-list').innerHTML=maquinas.map(m=>`<option value="${esc(m.patrimonio)}">${esc(m.modelo||m.setor||'')} — ${esc(m.colaborador||'sem dono')}</option>`).join('');
+  ['ntk-pat','ntk-desc','ntk-obs'].forEach(i=>$(i).value='');
+  $('ntk-modal-bg').style.display='flex';
+}
+function fecharNovoTicket(){$('ntk-modal-bg').style.display='none';}
+function onChangeNtkColab(){
+  const sel=$('ntk-colab'),nome=sel.value;
+  if(!nome){$('ntk-pat-list').innerHTML=maquinas.map(m=>`<option value="${esc(m.patrimonio)}">${esc(m.modelo||m.setor||'')} — ${esc(m.colaborador||'sem dono')}</option>`).join('');return;}
+  const nm=norm(nome);
+  const dele=maquinas.filter(m=>norm(m.colaborador||'')===nm);
+  const outras=maquinas.filter(m=>norm(m.colaborador||'')!==nm);
+  $('ntk-pat-list').innerHTML=[...dele,...outras].map(m=>`<option value="${esc(m.patrimonio)}">${esc(m.modelo||m.setor||'')} — ${esc(m.colaborador||'sem dono')}</option>`).join('');
+}
+async function salvarNovoTicket(){
+  const sel=$('ntk-colab'),colab=sel.value,patrimonio=$('ntk-pat').value.trim(),descricao=$('ntk-desc').value.trim();
+  if(!colab){alert('Selecione o colaborador.');return;}
+  if(!patrimonio){alert('Informe o patrimônio.');return;}
+  if(!descricao){alert('Descreva o problema.');return;}
+  const opt=sel.options[sel.selectedIndex];
+  const email=opt.getAttribute('data-email')||emailFromNome(colab);
+  const obs=$('ntk-obs').value.trim();
+  const dados={solicitante_email:email,colaborador:colab,patrimonio,descricao,observacao:obs,status:'Aberto',historico:[{ts:new Date().toISOString(),tipo:'Abertura',texto:'Ticket aberto pelo administrador/coordenador'}]};
+  const{error}=await db.from('tickets_manutencao').insert(dados);
+  if(error){alert('Erro: '+error.message);return;}
+  fecharNovoTicket();toast('Ticket aberto ✓');openMtAdm();
 }
 async function openMtAdm(){
   const{data,error}=await db.from('tickets_manutencao').select('*').order('created_at',{ascending:false});
