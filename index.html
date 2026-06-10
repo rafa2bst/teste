@@ -251,6 +251,7 @@
     <div class="nav-group" data-group="aus">
       <button class="group-label">📅 Ausências</button>
       <div class="group-items">
+        <button id="nav-aloc">Alocação do dia</button>
         <button id="nav-fer">Férias</button>
         <button id="nav-fol">Folgas</button>
         <button id="nav-ho">Home Office</button>
@@ -310,6 +311,7 @@
         <button id="nav-mtar">Minhas tarefas</button>
         <button id="nav-meutr">Meus treinamentos</button>
         <button id="nav-mho">Meus Dias no escritório</button>
+        <button id="nav-mequipehj">Equipe hoje</button>
       </div>
     </div>
 
@@ -1149,6 +1151,40 @@
     <div id="mcad-conteudo"></div>
   </div>
 
+  <!-- VIEW: ALOCAÇÃO (admin) -->
+  <div id="view-aloc" style="display:none">
+    <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
+      <h2>Alocação da equipe</h2>
+      <p class="hint">Defina onde cada técnico estará no dia. Os colaboradores veem o quadro em "Equipe hoje".</p>
+    </div>
+    <div class="toolbar">
+      <button onclick="navAlocDia(-1)" style="flex:none">← Ontem</button>
+      <input id="aloc-data" type="date" onchange="onChangeAlocData()" style="width:auto">
+      <button onclick="navAlocDia(1)" style="flex:none">Amanhã →</button>
+      <button onclick="navAlocDia(0)" style="flex:none">Hoje</button>
+      <div style="flex:1"></div>
+      <button id="aloc-toggle-edit" onclick="toggleAlocEdit()" class="btn-primary" style="flex:none">Editar alocações</button>
+      <button class="btn-del" onclick="limparAlocDia()" style="flex:none;font-size:12px;padding:6px 10px;background:#fbf4f4;color:#a64141;border-color:#d9b3b3">🗑 Limpar dia</button>
+    </div>
+    <div id="aloc-board" style="margin-top:16px"></div>
+    <div id="aloc-edit" style="display:none;margin-top:16px"></div>
+  </div>
+
+  <!-- VIEW: EQUIPE HOJE (colaborador) -->
+  <div id="view-mequipehj" style="display:none">
+    <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
+      <h2>Equipe hoje</h2>
+      <p class="hint">Veja como está distribuída a equipe no dia.</p>
+    </div>
+    <div class="toolbar">
+      <button onclick="navMeqDia(-1)" style="flex:none">← Ontem</button>
+      <input id="meq-data" type="date" onchange="openMequipehj()" style="width:auto">
+      <button onclick="navMeqDia(1)" style="flex:none">Amanhã →</button>
+      <button onclick="navMeqDia(0)" style="flex:none">Hoje</button>
+    </div>
+    <div id="meq-board" style="margin-top:16px"></div>
+  </div>
+
   <!-- VIEW: MEUS HOME OFFICE (colaborador) -->
   <div id="view-mho" style="display:none">
     <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
@@ -1256,7 +1292,7 @@ const isAdmin=u=>!!u&&ADMIN_EMAILS.includes((u.email||'').toLowerCase());
 
 let maquinas=[],atribuicoes=[],manutencoes=[],isAdminUser=false,editingPatr=null,ferias=[],editingFeria=null,folgas=[],editingFolga=null,atestados=[],editingAtest=null,feCal=null,foCal=null,atCal=null,anivs=[],editingAniv=null,ocors=[],editingOcor=null,probs=[],editingProb=null,anCal=null,treins=[],editingTrein=null,anoms=[],editingAnom=null;
 const charts={};
-let currentEmail='',authMode='login',sols=[],ferReqs=[],atSols=[],ocSols=[],tickets=[],maqStatusFilter='',anomTratFilter='',tarefas=[],currentTaskId=null,rotinas=[],selectedRotId=null,treinoCatalogo=[],treinoAtribs=[],onbSelectedColab='',equipe=[],usuarios=[],homeOffice=[],folgasAniv=[];
+let currentEmail='',authMode='login',sols=[],ferReqs=[],atSols=[],ocSols=[],tickets=[],maqStatusFilter='',anomTratFilter='',tarefas=[],currentTaskId=null,rotinas=[],selectedRotId=null,treinoCatalogo=[],treinoAtribs=[],onbSelectedColab='',equipe=[],usuarios=[],homeOffice=[],folgasAniv=[],alocacoes=[];
 const $=id=>document.getElementById(id);
 const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const hoje=()=>new Date().toISOString().slice(0,10);
@@ -1274,7 +1310,7 @@ async function showApp(user){
   // Registra último login (silenciosamente; ignora erro se a tabela não existir)
   try{await db.from('usuarios').update({ultimo_login:new Date().toISOString()}).eq('email',user.email);}catch(e){}
   $('nav').style.display='flex';
-  ['nav-cad','nav-rel','nav-eq','nav-us','nav-fer','nav-fol','nav-ho','nav-ate','nav-aniv','nav-ocor','nav-prob','nav-trein','nav-anom','nav-fat','nav-dash','nav-soladm','nav-feradm','nav-atadm','nav-ocadm','nav-mtadm','nav-tar','nav-rot','nav-onb'].forEach(id=>$(id).style.display=isAdminUser?'':'none');
+  ['nav-cad','nav-rel','nav-eq','nav-us','nav-aloc','nav-fer','nav-fol','nav-ho','nav-ate','nav-aniv','nav-ocor','nav-prob','nav-trein','nav-anom','nav-fat','nav-dash','nav-soladm','nav-feradm','nav-atadm','nav-ocadm','nav-mtadm','nav-tar','nav-rot','nav-onb'].forEach(id=>$(id).style.display=isAdminUser?'':'none');
   $('nav-solf').style.display=isAdminUser?'none':'';
   $('nav-solfer').style.display=isAdminUser?'none':'';
   $('nav-solat').style.display=isAdminUser?'none':'';
@@ -1285,6 +1321,7 @@ async function showApp(user){
   $('nav-meutr').style.display=isAdminUser?'none':'';
   $('nav-mho').style.display=isAdminUser?'none':'';
   $('nav-mcad').style.display=isAdminUser?'none':'';
+  $('nav-mequipehj').style.display=isAdminUser?'none':'';
   hideEmptyGroups();
   if(isAdminUser)await loadAll();
   if(isAdminUser)updatePendingBadges();
@@ -1429,7 +1466,7 @@ async function registrarManutencao(patr){
 
 // ===== Views =====
 function showView(v){
-  const adminViews=['cadastro','relatorios','eq','us','ferias','folgas','ho','atestados','aniv','ocor','prob','trein','anom','fat','dash','soladm','feradm','atadm','ocadm','mtadm','tar','rot','onb'];
+  const adminViews=['cadastro','relatorios','eq','us','ferias','folgas','ho','aloc','atestados','aniv','ocor','prob','trein','anom','fat','dash','soladm','feradm','atadm','ocadm','mtadm','tar','rot','onb'];
   if(adminViews.includes(v)&&!isAdminUser)v='solfolga';
   $('view-cadastro').style.display=v==='cadastro'?'block':'none';
   $('view-relatorios').style.display=v==='relatorios'?'block':'none';
@@ -1460,6 +1497,8 @@ function showView(v){
   $('view-us').style.display=v==='us'?'block':'none';
   $('view-ho').style.display=v==='ho'?'block':'none';
   $('view-mho').style.display=v==='mho'?'block':'none';
+  $('view-aloc').style.display=v==='aloc'?'block':'none';
+  $('view-mequipehj').style.display=v==='mequipehj'?'block':'none';
   $('view-mcad').style.display=v==='mcad'?'block':'none';
   $('view-meutr').style.display=v==='meutr'?'block':'none';
   $('view-mtar').style.display=v==='mtar'?'block':'none';
@@ -1493,6 +1532,8 @@ function showView(v){
   $('nav-us').classList.toggle('active',v==='us');
   $('nav-ho').classList.toggle('active',v==='ho');
   $('nav-mho').classList.toggle('active',v==='mho');
+  $('nav-aloc').classList.toggle('active',v==='aloc');
+  $('nav-mequipehj').classList.toggle('active',v==='mequipehj');
   $('nav-mcad').classList.toggle('active',v==='mcad');
   $('nav-meutr').classList.toggle('active',v==='meutr');
   $('nav-mtar').classList.toggle('active',v==='mtar');
@@ -1529,6 +1570,8 @@ function showView(v){
   if(v==='us')openUs();
   if(v==='ho')openHo();
   if(v==='mho')openMho();
+  if(v==='aloc')openAloc();
+  if(v==='mequipehj')openMequipehj();
   if(v==='mcad')openMcad();
   if(v==='meutr')openMeutr();
   if(v==='mtar')openMtar();
@@ -3054,6 +3097,145 @@ async function openMho(){
   $('mho-lista').innerHTML=html;
 }
 $('nav-mho').onclick=()=>showView('mho');
+
+// ===== Alocação Diária =====
+const ALOC_TRABALHO=['Telefone','Web Técnica','Performance','Conversão de Dados','Exporta-Importa','Conjunto de Dados','Relatórios','Apoio'];
+const ALOC_AUSENTE=['Folga','Atestado','Férias','Ausente'];
+
+async function openAloc(){
+  if(!equipe.length){try{const{data}=await db.from('equipe').select('*').order('nome_completo');equipe=data||[];}catch(e){}}
+  if(!$('aloc-data').value)$('aloc-data').value=new Date().toISOString().slice(0,10);
+  await loadAlocacoes();
+}
+async function loadAlocacoes(){
+  const data=$('aloc-data').value;
+  const{data:d,error}=await db.from('alocacao_diaria').select('*').eq('data',data);
+  if(error){$('aloc-board').innerHTML='<div class="empty"><b>Tabela de alocação ainda não existe</b>Rode o SQL e recarregue a página.</div>';return;}
+  alocacoes=d||[];
+  renderAlocBoard('aloc-board',data);
+  if($('aloc-edit').style.display==='block')renderAlocEdit();
+}
+function navAlocDia(d){
+  if(d===0){$('aloc-data').value=new Date().toISOString().slice(0,10);}
+  else{const dt=new Date($('aloc-data').value+'T12:00');dt.setDate(dt.getDate()+d);$('aloc-data').value=dt.toISOString().slice(0,10);}
+  onChangeAlocData();
+}
+function onChangeAlocData(){loadAlocacoes();}
+function renderAlocBoard(containerId,data,readonly){
+  const ds=new Date(data+'T12:00');
+  const dias=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+  const dia=dias[ds.getDay()];
+  const byAloc={};[...ALOC_TRABALHO,...ALOC_AUSENTE].forEach(a=>byAloc[a]=[]);
+  alocacoes.forEach(rec=>{if(byAloc[rec.alocacao]!==undefined)byAloc[rec.alocacao].push(rec);});
+  const allocated=new Set(alocacoes.filter(a=>a.alocacao).map(a=>a.colaborador));
+  const naoAloc=equipe.filter(e=>!allocated.has(e.nome_curto||e.nome_completo)).map(e=>e.nome_curto||e.nome_completo);
+  const totalAloc=alocacoes.filter(a=>a.alocacao).length;
+  let html=`<div style="background:linear-gradient(135deg,#1f6f5c,#175547);color:#fff;border-radius:14px;padding:24px;margin-bottom:18px;box-shadow:0 4px 18px rgba(31,111,92,.25)">
+    <div style="font-size:13px;text-transform:uppercase;letter-spacing:.1em;opacity:.85;margin-bottom:4px">${esc(dia)}</div>
+    <div style="font-family:var(--display);font-size:28px;font-weight:700;line-height:1.1">Equipe — ${fmt(data)}</div>
+    <div style="font-size:14px;opacity:.9;margin-top:6px">${totalAloc} de ${equipe.length} colaboradores alocados</div>
+  </div>`;
+  // Trabalho — grid
+  html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px">';
+  ALOC_TRABALHO.forEach(aloc=>{
+    const lista=byAloc[aloc],vazio=lista.length===0;
+    html+=`<div style="background:${vazio?'#f4f1ea':'#e6efe9'};border-left:4px solid ${vazio?'#cdc6b8':'#1f6f5c'};padding:14px 16px;border-radius:10px;min-height:90px">
+      <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:${vazio?'#9c9583':'#175547'};font-weight:700;margin-bottom:8px">${esc(aloc)} (${lista.length})</div>
+      ${lista.length?lista.map(r=>`<div style="padding:3px 0;font-weight:500;font-size:15px">• ${esc(r.colaborador)}${r.observacao?'<span style="color:var(--ink-soft);font-weight:400;font-size:13px"> — '+esc(r.observacao)+'</span>':''}</div>`).join(''):'<div style="color:var(--ink-soft);font-style:italic;font-size:13px">— ninguém alocado —</div>'}
+    </div>`;
+  });
+  html+='</div>';
+  // Ausências
+  const ausencias=ALOC_AUSENTE.flatMap(a=>byAloc[a].map(r=>({...r,tipo:a})));
+  if(ausencias.length){
+    html+=`<div style="background:#fbf0e6;border-left:4px solid #c97e2f;padding:14px 16px;border-radius:10px;margin-top:14px">
+      <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#7a4e1f;font-weight:700;margin-bottom:8px">⚠ Ausências (${ausencias.length})</div>
+      ${ausencias.map(r=>`<div style="padding:3px 0;font-size:15px"><b>${esc(r.colaborador)}</b> — ${esc(r.tipo)}${r.observacao?' ('+esc(r.observacao)+')':''}</div>`).join('')}
+    </div>`;
+  }
+  // Não alocados
+  if(naoAloc.length){
+    html+=`<div style="background:#f4f1ea;border:1px dashed #cdc6b8;padding:14px 16px;border-radius:10px;margin-top:14px">
+      <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#9c9583;font-weight:700;margin-bottom:8px">Sem alocação definida (${naoAloc.length})</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">${naoAloc.map(n=>`<span style="background:#fff;border:1px solid var(--line);padding:5px 12px;border-radius:14px;font-size:13px;font-weight:500">${esc(n)}</span>`).join('')}</div>
+    </div>`;
+  }
+  $(containerId).innerHTML=html;
+}
+function toggleAlocEdit(){
+  const div=$('aloc-edit'),btn=$('aloc-toggle-edit');
+  if(div.style.display==='block'){div.style.display='none';btn.textContent='Editar alocações';}
+  else{div.style.display='block';btn.textContent='Fechar edição';renderAlocEdit();}
+}
+function renderAlocEdit(){
+  const data=$('aloc-data').value;
+  let html=`<div class="form-card">
+    <h3 style="font-family:var(--display);font-size:18px;margin-bottom:6px">Editar alocações — ${fmt(data)}</h3>
+    <p class="hint" style="margin-bottom:12px">Para cada técnico, escolha onde ele estará no dia. As mudanças são salvas automaticamente.</p>
+    <div class="list">`;
+  const sortedEquipe=[...equipe].sort((a,b)=>(a.nome_curto||a.nome_completo||'').localeCompare(b.nome_curto||b.nome_completo||''));
+  sortedEquipe.forEach(e=>{
+    const colab=e.nome_curto||e.nome_completo;
+    const rec=alocacoes.find(a=>a.colaborador===colab);
+    const cur=rec?rec.alocacao:'';
+    const obs=rec?(rec.observacao||''):'';
+    const email=e.email||emailFromNome(colab);
+    html+=`<div class="row-item" style="cursor:default;align-items:center;gap:10px">
+      <div style="flex:1;min-width:120px"><div class="ri-main">${esc(colab)}</div></div>
+      <select style="width:auto;min-width:170px" onchange="setAloc('${esc(colab).replace(/'/g,"\\'")}','${esc(email).replace(/'/g,"\\'")}',this.value)">
+        <option value="">— sem definir —</option>
+        <optgroup label="Trabalho">${ALOC_TRABALHO.map(a=>`<option ${a===cur?'selected':''}>${a}</option>`).join('')}</optgroup>
+        <optgroup label="Ausências">${ALOC_AUSENTE.map(a=>`<option ${a===cur?'selected':''}>${a}</option>`).join('')}</optgroup>
+      </select>
+      <input type="text" placeholder="Observação" style="width:200px" value="${esc(obs)}" onblur="setAlocObs('${esc(colab).replace(/'/g,"\\'")}','${esc(email).replace(/'/g,"\\'")}',this.value)">
+    </div>`;
+  });
+  html+='</div></div>';
+  $('aloc-edit').innerHTML=html;
+}
+async function setAloc(colab,email,alocacao){
+  const data=$('aloc-data').value;
+  const rec=alocacoes.find(a=>a.colaborador===colab);
+  if(!alocacao){
+    if(rec){const{error}=await db.from('alocacao_diaria').delete().eq('id',rec.id);if(error){alert('Erro: '+error.message);return;}}
+    await loadAlocacoes();return;
+  }
+  if(rec){const{error}=await db.from('alocacao_diaria').update({alocacao}).eq('id',rec.id);if(error){alert('Erro: '+error.message);return;}}
+  else{const{error}=await db.from('alocacao_diaria').insert({data,colaborador:colab,colaborador_email:email,alocacao});if(error){alert('Erro: '+error.message);return;}}
+  await loadAlocacoes();
+}
+async function setAlocObs(colab,email,obs){
+  const data=$('aloc-data').value;
+  const rec=alocacoes.find(a=>a.colaborador===colab);
+  if(rec){const{error}=await db.from('alocacao_diaria').update({observacao:obs.trim()||null}).eq('id',rec.id);if(error){alert('Erro: '+error.message);return;}}
+  else if(obs.trim()){const{error}=await db.from('alocacao_diaria').insert({data,colaborador:colab,colaborador_email:email,observacao:obs.trim()});if(error){alert('Erro: '+error.message);return;}}
+  await loadAlocacoes();
+}
+async function limparAlocDia(){
+  if(!alocacoes.length){alert('Não há alocações neste dia para limpar.');return;}
+  if(!confirm(`Limpar TODAS as ${alocacoes.length} alocações de ${fmt($('aloc-data').value)}?`))return;
+  const{error}=await db.from('alocacao_diaria').delete().eq('data',$('aloc-data').value);
+  if(error){alert('Erro: '+error.message);return;}
+  toast('Dia limpo');await loadAlocacoes();
+}
+$('nav-aloc').onclick=()=>showView('aloc');
+
+// ===== Equipe hoje (colaborador, somente leitura) =====
+function navMeqDia(d){
+  if(d===0){$('meq-data').value=new Date().toISOString().slice(0,10);}
+  else{const dt=new Date(($('meq-data').value||new Date().toISOString().slice(0,10))+'T12:00');dt.setDate(dt.getDate()+d);$('meq-data').value=dt.toISOString().slice(0,10);}
+  openMequipehj();
+}
+async function openMequipehj(){
+  if(!equipe.length){try{const{data}=await db.from('equipe').select('*').order('nome_completo');equipe=data||[];}catch(e){}}
+  if(!$('meq-data').value)$('meq-data').value=new Date().toISOString().slice(0,10);
+  const data=$('meq-data').value;
+  const{data:d,error}=await db.from('alocacao_diaria').select('*').eq('data',data);
+  if(error){$('meq-board').innerHTML='<div class="empty">Quadro ainda não disponível.</div>';return;}
+  alocacoes=d||[];
+  renderAlocBoard('meq-board',data,true);
+}
+$('nav-mequipehj').onclick=()=>showView('mequipehj');
 
 // ===== Meu cadastro (colaborador ve os proprios dados) =====
 async function openMcad(){
