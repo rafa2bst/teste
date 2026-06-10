@@ -230,6 +230,13 @@
     <button class="nav-close" id="nav-close-btn" aria-label="Fechar menu">×</button>
 
     <!-- ===== ADMIN ===== -->
+    <div class="nav-group" data-group="equipehj">
+      <button class="group-label">🎯 Equipe</button>
+      <div class="group-items">
+        <button id="nav-aloc">Equipe hoje</button>
+      </div>
+    </div>
+
     <div class="nav-group" data-group="cad">
       <button class="group-label">📋 Cadastros</button>
       <div class="group-items">
@@ -251,7 +258,6 @@
     <div class="nav-group" data-group="aus">
       <button class="group-label">📅 Ausências</button>
       <div class="group-items">
-        <button id="nav-aloc">Alocação do dia</button>
         <button id="nav-fer">Férias</button>
         <button id="nav-fol">Folgas</button>
         <button id="nav-ho">Home Office</button>
@@ -1151,11 +1157,11 @@
     <div id="mcad-conteudo"></div>
   </div>
 
-  <!-- VIEW: ALOCAÇÃO (admin) -->
+  <!-- VIEW: EQUIPE HOJE (admin) -->
   <div id="view-aloc" style="display:none">
     <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
-      <h2>Alocação da equipe</h2>
-      <p class="hint">Defina onde cada técnico estará no dia. Os colaboradores veem o quadro em "Equipe hoje".</p>
+      <h2>Equipe hoje</h2>
+      <p class="hint">Defina onde cada técnico está alocado. Todos os colaboradores podem ver o quadro pelo menu "Equipe hoje" deles.</p>
     </div>
     <div class="toolbar">
       <button onclick="navAlocDia(-1)" style="flex:none">← Ontem</button>
@@ -1163,11 +1169,34 @@
       <button onclick="navAlocDia(1)" style="flex:none">Amanhã →</button>
       <button onclick="navAlocDia(0)" style="flex:none">Hoje</button>
       <div style="flex:1"></div>
-      <button id="aloc-toggle-edit" onclick="toggleAlocEdit()" class="btn-primary" style="flex:none">Editar alocações</button>
       <button class="btn-del" onclick="limparAlocDia()" style="flex:none;font-size:12px;padding:6px 10px;background:#fbf4f4;color:#a64141;border-color:#d9b3b3">🗑 Limpar dia</button>
     </div>
-    <div id="aloc-board" style="margin-top:16px"></div>
-    <div id="aloc-edit" style="display:none;margin-top:16px"></div>
+
+    <!-- Seletor rapido -->
+    <div class="form-card" style="margin-top:14px">
+      <h3 style="font-family:var(--display);font-size:17px;margin-bottom:8px">Atribuir alocação</h3>
+      <div class="row2">
+        <div><label>Colaborador *</label>
+          <select id="aloc-q-colab"><option value="">— selecione —</option></select>
+        </div>
+        <div><label>Alocação *</label>
+          <select id="aloc-q-aloc">
+            <option value="">— selecione —</option>
+            <optgroup label="Trabalho">
+              <option>Telefone</option><option>Web Técnica</option><option>Performance</option><option>Conversão de Dados</option><option>Exporta-Importa</option><option>Conjunto de Dados</option><option>Relatórios</option><option>Apoio</option>
+            </optgroup>
+            <optgroup label="Ausências">
+              <option>Folga</option><option>Atestado</option><option>Férias</option><option>Ausente</option>
+            </optgroup>
+          </select>
+        </div>
+      </div>
+      <label>Observação (opcional)</label>
+      <input id="aloc-q-obs" placeholder="Ex.: substituindo o Caique">
+      <div class="actions"><button class="btn-primary" onclick="quickAlocar()">Alocar</button></div>
+    </div>
+
+    <div id="aloc-board" style="margin-top:18px"></div>
   </div>
 
   <!-- VIEW: EQUIPE HOJE (colaborador) -->
@@ -3105,6 +3134,9 @@ const ALOC_AUSENTE=['Folga','Atestado','Férias','Ausente'];
 async function openAloc(){
   if(!equipe.length){try{const{data}=await db.from('equipe').select('*').order('nome_completo');equipe=data||[];}catch(e){}}
   if(!$('aloc-data').value)$('aloc-data').value=new Date().toISOString().slice(0,10);
+  // popular o select de colaboradores
+  const sortedEquipe=[...equipe].sort((a,b)=>(a.nome_curto||a.nome_completo||'').localeCompare(b.nome_curto||b.nome_completo||''));
+  $('aloc-q-colab').innerHTML='<option value="">— selecione —</option>'+sortedEquipe.map(e=>{const nm=e.nome_curto||e.nome_completo;return`<option value="${esc(nm)}" data-email="${esc(e.email||'')}">${esc(nm)}</option>`;}).join('');
   await loadAlocacoes();
 }
 async function loadAlocacoes(){
@@ -3112,8 +3144,23 @@ async function loadAlocacoes(){
   const{data:d,error}=await db.from('alocacao_diaria').select('*').eq('data',data);
   if(error){$('aloc-board').innerHTML='<div class="empty"><b>Tabela de alocação ainda não existe</b>Rode o SQL e recarregue a página.</div>';return;}
   alocacoes=d||[];
-  renderAlocBoard('aloc-board',data);
-  if($('aloc-edit').style.display==='block')renderAlocEdit();
+  renderAlocBoard('aloc-board',data,false);
+}
+async function quickAlocar(){
+  const sel=$('aloc-q-colab'),colab=sel.value,aloc=$('aloc-q-aloc').value,obs=$('aloc-q-obs').value.trim();
+  if(!colab){alert('Selecione um colaborador.');return;}
+  if(!aloc){alert('Selecione uma alocação.');return;}
+  const opt=sel.options[sel.selectedIndex];
+  const email=opt.getAttribute('data-email')||emailFromNome(colab);
+  const data=$('aloc-data').value;
+  const rec=alocacoes.find(a=>a.colaborador===colab);
+  const dados={data,colaborador:colab,colaborador_email:email,alocacao:aloc,observacao:obs||null};
+  let error;
+  if(rec){({error}=await db.from('alocacao_diaria').update({alocacao:aloc,observacao:obs||null}).eq('id',rec.id));}
+  else{({error}=await db.from('alocacao_diaria').insert(dados));}
+  if(error){alert('Erro: '+error.message);return;}
+  $('aloc-q-colab').value='';$('aloc-q-aloc').value='';$('aloc-q-obs').value='';
+  toast('Alocado ✓');await loadAlocacoes();
 }
 function navAlocDia(d){
   if(d===0){$('aloc-data').value=new Date().toISOString().slice(0,10);}
@@ -3130,30 +3177,28 @@ function renderAlocBoard(containerId,data,readonly){
   const allocated=new Set(alocacoes.filter(a=>a.alocacao).map(a=>a.colaborador));
   const naoAloc=equipe.filter(e=>!allocated.has(e.nome_curto||e.nome_completo)).map(e=>e.nome_curto||e.nome_completo);
   const totalAloc=alocacoes.filter(a=>a.alocacao).length;
+  const xBtn=(id)=>readonly?'':`<button onclick="removerAlocacao('${id}')" title="Remover" style="background:transparent;border:none;color:#a64141;font-size:16px;cursor:pointer;padding:0 4px;margin-left:6px;line-height:1">×</button>`;
   let html=`<div style="background:linear-gradient(135deg,#1f6f5c,#175547);color:#fff;border-radius:14px;padding:24px;margin-bottom:18px;box-shadow:0 4px 18px rgba(31,111,92,.25)">
     <div style="font-size:13px;text-transform:uppercase;letter-spacing:.1em;opacity:.85;margin-bottom:4px">${esc(dia)}</div>
     <div style="font-family:var(--display);font-size:28px;font-weight:700;line-height:1.1">Equipe — ${fmt(data)}</div>
     <div style="font-size:14px;opacity:.9;margin-top:6px">${totalAloc} de ${equipe.length} colaboradores alocados</div>
   </div>`;
-  // Trabalho — grid
   html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px">';
   ALOC_TRABALHO.forEach(aloc=>{
     const lista=byAloc[aloc],vazio=lista.length===0;
     html+=`<div style="background:${vazio?'#f4f1ea':'#e6efe9'};border-left:4px solid ${vazio?'#cdc6b8':'#1f6f5c'};padding:14px 16px;border-radius:10px;min-height:90px">
       <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:${vazio?'#9c9583':'#175547'};font-weight:700;margin-bottom:8px">${esc(aloc)} (${lista.length})</div>
-      ${lista.length?lista.map(r=>`<div style="padding:3px 0;font-weight:500;font-size:15px">• ${esc(r.colaborador)}${r.observacao?'<span style="color:var(--ink-soft);font-weight:400;font-size:13px"> — '+esc(r.observacao)+'</span>':''}</div>`).join(''):'<div style="color:var(--ink-soft);font-style:italic;font-size:13px">— ninguém alocado —</div>'}
+      ${lista.length?lista.map(r=>`<div style="padding:3px 0;font-weight:500;font-size:15px;display:flex;align-items:center">• <span style="margin-left:4px">${esc(r.colaborador)}${r.observacao?'<span style="color:var(--ink-soft);font-weight:400;font-size:13px"> — '+esc(r.observacao)+'</span>':''}</span>${xBtn(r.id)}</div>`).join(''):'<div style="color:var(--ink-soft);font-style:italic;font-size:13px">— ninguém alocado —</div>'}
     </div>`;
   });
   html+='</div>';
-  // Ausências
   const ausencias=ALOC_AUSENTE.flatMap(a=>byAloc[a].map(r=>({...r,tipo:a})));
   if(ausencias.length){
     html+=`<div style="background:#fbf0e6;border-left:4px solid #c97e2f;padding:14px 16px;border-radius:10px;margin-top:14px">
       <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#7a4e1f;font-weight:700;margin-bottom:8px">⚠ Ausências (${ausencias.length})</div>
-      ${ausencias.map(r=>`<div style="padding:3px 0;font-size:15px"><b>${esc(r.colaborador)}</b> — ${esc(r.tipo)}${r.observacao?' ('+esc(r.observacao)+')':''}</div>`).join('')}
+      ${ausencias.map(r=>`<div style="padding:3px 0;font-size:15px;display:flex;align-items:center"><span><b>${esc(r.colaborador)}</b> — ${esc(r.tipo)}${r.observacao?' ('+esc(r.observacao)+')':''}</span>${xBtn(r.id)}</div>`).join('')}
     </div>`;
   }
-  // Não alocados
   if(naoAloc.length){
     html+=`<div style="background:#f4f1ea;border:1px dashed #cdc6b8;padding:14px 16px;border-radius:10px;margin-top:14px">
       <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#9c9583;font-weight:700;margin-bottom:8px">Sem alocação definida (${naoAloc.length})</div>
@@ -3162,53 +3207,10 @@ function renderAlocBoard(containerId,data,readonly){
   }
   $(containerId).innerHTML=html;
 }
-function toggleAlocEdit(){
-  const div=$('aloc-edit'),btn=$('aloc-toggle-edit');
-  if(div.style.display==='block'){div.style.display='none';btn.textContent='Editar alocações';}
-  else{div.style.display='block';btn.textContent='Fechar edição';renderAlocEdit();}
-}
-function renderAlocEdit(){
-  const data=$('aloc-data').value;
-  let html=`<div class="form-card">
-    <h3 style="font-family:var(--display);font-size:18px;margin-bottom:6px">Editar alocações — ${fmt(data)}</h3>
-    <p class="hint" style="margin-bottom:12px">Para cada técnico, escolha onde ele estará no dia. As mudanças são salvas automaticamente.</p>
-    <div class="list">`;
-  const sortedEquipe=[...equipe].sort((a,b)=>(a.nome_curto||a.nome_completo||'').localeCompare(b.nome_curto||b.nome_completo||''));
-  sortedEquipe.forEach(e=>{
-    const colab=e.nome_curto||e.nome_completo;
-    const rec=alocacoes.find(a=>a.colaborador===colab);
-    const cur=rec?rec.alocacao:'';
-    const obs=rec?(rec.observacao||''):'';
-    const email=e.email||emailFromNome(colab);
-    html+=`<div class="row-item" style="cursor:default;align-items:center;gap:10px">
-      <div style="flex:1;min-width:120px"><div class="ri-main">${esc(colab)}</div></div>
-      <select style="width:auto;min-width:170px" onchange="setAloc('${esc(colab).replace(/'/g,"\\'")}','${esc(email).replace(/'/g,"\\'")}',this.value)">
-        <option value="">— sem definir —</option>
-        <optgroup label="Trabalho">${ALOC_TRABALHO.map(a=>`<option ${a===cur?'selected':''}>${a}</option>`).join('')}</optgroup>
-        <optgroup label="Ausências">${ALOC_AUSENTE.map(a=>`<option ${a===cur?'selected':''}>${a}</option>`).join('')}</optgroup>
-      </select>
-      <input type="text" placeholder="Observação" style="width:200px" value="${esc(obs)}" onblur="setAlocObs('${esc(colab).replace(/'/g,"\\'")}','${esc(email).replace(/'/g,"\\'")}',this.value)">
-    </div>`;
-  });
-  html+='</div></div>';
-  $('aloc-edit').innerHTML=html;
-}
-async function setAloc(colab,email,alocacao){
-  const data=$('aloc-data').value;
-  const rec=alocacoes.find(a=>a.colaborador===colab);
-  if(!alocacao){
-    if(rec){const{error}=await db.from('alocacao_diaria').delete().eq('id',rec.id);if(error){alert('Erro: '+error.message);return;}}
-    await loadAlocacoes();return;
-  }
-  if(rec){const{error}=await db.from('alocacao_diaria').update({alocacao}).eq('id',rec.id);if(error){alert('Erro: '+error.message);return;}}
-  else{const{error}=await db.from('alocacao_diaria').insert({data,colaborador:colab,colaborador_email:email,alocacao});if(error){alert('Erro: '+error.message);return;}}
-  await loadAlocacoes();
-}
-async function setAlocObs(colab,email,obs){
-  const data=$('aloc-data').value;
-  const rec=alocacoes.find(a=>a.colaborador===colab);
-  if(rec){const{error}=await db.from('alocacao_diaria').update({observacao:obs.trim()||null}).eq('id',rec.id);if(error){alert('Erro: '+error.message);return;}}
-  else if(obs.trim()){const{error}=await db.from('alocacao_diaria').insert({data,colaborador:colab,colaborador_email:email,observacao:obs.trim()});if(error){alert('Erro: '+error.message);return;}}
+async function removerAlocacao(id){
+  if(!confirm('Remover esta alocação?'))return;
+  const{error}=await db.from('alocacao_diaria').delete().eq('id',id);
+  if(error){alert('Erro: '+error.message);return;}
   await loadAlocacoes();
 }
 async function limparAlocDia(){
