@@ -1333,7 +1333,13 @@ async function doSignup(){
   $('btn-auth').disabled=true;$('btn-auth').textContent='Criando...';
   const{data,error}=await db.auth.signUp({email,password});
   $('btn-auth').disabled=false;$('btn-auth').textContent='Criar conta';
-  if(error){err.textContent='Erro: '+error.message;err.style.display='block';return;}
+  if(error){
+    let msg='Erro: '+error.message;
+    if(/rate limit/i.test(error.message)){
+      msg='Limite de e-mails do Supabase atingido (3 por hora). Peça ao administrador para desativar "Confirm email" em Supabase → Authentication → Providers → Email, ou aguarde 1 hora.';
+    }
+    err.textContent=msg;err.style.display='block';return;
+  }
   if(data.session){showApp(data.user);}
   else{setAuthMode('login');err.style.background='#e6efe9';err.style.color='#175547';err.textContent='Conta criada! Confirme pelo e-mail antes de entrar.';err.style.display='block';}
 }
