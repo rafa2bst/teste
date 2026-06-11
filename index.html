@@ -1183,7 +1183,7 @@
           <select id="aloc-q-aloc">
             <option value="">— selecione —</option>
             <optgroup label="Trabalho">
-              <option>Telefone</option><option>Web Técnica</option><option>Performance</option><option>Conversão de Dados</option><option>Exporta-Importa</option><option>Conjunto de Dados</option><option>Relatórios</option><option>Apoio</option>
+              <option>Telefone</option><option>Chat</option><option>Web Técnica</option><option>Performance</option><option>Conversão de Dados</option><option>Exporta-Importa</option><option>Conjunto de Dados</option><option>Relatórios</option><option>Apoio</option>
             </optgroup>
             <optgroup label="Ausências">
               <option>Folga</option><option>Atestado</option><option>Férias</option><option>Ausente</option>
@@ -1354,7 +1354,7 @@ async function showApp(user){
   hideEmptyGroups();
   if(isAdminUser)await loadAll();
   if(isAdminUser)updatePendingBadges();
-  showView(isAdminUser?'cadastro':'solfolga');
+  showView(isAdminUser?'aloc':'mequipehj');
 }
 
 function hideEmptyGroups(){
@@ -3128,7 +3128,7 @@ async function openMho(){
 $('nav-mho').onclick=()=>showView('mho');
 
 // ===== Alocação Diária =====
-const ALOC_TRABALHO=['Telefone','Web Técnica','Performance','Conversão de Dados','Exporta-Importa','Conjunto de Dados','Relatórios','Apoio'];
+const ALOC_TRABALHO=['Telefone','Chat','Web Técnica','Performance','Conversão de Dados','Exporta-Importa','Conjunto de Dados','Relatórios','Apoio'];
 const ALOC_AUSENTE=['Folga','Atestado','Férias','Ausente'];
 
 async function openAloc(){
@@ -3172,12 +3172,26 @@ function renderAlocBoard(containerId,data,readonly){
   const ds=new Date(data+'T12:00');
   const dias=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
   const dia=dias[ds.getDay()];
+  // Construir alocacoes efetivas: override do dia OU default da equipe
+  const efetivas=[];
+  equipe.forEach(e=>{
+    const nome=e.nome_curto||e.nome_completo;
+    const rec=alocacoes.find(a=>a.colaborador===nome);
+    if(rec&&rec.alocacao){
+      efetivas.push({id:rec.id,colaborador:nome,alocacao:rec.alocacao,observacao:rec.observacao,padrao:false});
+    }else if(e.alocacao){
+      efetivas.push({id:null,colaborador:nome,alocacao:e.alocacao,observacao:null,padrao:true});
+    }
+  });
+  // Também respeitar overrides para nomes que não estão na equipe (caso raro)
+  alocacoes.forEach(a=>{if(a.alocacao&&!efetivas.find(e=>e.colaborador===a.colaborador))efetivas.push({id:a.id,colaborador:a.colaborador,alocacao:a.alocacao,observacao:a.observacao,padrao:false});});
   const byAloc={};[...ALOC_TRABALHO,...ALOC_AUSENTE].forEach(a=>byAloc[a]=[]);
-  alocacoes.forEach(rec=>{if(byAloc[rec.alocacao]!==undefined)byAloc[rec.alocacao].push(rec);});
-  const allocated=new Set(alocacoes.filter(a=>a.alocacao).map(a=>a.colaborador));
+  efetivas.forEach(rec=>{if(byAloc[rec.alocacao]!==undefined)byAloc[rec.alocacao].push(rec);});
+  const allocated=new Set();Object.values(byAloc).flat().forEach(r=>allocated.add(r.colaborador));
   const naoAloc=equipe.filter(e=>!allocated.has(e.nome_curto||e.nome_completo)).map(e=>e.nome_curto||e.nome_completo);
-  const totalAloc=alocacoes.filter(a=>a.alocacao).length;
-  const xBtn=(id)=>readonly?'':`<button onclick="removerAlocacao('${id}')" title="Remover" style="background:transparent;border:none;color:#a64141;font-size:16px;cursor:pointer;padding:0 4px;margin-left:6px;line-height:1">×</button>`;
+  const totalAloc=Object.values(byAloc).flat().length;
+  const xBtn=(rec)=>(readonly||!rec.id)?'':`<button onclick="removerAlocacao('${rec.id}')" title="Reverter para padrão" style="background:transparent;border:none;color:#a64141;font-size:16px;cursor:pointer;padding:0 4px;margin-left:6px;line-height:1">×</button>`;
+  const nameTag=(rec)=>rec.padrao?esc(rec.colaborador):`<b>${esc(rec.colaborador)}</b>`;
   let html=`<div style="background:linear-gradient(135deg,#1f6f5c,#175547);color:#fff;border-radius:14px;padding:24px;margin-bottom:18px;box-shadow:0 4px 18px rgba(31,111,92,.25)">
     <div style="font-size:13px;text-transform:uppercase;letter-spacing:.1em;opacity:.85;margin-bottom:4px">${esc(dia)}</div>
     <div style="font-family:var(--display);font-size:28px;font-weight:700;line-height:1.1">Equipe — ${fmt(data)}</div>
@@ -3188,7 +3202,7 @@ function renderAlocBoard(containerId,data,readonly){
     const lista=byAloc[aloc],vazio=lista.length===0;
     html+=`<div style="background:${vazio?'#f4f1ea':'#e6efe9'};border-left:4px solid ${vazio?'#cdc6b8':'#1f6f5c'};padding:14px 16px;border-radius:10px;min-height:90px">
       <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:${vazio?'#9c9583':'#175547'};font-weight:700;margin-bottom:8px">${esc(aloc)} (${lista.length})</div>
-      ${lista.length?lista.map(r=>`<div style="padding:3px 0;font-weight:500;font-size:15px;display:flex;align-items:center">• <span style="margin-left:4px">${esc(r.colaborador)}${r.observacao?'<span style="color:var(--ink-soft);font-weight:400;font-size:13px"> — '+esc(r.observacao)+'</span>':''}</span>${xBtn(r.id)}</div>`).join(''):'<div style="color:var(--ink-soft);font-style:italic;font-size:13px">— ninguém alocado —</div>'}
+      ${lista.length?lista.map(r=>`<div style="padding:3px 0;font-weight:500;font-size:15px;display:flex;align-items:center">• <span style="margin-left:4px">${nameTag(r)}${r.observacao?'<span style="color:var(--ink-soft);font-weight:400;font-size:13px"> — '+esc(r.observacao)+'</span>':''}</span>${xBtn(r)}</div>`).join(''):'<div style="color:var(--ink-soft);font-style:italic;font-size:13px">— ninguém alocado —</div>'}
     </div>`;
   });
   html+='</div>';
@@ -3196,7 +3210,7 @@ function renderAlocBoard(containerId,data,readonly){
   if(ausencias.length){
     html+=`<div style="background:#fbf0e6;border-left:4px solid #c97e2f;padding:14px 16px;border-radius:10px;margin-top:14px">
       <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#7a4e1f;font-weight:700;margin-bottom:8px">⚠ Ausências (${ausencias.length})</div>
-      ${ausencias.map(r=>`<div style="padding:3px 0;font-size:15px;display:flex;align-items:center"><span><b>${esc(r.colaborador)}</b> — ${esc(r.tipo)}${r.observacao?' ('+esc(r.observacao)+')':''}</span>${xBtn(r.id)}</div>`).join('')}
+      ${ausencias.map(r=>`<div style="padding:3px 0;font-size:15px;display:flex;align-items:center"><span><b>${esc(r.colaborador)}</b> — ${esc(r.tipo)}${r.observacao?' ('+esc(r.observacao)+')':''}</span>${xBtn(r)}</div>`).join('')}
     </div>`;
   }
   if(naoAloc.length){
@@ -3204,6 +3218,9 @@ function renderAlocBoard(containerId,data,readonly){
       <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#9c9583;font-weight:700;margin-bottom:8px">Sem alocação definida (${naoAloc.length})</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px">${naoAloc.map(n=>`<span style="background:#fff;border:1px solid var(--line);padding:5px 12px;border-radius:14px;font-size:13px;font-weight:500">${esc(n)}</span>`).join('')}</div>
     </div>`;
+  }
+  if(!readonly){
+    html+=`<p class="hint" style="margin-top:12px;font-size:12px">Nomes em <b>negrito</b> = mudança específica para este dia · Nomes normais = alocação padrão · × ao lado = voltar ao padrão</p>`;
   }
   $(containerId).innerHTML=html;
 }
