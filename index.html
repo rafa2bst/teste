@@ -1258,6 +1258,9 @@
         <input id="eq-busca" placeholder="Buscar por nome, e-mail, ramal..." oninput="renderEq()">
       </div>
       <select id="eq-floc" style="width:auto;min-width:170px" onchange="renderEq()"><option value="">Todas alocações</option></select>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:var(--ink);margin:0;text-transform:none;letter-spacing:0">
+        <input type="checkbox" id="eq-mostrar-desl" onchange="renderEq()" style="width:auto"> Mostrar desligados
+      </label>
     </div>
     <div class="counts" id="eq-kpis" style="margin-top:14px"></div>
     <div id="eq-lista" style="margin-top:14px"></div>
@@ -2912,16 +2915,19 @@ async function openEq(){
   renderEq();
 }
 function renderEq(){
-  const q=$('eq-busca').value.trim().toLowerCase(),fl=$('eq-floc').value;
+  const q=$('eq-busca').value.trim().toLowerCase(),fl=$('eq-floc').value,mostrarDesl=$('eq-mostrar-desl').checked;
   const arr=equipe.filter(c=>{
+    if(!mostrarDesl&&c.desligado)return false;
     if(fl&&c.alocacao!==fl)return false;
     if(q){const blob=[c.nome_completo,c.nome_curto,c.email,c.ramal,c.cargo,c.nome_sgd,c.alocacao].filter(Boolean).join(' ').toLowerCase();if(!blob.includes(q))return false;}
     return true;
   });
-  const semIni=equipe.filter(c=>!c.inicio_alocacao).length;
-  const semCargo=equipe.filter(c=>!c.cargo).length;
+  const ativos=equipe.filter(c=>!c.desligado);
+  const desligados=equipe.filter(c=>c.desligado);
+  const semIni=ativos.filter(c=>!c.inicio_alocacao).length;
+  const semCargo=ativos.filter(c=>!c.cargo).length;
   $('eq-kpis').innerHTML=[
-    ['Total no time',equipe.length,''],['Sem início de alocação',semIni,semIni?'s-manut':'s-uso'],['Sem cargo',semCargo,semCargo?'s-manut':'s-uso'],['Filtrados',arr.length,'s-disp']
+    ['Ativos',ativos.length,'s-uso'],['Desligados',desligados.length,desligados.length?'s-desc':''],['Sem início de alocação',semIni,semIni?'s-manut':''],['Sem cargo',semCargo,semCargo?'s-manut':''],['Filtrados',arr.length,'s-disp']
   ].map(k=>`<div class="stat ${k[2]}"><b>${k[1]}</b><span>${esc(k[0])}</span></div>`).join('');
   if(!arr.length){$('eq-lista').innerHTML='<div class="empty">Nenhum colaborador encontrado.</div>';return;}
   $('eq-lista').innerHTML='<div class="list">'+arr.map(c=>{
@@ -2931,21 +2937,44 @@ function renderEq(){
     const hoje=new Date().toISOString().slice(0,10);
     const meusHo=homeOffice.filter(h=>h.colaborador_email===c.email&&h.data>=hoje).sort((a,b)=>a.data.localeCompare(b.data));
     const hoLinha=meusHo.length?`<div class="ri-sub">🏠 Home office: ${meusHo.slice(0,3).map(h=>diaSemana(h.data)+' '+fmt(h.data)).join(' · ')}${meusHo.length>3?' · +'+(meusHo.length-3)+' mais':''}</div>`:'';
-    return`<div class="row-item" style="cursor:default;align-items:flex-start">
+    const estiloDesl=c.desligado?'opacity:.6;background:#faf6f6':'';
+    const badgeDesl=c.desligado?`<span class="badge b-desc" style="margin-left:8px">DESLIGADO${c.data_desligamento?' em '+fmt(c.data_desligamento):''}</span>`:'';
+    return`<div class="row-item" style="cursor:default;align-items:flex-start;${estiloDesl}">
       <div style="flex:1;min-width:0">
-        <div class="ri-main">${esc(c.nome_completo||'')} ${c.nome_curto?'<span style="color:var(--ink-soft);font-weight:400;font-size:14px">('+esc(c.nome_curto)+')</span>':''}</div>
+        <div class="ri-main">${esc(c.nome_completo||'')} ${c.nome_curto?'<span style="color:var(--ink-soft);font-weight:400;font-size:14px">('+esc(c.nome_curto)+')</span>':''}${badgeDesl}</div>
         <div class="ri-sub"><b>${esc(c.cargo||'—')}</b>${semCargoBadge} · Alocação: <b>${esc(c.alocacao||'—')}</b> ${c.inicio_alocacao?'desde <b>'+fmt(c.inicio_alocacao)+'</b> ('+fmtTempo(tAloc)+')':semIniBadge}</div>
         <div class="ri-sub">📅 Admissão: <b>${fmt(c.admissao)}</b> · 🏢 Na 2B há <b>${fmtTempo(t2B)}</b>${c.data_fim_experiencia?' · Fim experiência: '+fmt(c.data_fim_experiencia):''}</div>
         <div class="ri-sub">🕐 ${fmtHora(c.horario_inicial)} — ${fmtHora(c.horario_final)} · ☎️ Ramal: <b>${esc(c.ramal||'—')}</b> · 🎂 ${fmtAniv(c.aniversario)}</div>
         <div class="ri-sub">✉️ ${esc(c.email||'—')}${c.nome_sgd?' · 🔍 SGD: '+esc(c.nome_sgd):''}</div>
+        ${c.desligado&&c.motivo_desligamento?`<div class="ri-sub" style="margin-top:4px"><i>Motivo: ${esc(c.motivo_desligamento)}</i></div>`:''}
         ${hoLinha}
       </div>
       <div class="item-actions">
         <button class="btn-edit" onclick="openEqModal('${c.id}')">Editar</button>
+        ${c.desligado?`<button class="btn-edit" onclick="religarColab('${c.id}')">Reativar</button>`:`<button class="btn-edit" onclick="desligarColab('${c.id}')" style="color:#a64141;border-color:#d9b3b3">Desligar</button>`}
         <button class="btn-del" onclick="excluirEq('${c.id}')">Excluir</button>
       </div>
     </div>`;
   }).join('')+'</div>';
+}
+async function desligarColab(id){
+  const c=equipe.find(x=>x.id===id);if(!c)return;
+  const dt=prompt(`Desligar "${c.nome_completo}".\n\nData do desligamento (AAAA-MM-DD, deixe em branco = hoje):`,new Date().toISOString().slice(0,10));
+  if(dt===null)return;
+  const data=dt.trim()||new Date().toISOString().slice(0,10);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(data)){alert('Data inválida. Use AAAA-MM-DD.');return;}
+  const motivo=prompt('Motivo do desligamento (opcional):','');
+  if(motivo===null)return;
+  const{error}=await db.from('equipe').update({desligado:true,data_desligamento:data,motivo_desligamento:motivo.trim()||null}).eq('id',id);
+  if(error){alert('Erro: '+error.message);return;}
+  toast(`${c.nome_completo} desligado em ${fmt(data)}`);openEq();
+}
+async function religarColab(id){
+  const c=equipe.find(x=>x.id===id);if(!c)return;
+  if(!confirm(`Reativar "${c.nome_completo}"?\n\nA data e motivo do desligamento serão apagados, e ele volta a aparecer no quadro normal.`))return;
+  const{error}=await db.from('equipe').update({desligado:false,data_desligamento:null,motivo_desligamento:null}).eq('id',id);
+  if(error){alert('Erro: '+error.message);return;}
+  toast('Reativado ✓');openEq();
 }
 function novoEq(){openEqModal(null);}
 function openEqModal(id){
@@ -3134,8 +3163,8 @@ const ALOC_AUSENTE=['Folga','Atestado','Férias','Ausente'];
 async function openAloc(){
   if(!equipe.length){try{const{data}=await db.from('equipe').select('*').order('nome_completo');equipe=data||[];}catch(e){}}
   if(!$('aloc-data').value)$('aloc-data').value=new Date().toISOString().slice(0,10);
-  // popular o select de colaboradores
-  const sortedEquipe=[...equipe].sort((a,b)=>(a.nome_curto||a.nome_completo||'').localeCompare(b.nome_curto||b.nome_completo||''));
+  // popular o select de colaboradores (sem desligados)
+  const sortedEquipe=equipe.filter(e=>!e.desligado).sort((a,b)=>(a.nome_curto||a.nome_completo||'').localeCompare(b.nome_curto||b.nome_completo||''));
   $('aloc-q-colab').innerHTML='<option value="">— selecione —</option>'+sortedEquipe.map(e=>{const nm=e.nome_curto||e.nome_completo;return`<option value="${esc(nm)}" data-email="${esc(e.email||'')}">${esc(nm)}</option>`;}).join('');
   await loadAlocacoes();
 }
@@ -3173,8 +3202,9 @@ function renderAlocBoard(containerId,data,readonly){
   const dias=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
   const dia=dias[ds.getDay()];
   // Construir alocacoes efetivas: override do dia OU default da equipe
+  const ativos=equipe.filter(e=>!e.desligado);
   const efetivas=[];
-  equipe.forEach(e=>{
+  ativos.forEach(e=>{
     const nome=e.nome_curto||e.nome_completo;
     const rec=alocacoes.find(a=>a.colaborador===nome);
     if(rec&&rec.alocacao){
@@ -3188,14 +3218,14 @@ function renderAlocBoard(containerId,data,readonly){
   const byAloc={};[...ALOC_TRABALHO,...ALOC_AUSENTE].forEach(a=>byAloc[a]=[]);
   efetivas.forEach(rec=>{if(byAloc[rec.alocacao]!==undefined)byAloc[rec.alocacao].push(rec);});
   const allocated=new Set();Object.values(byAloc).flat().forEach(r=>allocated.add(r.colaborador));
-  const naoAloc=equipe.filter(e=>!allocated.has(e.nome_curto||e.nome_completo)).map(e=>e.nome_curto||e.nome_completo);
+  const naoAloc=ativos.filter(e=>!allocated.has(e.nome_curto||e.nome_completo)).map(e=>e.nome_curto||e.nome_completo);
   const totalAloc=Object.values(byAloc).flat().length;
   const xBtn=(rec)=>(readonly||!rec.id)?'':`<button onclick="removerAlocacao('${rec.id}')" title="Reverter para padrão" style="background:transparent;border:none;color:#a64141;font-size:16px;cursor:pointer;padding:0 4px;margin-left:6px;line-height:1">×</button>`;
   const nameTag=(rec)=>rec.padrao?esc(rec.colaborador):`<b>${esc(rec.colaborador)}</b>`;
   let html=`<div style="background:linear-gradient(135deg,#1f6f5c,#175547);color:#fff;border-radius:14px;padding:24px;margin-bottom:18px;box-shadow:0 4px 18px rgba(31,111,92,.25)">
     <div style="font-size:13px;text-transform:uppercase;letter-spacing:.1em;opacity:.85;margin-bottom:4px">${esc(dia)}</div>
     <div style="font-family:var(--display);font-size:28px;font-weight:700;line-height:1.1">Equipe — ${fmt(data)}</div>
-    <div style="font-size:14px;opacity:.9;margin-top:6px">${totalAloc} de ${equipe.length} colaboradores alocados</div>
+    <div style="font-size:14px;opacity:.9;margin-top:6px">${totalAloc} de ${ativos.length} colaboradores alocados</div>
   </div>`;
   html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px">';
   ALOC_TRABALHO.forEach(aloc=>{
