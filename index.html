@@ -234,6 +234,7 @@
       <button class="group-label">🎯 Equipe</button>
       <div class="group-items">
         <button id="nav-aloc">Equipe hoje</button>
+        <button id="nav-met">Metas do dia</button>
       </div>
     </div>
 
@@ -1157,6 +1158,30 @@
     <div id="mcad-conteudo"></div>
   </div>
 
+  <!-- VIEW: METAS (admin) -->
+  <div id="view-met" style="display:none">
+    <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
+      <h2>Metas do dia</h2>
+      <p class="hint">Defina as metas diárias da equipe. Aparecem no topo do quadro Equipe hoje.</p>
+    </div>
+    <div class="form-card">
+      <h3 style="font-family:var(--display);font-size:17px;margin-bottom:8px">Lançar / atualizar meta</h3>
+      <div class="row2">
+        <div><label>Data *</label><input id="met-data" type="date"></div>
+        <div><label>TME (tempo médio de espera)</label><input id="met-tme" placeholder="Ex.: 00:45 ou 45s"></div>
+      </div>
+      <div class="row2">
+        <div><label>Meta de Satisfação Web (%)</label><input id="met-web" type="number" step="0.1" placeholder="Ex.: 95"></div>
+        <div><label>Meta de Satisfação Fone (%)</label><input id="met-fone" type="number" step="0.1" placeholder="Ex.: 93"></div>
+      </div>
+      <label>Observação</label>
+      <input id="met-obs" placeholder="Opcional">
+      <div class="actions"><button class="btn-primary" onclick="salvarMeta()">Salvar meta do dia</button></div>
+    </div>
+    <div class="sec-title">Últimas metas lançadas</div>
+    <div id="met-lista"></div>
+  </div>
+
   <!-- VIEW: EQUIPE HOJE (admin) -->
   <div id="view-aloc" style="display:none">
     <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
@@ -1324,7 +1349,7 @@ const isAdmin=u=>!!u&&ADMIN_EMAILS.includes((u.email||'').toLowerCase());
 
 let maquinas=[],atribuicoes=[],manutencoes=[],isAdminUser=false,editingPatr=null,ferias=[],editingFeria=null,folgas=[],editingFolga=null,atestados=[],editingAtest=null,feCal=null,foCal=null,atCal=null,anivs=[],editingAniv=null,ocors=[],editingOcor=null,probs=[],editingProb=null,anCal=null,treins=[],editingTrein=null,anoms=[],editingAnom=null;
 const charts={};
-let currentEmail='',authMode='login',sols=[],ferReqs=[],atSols=[],ocSols=[],tickets=[],maqStatusFilter='',anomTratFilter='',tarefas=[],currentTaskId=null,rotinas=[],selectedRotId=null,treinoCatalogo=[],treinoAtribs=[],onbSelectedColab='',equipe=[],usuarios=[],homeOffice=[],folgasAniv=[],alocacoes=[];
+let currentEmail='',authMode='login',sols=[],ferReqs=[],atSols=[],ocSols=[],tickets=[],maqStatusFilter='',anomTratFilter='',tarefas=[],currentTaskId=null,rotinas=[],selectedRotId=null,treinoCatalogo=[],treinoAtribs=[],onbSelectedColab='',equipe=[],usuarios=[],homeOffice=[],folgasAniv=[],alocacoes=[],autoAusencias=[],metaDoDia=null,metasHist=[],presenceChannel=null,onlineEmails=new Set();
 const $=id=>document.getElementById(id);
 const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const hoje=()=>new Date().toISOString().slice(0,10);
@@ -1341,8 +1366,9 @@ async function showApp(user){
   $('user-email').textContent=user.email;currentEmail=user.email||'';isAdminUser=isAdmin(user);
   // Registra último login (silenciosamente; ignora erro se a tabela não existir)
   try{await db.from('usuarios').update({ultimo_login:new Date().toISOString()}).eq('email',user.email);}catch(e){}
+  setupPresence();
   $('nav').style.display='flex';
-  ['nav-cad','nav-rel','nav-eq','nav-us','nav-aloc','nav-fer','nav-fol','nav-ho','nav-ate','nav-aniv','nav-ocor','nav-prob','nav-trein','nav-anom','nav-fat','nav-dash','nav-soladm','nav-feradm','nav-atadm','nav-ocadm','nav-mtadm','nav-tar','nav-rot','nav-onb'].forEach(id=>$(id).style.display=isAdminUser?'':'none');
+  ['nav-cad','nav-rel','nav-eq','nav-us','nav-aloc','nav-met','nav-fer','nav-fol','nav-ho','nav-ate','nav-aniv','nav-ocor','nav-prob','nav-trein','nav-anom','nav-fat','nav-dash','nav-soladm','nav-feradm','nav-atadm','nav-ocadm','nav-mtadm','nav-tar','nav-rot','nav-onb'].forEach(id=>$(id).style.display=isAdminUser?'':'none');
   $('nav-solf').style.display=isAdminUser?'none':'';
   $('nav-solfer').style.display=isAdminUser?'none':'';
   $('nav-solat').style.display=isAdminUser?'none':'';
@@ -1498,7 +1524,7 @@ async function registrarManutencao(patr){
 
 // ===== Views =====
 function showView(v){
-  const adminViews=['cadastro','relatorios','eq','us','ferias','folgas','ho','aloc','atestados','aniv','ocor','prob','trein','anom','fat','dash','soladm','feradm','atadm','ocadm','mtadm','tar','rot','onb'];
+  const adminViews=['cadastro','relatorios','eq','us','ferias','folgas','ho','aloc','met','atestados','aniv','ocor','prob','trein','anom','fat','dash','soladm','feradm','atadm','ocadm','mtadm','tar','rot','onb'];
   if(adminViews.includes(v)&&!isAdminUser)v='solfolga';
   $('view-cadastro').style.display=v==='cadastro'?'block':'none';
   $('view-relatorios').style.display=v==='relatorios'?'block':'none';
@@ -1530,6 +1556,7 @@ function showView(v){
   $('view-ho').style.display=v==='ho'?'block':'none';
   $('view-mho').style.display=v==='mho'?'block':'none';
   $('view-aloc').style.display=v==='aloc'?'block':'none';
+  $('view-met').style.display=v==='met'?'block':'none';
   $('view-mequipehj').style.display=v==='mequipehj'?'block':'none';
   $('view-mcad').style.display=v==='mcad'?'block':'none';
   $('view-meutr').style.display=v==='meutr'?'block':'none';
@@ -1565,6 +1592,7 @@ function showView(v){
   $('nav-ho').classList.toggle('active',v==='ho');
   $('nav-mho').classList.toggle('active',v==='mho');
   $('nav-aloc').classList.toggle('active',v==='aloc');
+  $('nav-met').classList.toggle('active',v==='met');
   $('nav-mequipehj').classList.toggle('active',v==='mequipehj');
   $('nav-mcad').classList.toggle('active',v==='mcad');
   $('nav-meutr').classList.toggle('active',v==='meutr');
@@ -1603,6 +1631,7 @@ function showView(v){
   if(v==='ho')openHo();
   if(v==='mho')openMho();
   if(v==='aloc')openAloc();
+  if(v==='met')openMet();
   if(v==='mequipehj')openMequipehj();
   if(v==='mcad')openMcad();
   if(v==='meutr')openMeutr();
@@ -3170,9 +3199,15 @@ async function openAloc(){
 }
 async function loadAlocacoes(){
   const data=$('aloc-data').value;
-  const{data:d,error}=await db.from('alocacao_diaria').select('*').eq('data',data);
-  if(error){$('aloc-board').innerHTML='<div class="empty"><b>Tabela de alocação ainda não existe</b>Rode o SQL e recarregue a página.</div>';return;}
-  alocacoes=d||[];
+  const r=await Promise.all([
+    db.from('alocacao_diaria').select('*').eq('data',data),
+    db.rpc('ausencias_em',{d:data}),
+    db.from('metas_diarias').select('*').eq('data',data).maybeSingle()
+  ]);
+  if(r[0].error){$('aloc-board').innerHTML='<div class="empty"><b>Tabela de alocação ainda não existe</b>Rode o SQL e recarregue a página.</div>';return;}
+  alocacoes=r[0].data||[];
+  autoAusencias=r[1].error?[]:(r[1].data||[]);
+  metaDoDia=r[2].error?null:r[2].data;
   renderAlocBoard('aloc-board',data,false);
 }
 async function quickAlocar(){
@@ -3201,38 +3236,51 @@ function renderAlocBoard(containerId,data,readonly){
   const ds=new Date(data+'T12:00');
   const dias=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
   const dia=dias[ds.getDay()];
-  // Construir alocacoes efetivas: override do dia OU default da equipe
+  const eqByName={};equipe.forEach(e=>{const k=e.nome_curto||e.nome_completo;eqByName[k]=e;});
+  const onlineDot=(nome)=>{const eq=eqByName[nome];const email=eq?eq.email:null;const on=email&&onlineEmails.has(email);return on?'<span title="Online" style="display:inline-block;width:9px;height:9px;background:#22c55e;border-radius:50%;margin-right:6px;box-shadow:0 0 0 2px rgba(34,197,94,.18);flex-shrink:0"></span>':'<span title="Offline" style="display:inline-block;width:9px;height:9px;background:transparent;border:1.5px solid #c8c0b0;border-radius:50%;margin-right:6px;flex-shrink:0"></span>';};
   const ativos=equipe.filter(e=>!e.desligado);
+  const ausAuto={};(autoAusencias||[]).forEach(a=>{if(!ausAuto[a.colaborador])ausAuto[a.colaborador]=a.tipo;});
   const efetivas=[];
   ativos.forEach(e=>{
     const nome=e.nome_curto||e.nome_completo;
     const rec=alocacoes.find(a=>a.colaborador===nome);
     if(rec&&rec.alocacao){
-      efetivas.push({id:rec.id,colaborador:nome,alocacao:rec.alocacao,observacao:rec.observacao,padrao:false});
+      efetivas.push({id:rec.id,colaborador:nome,alocacao:rec.alocacao,observacao:rec.observacao,padrao:false,auto:false});
+    }else if(ausAuto[nome]){
+      efetivas.push({id:null,colaborador:nome,alocacao:ausAuto[nome],observacao:null,padrao:false,auto:true});
     }else if(e.alocacao){
-      efetivas.push({id:null,colaborador:nome,alocacao:e.alocacao,observacao:null,padrao:true});
+      efetivas.push({id:null,colaborador:nome,alocacao:e.alocacao,observacao:null,padrao:true,auto:false});
     }
   });
-  // Também respeitar overrides para nomes que não estão na equipe (caso raro)
-  alocacoes.forEach(a=>{if(a.alocacao&&!efetivas.find(e=>e.colaborador===a.colaborador))efetivas.push({id:a.id,colaborador:a.colaborador,alocacao:a.alocacao,observacao:a.observacao,padrao:false});});
+  alocacoes.forEach(a=>{if(a.alocacao&&!efetivas.find(e=>e.colaborador===a.colaborador))efetivas.push({id:a.id,colaborador:a.colaborador,alocacao:a.alocacao,observacao:a.observacao,padrao:false,auto:false});});
   const byAloc={};[...ALOC_TRABALHO,...ALOC_AUSENTE].forEach(a=>byAloc[a]=[]);
   efetivas.forEach(rec=>{if(byAloc[rec.alocacao]!==undefined)byAloc[rec.alocacao].push(rec);});
   const allocated=new Set();Object.values(byAloc).flat().forEach(r=>allocated.add(r.colaborador));
   const naoAloc=ativos.filter(e=>!allocated.has(e.nome_curto||e.nome_completo)).map(e=>e.nome_curto||e.nome_completo);
   const totalAloc=Object.values(byAloc).flat().length;
   const xBtn=(rec)=>(readonly||!rec.id)?'':`<button onclick="removerAlocacao('${rec.id}')" title="Reverter para padrão" style="background:transparent;border:none;color:#a64141;font-size:16px;cursor:pointer;padding:0 4px;margin-left:6px;line-height:1">×</button>`;
-  const nameTag=(rec)=>rec.padrao?esc(rec.colaborador):`<b>${esc(rec.colaborador)}</b>`;
+  const nameTag=(rec)=>rec.auto?`<i style="color:#7a4e1f">${esc(rec.colaborador)}</i>`:(rec.padrao?esc(rec.colaborador):`<b>${esc(rec.colaborador)}</b>`);
   let html=`<div style="background:linear-gradient(135deg,#1f6f5c,#175547);color:#fff;border-radius:14px;padding:24px;margin-bottom:18px;box-shadow:0 4px 18px rgba(31,111,92,.25)">
     <div style="font-size:13px;text-transform:uppercase;letter-spacing:.1em;opacity:.85;margin-bottom:4px">${esc(dia)}</div>
     <div style="font-family:var(--display);font-size:28px;font-weight:700;line-height:1.1">Equipe — ${fmt(data)}</div>
-    <div style="font-size:14px;opacity:.9;margin-top:6px">${totalAloc} de ${ativos.length} colaboradores alocados</div>
+    <div style="font-size:14px;opacity:.9;margin-top:6px">${totalAloc} de ${ativos.length} alocados · ${onlineEmails.size} online agora</div>
   </div>`;
+  if(metaDoDia){
+    const m=metaDoDia;
+    const cell=(label,val,suf)=>`<div style="flex:1;text-align:center"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;opacity:.7;margin-bottom:2px">${label}</div><div style="font-size:22px;font-weight:700">${val!=null&&val!==''?esc(String(val))+(suf||''):'—'}</div></div>`;
+    html+=`<div style="background:#f6f0e1;border:1px solid #e8dcc1;border-radius:12px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:10px;flex-shrink:0"><span style="font-size:22px">🎯</span><span style="font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:#7a5a1f;font-weight:700">Metas do dia</span></div>
+      <div style="display:flex;flex:1;gap:12px;min-width:240px">${cell('Sat. Web',m.meta_satisfacao_web,'%')}${cell('Sat. Fone',m.meta_satisfacao_fone,'%')}${cell('TME',m.meta_tme,'')}</div>
+    </div>`;
+  }else if(!readonly){
+    html+=`<div style="background:#faf6ed;border:1px dashed #d4c69d;border-radius:12px;padding:12px 16px;margin-bottom:18px;font-size:14px;color:var(--ink-soft)">🎯 <i>Nenhuma meta definida para este dia.</i> Defina em "Metas do dia" no menu.</div>`;
+  }
   html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px">';
   ALOC_TRABALHO.forEach(aloc=>{
     const lista=byAloc[aloc],vazio=lista.length===0;
     html+=`<div style="background:${vazio?'#f4f1ea':'#e6efe9'};border-left:4px solid ${vazio?'#cdc6b8':'#1f6f5c'};padding:14px 16px;border-radius:10px;min-height:90px">
       <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:${vazio?'#9c9583':'#175547'};font-weight:700;margin-bottom:8px">${esc(aloc)} (${lista.length})</div>
-      ${lista.length?lista.map(r=>`<div style="padding:3px 0;font-weight:500;font-size:15px;display:flex;align-items:center">• <span style="margin-left:4px">${nameTag(r)}${r.observacao?'<span style="color:var(--ink-soft);font-weight:400;font-size:13px"> — '+esc(r.observacao)+'</span>':''}</span>${xBtn(r)}</div>`).join(''):'<div style="color:var(--ink-soft);font-style:italic;font-size:13px">— ninguém alocado —</div>'}
+      ${lista.length?lista.map(r=>`<div style="padding:3px 0;font-weight:500;font-size:15px;display:flex;align-items:center">${onlineDot(r.colaborador)}<span style="flex:1">${nameTag(r)}${r.observacao?'<span style="color:var(--ink-soft);font-weight:400;font-size:13px"> — '+esc(r.observacao)+'</span>':''}</span>${xBtn(r)}</div>`).join(''):'<div style="color:var(--ink-soft);font-style:italic;font-size:13px">— ninguém alocado —</div>'}
     </div>`;
   });
   html+='</div>';
@@ -3240,18 +3288,16 @@ function renderAlocBoard(containerId,data,readonly){
   if(ausencias.length){
     html+=`<div style="background:#fbf0e6;border-left:4px solid #c97e2f;padding:14px 16px;border-radius:10px;margin-top:14px">
       <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#7a4e1f;font-weight:700;margin-bottom:8px">⚠ Ausências (${ausencias.length})</div>
-      ${ausencias.map(r=>`<div style="padding:3px 0;font-size:15px;display:flex;align-items:center"><span><b>${esc(r.colaborador)}</b> — ${esc(r.tipo)}${r.observacao?' ('+esc(r.observacao)+')':''}</span>${xBtn(r)}</div>`).join('')}
+      ${ausencias.map(r=>`<div style="padding:3px 0;font-size:15px;display:flex;align-items:center">${onlineDot(r.colaborador)}<span style="flex:1"><b>${esc(r.colaborador)}</b> — ${esc(r.tipo)}${r.auto?' <span style="font-size:11px;color:#7a4e1f;background:#fde6c8;padding:1px 6px;border-radius:8px;margin-left:4px">auto</span>':''}${r.observacao?' ('+esc(r.observacao)+')':''}</span>${xBtn(r)}</div>`).join('')}
     </div>`;
   }
   if(naoAloc.length){
     html+=`<div style="background:#f4f1ea;border:1px dashed #cdc6b8;padding:14px 16px;border-radius:10px;margin-top:14px">
       <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#9c9583;font-weight:700;margin-bottom:8px">Sem alocação definida (${naoAloc.length})</div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px">${naoAloc.map(n=>`<span style="background:#fff;border:1px solid var(--line);padding:5px 12px;border-radius:14px;font-size:13px;font-weight:500">${esc(n)}</span>`).join('')}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">${naoAloc.map(n=>`<span style="background:#fff;border:1px solid var(--line);padding:5px 12px;border-radius:14px;font-size:13px;font-weight:500;display:inline-flex;align-items:center">${onlineDot(n)}${esc(n)}</span>`).join('')}</div>
     </div>`;
   }
-  if(!readonly){
-    html+=`<p class="hint" style="margin-top:12px;font-size:12px">Nomes em <b>negrito</b> = mudança específica para este dia · Nomes normais = alocação padrão · × ao lado = voltar ao padrão</p>`;
-  }
+  html+=`<p class="hint" style="margin-top:12px;font-size:12px">🟢 verde = online agora · ⚪ vazio = offline${readonly?' · <i>itálico</i> = ausência automática (de Férias/Folgas/Atestados)':' · <b>negrito</b> = mudança específica · <i>itálico</i> = ausência automática · × ao lado = remover override'}</p>`;
   $(containerId).innerHTML=html;
 }
 async function removerAlocacao(id){
@@ -3269,6 +3315,74 @@ async function limparAlocDia(){
 }
 $('nav-aloc').onclick=()=>showView('aloc');
 
+// ===== Presence (online/offline em tempo real) =====
+function setupPresence(){
+  if(!currentEmail)return;
+  if(presenceChannel){try{presenceChannel.unsubscribe();}catch(e){}presenceChannel=null;}
+  presenceChannel=db.channel('equipe-online',{config:{presence:{key:currentEmail}}});
+  presenceChannel.on('presence',{event:'sync'},()=>{
+    onlineEmails=new Set();
+    const state=presenceChannel.presenceState();
+    Object.keys(state).forEach(k=>onlineEmails.add(k));
+    refreshBoardIfVisible();
+  });
+  presenceChannel.subscribe(async status=>{
+    if(status==='SUBSCRIBED'){try{await presenceChannel.track({email:currentEmail,since:new Date().toISOString()});}catch(e){}}
+  });
+}
+function refreshBoardIfVisible(){
+  try{
+    if($('view-aloc')&&$('view-aloc').style.display==='block')renderAlocBoard('aloc-board',$('aloc-data').value,false);
+    if($('view-mequipehj')&&$('view-mequipehj').style.display==='block')renderAlocBoard('meq-board',$('meq-data').value,true);
+  }catch(e){}
+}
+
+// ===== Metas do dia =====
+async function openMet(){
+  if(!$('met-data').value)$('met-data').value=new Date().toISOString().slice(0,10);
+  await carregarMetaData();
+  await listarMetas();
+}
+async function carregarMetaData(){
+  const data=$('met-data').value;if(!data)return;
+  const{data:m}=await db.from('metas_diarias').select('*').eq('data',data).maybeSingle();
+  if(m){$('met-tme').value=m.meta_tme||'';$('met-web').value=m.meta_satisfacao_web!=null?m.meta_satisfacao_web:'';$('met-fone').value=m.meta_satisfacao_fone!=null?m.meta_satisfacao_fone:'';$('met-obs').value=m.observacao||'';}
+  else{$('met-tme').value='';$('met-web').value='';$('met-fone').value='';$('met-obs').value='';}
+}
+async function listarMetas(){
+  const{data,error}=await db.from('metas_diarias').select('*').order('data',{ascending:false}).limit(30);
+  if(error){$('met-lista').innerHTML='<div class="empty"><b>Tabela de metas ainda não existe</b>Rode o SQL e recarregue a página.</div>';return;}
+  metasHist=data||[];
+  if(!metasHist.length){$('met-lista').innerHTML='<div class="empty">Nenhuma meta lançada ainda.</div>';return;}
+  $('met-lista').innerHTML='<div class="list">'+metasHist.map(m=>`
+    <div class="row-item" style="cursor:pointer" onclick="$('met-data').value='${m.data}';carregarMetaData()">
+      <div style="flex:1">
+        <div class="ri-main">${fmt(m.data)} <span style="color:var(--ink-soft);font-weight:400;font-size:13px">(${diaSemana(m.data)})</span></div>
+        <div class="ri-sub">🌐 Web: <b>${m.meta_satisfacao_web!=null?m.meta_satisfacao_web+'%':'—'}</b> · ☎️ Fone: <b>${m.meta_satisfacao_fone!=null?m.meta_satisfacao_fone+'%':'—'}</b> · ⏱ TME: <b>${esc(m.meta_tme||'—')}</b>${m.observacao?' · '+esc(m.observacao):''}</div>
+      </div>
+      <div class="item-actions"><button class="btn-del" onclick="event.stopPropagation();excluirMeta('${m.id}')">Excluir</button></div>
+    </div>`).join('')+'</div>';
+}
+async function salvarMeta(){
+  const data=$('met-data').value;if(!data){alert('Informe a data.');return;}
+  const dados={data,meta_satisfacao_web:$('met-web').value?parseFloat($('met-web').value):null,meta_satisfacao_fone:$('met-fone').value?parseFloat($('met-fone').value):null,meta_tme:$('met-tme').value.trim()||null,observacao:$('met-obs').value.trim()||null};
+  // upsert manual
+  const{data:exist}=await db.from('metas_diarias').select('id').eq('data',data).maybeSingle();
+  let error;
+  if(exist){({error}=await db.from('metas_diarias').update(dados).eq('id',exist.id));}
+  else{({error}=await db.from('metas_diarias').insert(dados));}
+  if(error){alert('Erro: '+error.message);return;}
+  toast('Meta salva ✓');listarMetas();
+}
+async function excluirMeta(id){
+  if(!confirm('Excluir meta deste dia?'))return;
+  const{error}=await db.from('metas_diarias').delete().eq('id',id);
+  if(error){alert('Erro: '+error.message);return;}
+  toast('Excluída');listarMetas();
+}
+$('nav-met').onclick=()=>showView('met');
+$('met-data')&&($('met-data').addEventListener('change',carregarMetaData));
+
 // ===== Equipe hoje (colaborador, somente leitura) =====
 function navMeqDia(d){
   if(d===0){$('meq-data').value=new Date().toISOString().slice(0,10);}
@@ -3279,9 +3393,15 @@ async function openMequipehj(){
   if(!equipe.length){try{const{data}=await db.from('equipe').select('*').order('nome_completo');equipe=data||[];}catch(e){}}
   if(!$('meq-data').value)$('meq-data').value=new Date().toISOString().slice(0,10);
   const data=$('meq-data').value;
-  const{data:d,error}=await db.from('alocacao_diaria').select('*').eq('data',data);
-  if(error){$('meq-board').innerHTML='<div class="empty">Quadro ainda não disponível.</div>';return;}
-  alocacoes=d||[];
+  const r=await Promise.all([
+    db.from('alocacao_diaria').select('*').eq('data',data),
+    db.rpc('ausencias_em',{d:data}),
+    db.from('metas_diarias').select('*').eq('data',data).maybeSingle()
+  ]);
+  if(r[0].error){$('meq-board').innerHTML='<div class="empty">Quadro ainda não disponível.</div>';return;}
+  alocacoes=r[0].data||[];
+  autoAusencias=r[1].error?[]:(r[1].data||[]);
+  metaDoDia=r[2].error?null:r[2].data;
   renderAlocBoard('meq-board',data,true);
 }
 $('nav-mequipehj').onclick=()=>showView('mequipehj');
