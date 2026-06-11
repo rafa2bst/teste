@@ -3626,6 +3626,7 @@ function renderOnbDetail(){
         <div class="row-item" style="cursor:default;align-items:flex-start">
           <div><div class="ri-main">${esc(t.nome||'(removido do catálogo)')}</div>
           <div class="ri-sub">${esc(t.categoria||'')} · ${esc(t.formato||'')}${t.duracao_minutos?' · '+t.duracao_minutos+' min estim.':''}</div>
+          ${t.observacao?`<div class="ri-sub" style="margin-top:4px;font-style:italic;color:var(--ink-soft)">${esc(t.observacao)}</div>`:''}
           ${t.link?`<div class="ri-sub" style="margin-top:4px"><a href="${esc(t.link)}" target="_blank" rel="noopener" style="color:var(--accent-dark);word-break:break-all">${esc(t.link.length>80?t.link.slice(0,80)+'…':t.link)}</a></div>`:''}
           ${a.status==='Concluído'?`<div class="ri-sub" style="margin-top:4px;color:var(--accent-dark)"><b>Concluído</b> em ${fmt(a.data_assistido)}${a.tempo_levado_min?' · levou '+a.tempo_levado_min+' min':''}${a.observacao?' · '+esc(a.observacao):''}</div>`:''}</div>
           <div style="display:flex;align-items:center;gap:10px">
@@ -3689,13 +3690,16 @@ function renderMeutr(meus){
   // ordenar dentro da categoria por ordem
   Object.values(porCat).forEach(arr=>arr.sort((x,y)=>(x.t.ordem||0)-(y.t.ordem||0)));
   let html='';
-  Object.keys(porCat).sort().forEach(cat=>{
+  // ordenar categorias na ordem em que aparecem no catálogo (pelo menor ordem)
+  const catMinOrd={};Object.entries(porCat).forEach(([c,arr])=>{catMinOrd[c]=Math.min(...arr.map(x=>x.t.ordem||9999));});
+  Object.keys(porCat).sort((a,b)=>catMinOrd[a]-catMinOrd[b]).forEach(cat=>{
     html+=`<div class="sec-title">${esc(cat)} (${porCat[cat].length})</div><div class="list">`;
     porCat[cat].forEach(({a,t})=>{
       const done=a.status==='Concluído';
       html+=`<div class="row-item" style="cursor:default;align-items:flex-start">
         <div><div class="ri-main">${esc(t.nome||'')}</div>
         <div class="ri-sub">${esc(t.formato||'')}${t.duracao_minutos?' · '+t.duracao_minutos+' min estim.':''}</div>
+        ${t.observacao?`<div class="ri-sub" style="margin-top:4px;font-style:italic;color:var(--ink-soft)">${esc(t.observacao)}</div>`:''}
         ${t.link?`<div class="ri-sub" style="margin-top:4px"><a href="${esc(t.link)}" target="_blank" rel="noopener" style="color:var(--accent-dark);word-break:break-all">${esc(t.link.length>80?t.link.slice(0,80)+'…':t.link)}</a></div>`:''}
         ${done?`<div class="ri-sub" style="margin-top:4px;color:var(--accent-dark)"><b>Concluído</b> em ${fmt(a.data_assistido)}${a.tempo_levado_min?' · levou '+a.tempo_levado_min+' min':''}${a.observacao?' · '+esc(a.observacao):''}</div>`:''}</div>
         <div style="display:flex;align-items:center;gap:10px">
