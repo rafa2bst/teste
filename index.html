@@ -1344,7 +1344,7 @@
 const SUPA_URL='https://jvfewdukhgmtdieufpaf.supabase.co';
 const SUPA_KEY='sb_publishable_O2rf2zCnJTZ1YE5q4eJeeA_AVdukzUg';
 const db=supabase.createClient(SUPA_URL,SUPA_KEY);
-const ADMIN_EMAILS=['rafael.andrade.sa@gmail.com'];
+const ADMIN_EMAILS=['rafael.andrade.sa@gmail.com','maria.nascimento@2bst.com.br','tiago.barbosa@2bst.com.br'];
 const isAdmin=u=>!!u&&ADMIN_EMAILS.includes((u.email||'').toLowerCase());
 
 let maquinas=[],atribuicoes=[],manutencoes=[],isAdminUser=false,editingPatr=null,ferias=[],editingFeria=null,folgas=[],editingFolga=null,atestados=[],editingAtest=null,feCal=null,foCal=null,atCal=null,anivs=[],editingAniv=null,ocors=[],editingOcor=null,probs=[],editingProb=null,anCal=null,treins=[],editingTrein=null,anoms=[],editingAnom=null;
@@ -1366,6 +1366,7 @@ async function showApp(user){
   $('user-email').textContent=user.email;currentEmail=user.email||'';isAdminUser=isAdmin(user);
   // Registra último login (silenciosamente; ignora erro se a tabela não existir)
   try{await db.from('usuarios').update({ultimo_login:new Date().toISOString()}).eq('email',user.email);}catch(e){}
+  try{const{data}=await db.from('equipe').select('*').order('nome_completo');equipe=data||[];}catch(e){}
   setupPresence();
   $('nav').style.display='flex';
   ['nav-cad','nav-rel','nav-eq','nav-us','nav-aloc','nav-met','nav-fer','nav-fol','nav-ho','nav-ate','nav-aniv','nav-ocor','nav-prob','nav-trein','nav-anom','nav-fat','nav-dash','nav-soladm','nav-feradm','nav-atadm','nav-ocadm','nav-mtadm','nav-tar','nav-rot','nav-onb'].forEach(id=>$(id).style.display=isAdminUser?'':'none');
@@ -2762,12 +2763,25 @@ function renderKanban(containerId,arr){
   $(containerId).innerHTML=cols;
 }
 function colaboradoresAreaTecnica(){
-  const set=new Set();
-  set.add('Rafael Andrade'); // admin sempre disponível para receber tarefas
-  maquinas.forEach(m=>{if(m.colaborador&&norm(m.setor)==='area tecnica')set.add(m.colaborador);});
-  // adicionar nomes que já apareceram em tarefas e na aniversários (load lazy)
-  tarefas.forEach(t=>{if(t.responsavel)set.add(t.responsavel);});
-  return [...set].sort();
+  const map=new Map(); // fuzzyKey -> nome canonico (equipe ganha sobre legados)
+  const fuzzyKey=n=>{
+    const parts=norm(n).split(/\s+/).filter(Boolean);
+    if(!parts.length)return '';
+    if(parts.length===1)return parts[0];
+    return parts[0]+'_'+parts[parts.length-1].slice(0,4);
+  };
+  const add=(name,deEquipe)=>{
+    if(!name)return;
+    const k=fuzzyKey(name);if(!k)return;
+    if(deEquipe||!map.has(k))map.set(k,name);
+  };
+  add('Rafael Andrade',true);
+  // PRIMARIO: equipe (fonte de verdade)
+  equipe.filter(e=>!e.desligado).forEach(e=>add(e.nome_curto||e.nome_completo,true));
+  // LEGADOS: maquinas + tarefas (so se nao houver nome equivalente na equipe)
+  maquinas.forEach(m=>{if(m.colaborador&&norm(m.setor)==='area tecnica')add(m.colaborador,false);});
+  tarefas.forEach(t=>{if(t.responsavel)add(t.responsavel,false);});
+  return [...map.values()].sort();
 }
 
 // ===== Rotinas (templates de tarefas) =====
@@ -3475,7 +3489,7 @@ function renderUs(){
   ].map(k=>`<div class="stat ${k[2]}"><b>${k[1]}</b><span>${esc(k[0])}</span></div>`).join('');
   if(!arr.length){$('us-lista').innerHTML='<div class="empty">Nenhum usuário encontrado.</div>';return;}
   $('us-lista').innerHTML='<div class="list">'+arr.map(u=>{
-    const ehAdmin=u.email==='rafael.andrade.sa@gmail.com';
+    const ehAdmin=ADMIN_EMAILS.includes(u.email);
     return`<div class="row-item" style="cursor:default;align-items:flex-start">
       <div style="flex:1;min-width:0">
         <div class="ri-main">${esc(u.email||'(sem e-mail)')}${ehAdmin?' <span class="badge b-disp" style="margin-left:6px">admin</span>':''}</div>
