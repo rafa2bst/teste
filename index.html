@@ -238,6 +238,7 @@
         <button id="nav-met">Metas do dia</button>
         <button id="nav-metcol">Metas colaborador</button>
         <button id="nav-compano">Comparativo anual</button>
+        <button id="nav-plantel">Plan. Estratégico Telefone</button>
       </div>
     </div>
 
@@ -1212,11 +1213,18 @@
 
   <!-- VIEW: COMPARATIVO ANUAL (SOMENTE RAFAEL) -->
   <div id="view-compano" style="display:none">
-    <style>#view-compano .form-card{max-width:none}body.compano-view .wrap{max-width:1400px !important}</style>
+    <style>#view-compano .form-card,#view-plantel .form-card{max-width:none}body.compano-view .wrap{max-width:1400px !important}</style>
     <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
       <h2>Comparativo anual de colaboradores</h2>
       <p class="hint">Escolha uma métrica e um ano pra ver a evolução comparada. As cores da tabela mostram o ranking mês a mês (verde = melhor · vermelho = pior).</p>
     </div>
+
+    <div class="sec-title">🏆 Consolidado anual — melhor colaborador</div>
+    <p class="hint">Pontuação agregada de 5 métricas principais. 1º lugar em uma métrica rende mais pontos. Soma final define o melhor colaborador do ano.</p>
+    <div class="form-card">
+      <div id="ca-consolidado"></div>
+    </div>
+
     <div class="form-card">
       <div class="row2">
         <div><label>Métrica</label><select id="ca-metrica" onchange="renderCompAno()">
@@ -1250,6 +1258,23 @@
         <div style="display:flex;align-items:end;padding-bottom:10px"><div style="font-size:12px;color:var(--ink-soft);background:#f4f1ea;padding:6px 12px;border-radius:6px">Usa a mesma métrica selecionada acima</div></div>
       </div>
       <div id="ca-rk-lista" style="margin-top:14px"></div>
+    </div>
+  </div>
+
+  <!-- VIEW: PLANEJAMENTO ESTRATÉGICO TELEFONE (SOMENTE RAFAEL) -->
+  <div id="view-plantel" style="display:none">
+    <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
+      <h2>Planejamento Estratégico — Telefone</h2>
+      <p class="hint">Projeção mensal de demanda, valores realizados e TME. Cada campo é editável.</p>
+    </div>
+    <div class="form-card">
+      <div class="row2">
+        <div><label>Ano</label><select id="pt-ano" onchange="loadPlantel()"></select></div>
+        <div style="display:flex;align-items:end;padding-bottom:8px"><div style="font-size:12px;color:var(--ink-soft);background:#f4f1ea;padding:6px 12px;border-radius:6px">Os campos "Recebida" e "Atendida" também aparecem em Metas colaborador → Setor</div></div>
+      </div>
+      <div id="pt-kpis" class="kpis" style="margin-top:12px"></div>
+      <div id="pt-tabela" style="margin-top:14px;overflow-x:auto"></div>
+      <div class="actions" style="margin-top:12px"><button class="btn-primary" onclick="salvarPlantel()">Salvar planejamento</button></div>
     </div>
   </div>
 
@@ -1555,6 +1580,7 @@ async function showApp(user){
   // Metas colaborador + Comparativo anual: EXCLUSIVO do Rafael (nao aparece nem para outros admins)
   $('nav-metcol').style.display=(currentEmail==='rafael.andrade.sa@gmail.com')?'':'none';
   $('nav-compano').style.display=(currentEmail==='rafael.andrade.sa@gmail.com')?'':'none';
+  $('nav-plantel').style.display=(currentEmail==='rafael.andrade.sa@gmail.com')?'':'none';
   $('nav-solf').style.display=isAdminUser?'none':'';
   $('nav-solfer').style.display=isAdminUser?'none':'';
   $('nav-solat').style.display=isAdminUser?'none':'';
@@ -1710,7 +1736,7 @@ async function registrarManutencao(patr){
 
 // ===== Views =====
 function showView(v){
-  const adminViews=['cadastro','relatorios','eq','us','ferias','folgas','ho','aloc','met','metcol','compano','perf','dperf','atestados','aniv','ocor','prob','trein','anom','fat','dash','soladm','feradm','atadm','ocadm','mtadm','tar','rot','onb'];
+  const adminViews=['cadastro','relatorios','eq','us','ferias','folgas','ho','aloc','met','metcol','compano','plantel','perf','dperf','atestados','aniv','ocor','prob','trein','anom','fat','dash','soladm','feradm','atadm','ocadm','mtadm','tar','rot','onb'];
   if(adminViews.includes(v)&&!isAdminUser)v='solfolga';
   $('view-cadastro').style.display=v==='cadastro'?'block':'none';
   $('view-relatorios').style.display=v==='relatorios'?'block':'none';
@@ -1745,7 +1771,8 @@ function showView(v){
   $('view-met').style.display=v==='met'?'block':'none';
   $('view-metcol').style.display=v==='metcol'?'block':'none';
   $('view-compano').style.display=v==='compano'?'block':'none';
-  document.body.classList.toggle('compano-view',v==='compano');
+  $('view-plantel').style.display=v==='plantel'?'block':'none';
+  document.body.classList.toggle('compano-view',v==='compano'||v==='plantel');
   $('view-perf').style.display=(v==='perf'||v==='mperf')?'block':'none';
   $('view-dperf').style.display=v==='dperf'?'block':'none';
   $('view-mequipehj').style.display=v==='mequipehj'?'block':'none';
@@ -1786,6 +1813,7 @@ function showView(v){
   $('nav-met').classList.toggle('active',v==='met');
   $('nav-metcol').classList.toggle('active',v==='metcol');
   $('nav-compano').classList.toggle('active',v==='compano');
+  $('nav-plantel').classList.toggle('active',v==='plantel');
   $('nav-perf').classList.toggle('active',v==='perf');
   $('nav-dperf').classList.toggle('active',v==='dperf');
   $('nav-mperf').classList.toggle('active',v==='mperf');
@@ -1830,6 +1858,7 @@ function showView(v){
   if(v==='met')openMet();
   if(v==='metcol')openMetCol();
   if(v==='compano')openCompAno();
+  if(v==='plantel')openPlantel();
   if(v==='perf'||v==='mperf')openPerf();
   if(v==='dperf')openDailyPerf();
   if(v==='mequipehj')openMequipehj();
@@ -3930,14 +3959,66 @@ async function openCompAno(){
   selM.innerHTML=MESES.map((m,i)=>`<option value="${i+1}" ${(i+1)==curM?'selected':''}>${m}</option>`).join('');
   await loadCompAnoDados();
   renderCompAno();
+  renderConsolidado();
   renderRankingMes();
 }
-async function onCompAnoAnoChange(){await loadCompAnoDados();renderCompAno();renderRankingMes();}
+async function onCompAnoAnoChange(){await loadCompAnoDados();renderCompAno();renderConsolidado();renderRankingMes();}
 async function loadCompAnoDados(){
   const ano=parseInt($('ca-ano').value);if(!ano)return;
   const{data,error}=await db.from('metas_colaborador').select('*').eq('ano',ano);
   if(error){compAnoDados=[];return;}
   compAnoDados=data||[];
+}
+function renderConsolidado(){
+  const container=$('ca-consolidado');
+  if(!compAnoDados.length){container.innerHTML='<div class="empty" style="padding:8px;background:transparent">Sem dados para gerar consolidado.</div>';return;}
+  const METS=['pct_absorcao','pct_satisfacao','pct_votacao','qtd_atendimento','tma'];
+  const LBLS=['Abs','Sat','Vot','Qtd','TMA'];
+  const porColab={};compAnoDados.forEach(r=>{if(!porColab[r.colaborador])porColab[r.colaborador]=[];porColab[r.colaborador].push(r);});
+  const nomes=Object.keys(porColab).sort();
+  if(!nomes.length){container.innerHTML='<div class="empty" style="padding:8px;background:transparent">Sem colaboradores lançados.</div>';return;}
+  // Rankings por métrica (posição 1..N)
+  const rankings={};
+  METS.forEach(met=>{
+    const higher=CA_HIGHER_BETTER[met]!==false;
+    const items=nomes.map(nome=>{
+      let sum=0,count=0;
+      porColab[nome].forEach(r=>{const n=toNum(r[met],met);if(n!=null){sum+=n;count++;}});
+      return{nome,val:count>0?sum/count:null};
+    }).filter(x=>x.val!=null);
+    if(!items.length)return;
+    items.sort((a,b)=>higher?b.val-a.val:a.val-b.val);
+    rankings[met]={};items.forEach((x,idx)=>{rankings[met][x.nome]=idx+1;});
+  });
+  // Pontos totais por colab
+  const totais=nomes.map(nome=>{
+    let pts=0;const positions={};
+    METS.forEach(met=>{
+      if(rankings[met]&&rankings[met][nome]!=null){
+        const N=Object.keys(rankings[met]).length,rank=rankings[met][nome];
+        pts+=(N-rank+1);positions[met]=rank;
+      }
+    });
+    return{nome,pts,positions};
+  });
+  totais.sort((a,b)=>b.pts-a.pts);
+  const medals=['🥇','🥈','🥉'];
+  let html=`<div style="font-size:12px;color:var(--ink-soft);margin-bottom:12px">
+    Baseado em <b>${LBLS.join(' · ')}</b> · Pontuação = soma das colocações inversas (1º lugar em N colabs rende N pontos)
+  </div><div style="display:flex;flex-direction:column;gap:6px">`;
+  totais.forEach((t,idx)=>{
+    const cor=rankColor(idx,totais.length);
+    const emoji=idx<3?medals[idx]:`<span style="width:28px;display:inline-block;text-align:center;font-weight:700">${idx+1}º</span>`;
+    const bd=METS.map((m,i)=>{const p=t.positions[m];return`<span style="font-size:11px;padding:2px 6px;background:rgba(0,0,0,.06);border-radius:4px">${LBLS[i]} ${p?p+'º':'—'}</span>`;}).join(' ');
+    html+=`<div style="display:flex;align-items:center;gap:12px;padding:11px 14px;background:${cor.bg};color:${cor.tx};border-radius:8px;font-size:14px;flex-wrap:wrap">
+      <div style="font-size:${idx<3?'24px':'14px'};min-width:36px;text-align:center">${emoji}</div>
+      <div style="flex:1;font-weight:${idx<3?'700':'600'};font-size:${idx<3?'15px':'14px'}">${esc(t.nome)}</div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap">${bd}</div>
+      <div style="font-weight:700;font-size:17px;min-width:70px;text-align:right;background:rgba(0,0,0,.08);padding:4px 10px;border-radius:6px">${t.pts} pts</div>
+    </div>`;
+  });
+  html+='</div>';
+  container.innerHTML=html;
 }
 function renderCompAno(){
   const met=$('ca-metrica').value;
@@ -4052,6 +4133,87 @@ function renderRankingMes(){
   });
   html+='</div>';
   $('ca-rk-lista').innerHTML=html;
+}
+
+// ===== Planejamento Estratégico Telefone (EXCLUSIVO Rafael) =====
+$('nav-plantel').onclick=()=>showView('plantel');
+let plantelMap={};
+
+async function openPlantel(){
+  const anoAtual=new Date().getFullYear();
+  const anos=[];for(let a=anoAtual-2;a<=anoAtual+1;a++)anos.push(a);
+  const sel=$('pt-ano'),cur=sel.value||anoAtual;
+  sel.innerHTML=anos.map(a=>`<option ${a==cur?'selected':''}>${a}</option>`).join('');
+  await loadPlantel();
+}
+async function loadPlantel(){
+  const ano=parseInt($('pt-ano').value);if(!ano)return;
+  const{data,error}=await db.from('metas_setor').select('*').eq('ano',ano);
+  if(error){$('pt-tabela').innerHTML='<div class="empty"><b>Tabela não existe ou sem acesso.</b> Rode o SQL.</div>';return;}
+  plantelMap={};(data||[]).forEach(m=>{plantelMap[m.mes]={...m};});
+  for(let m=1;m<=12;m++)if(!plantelMap[m])plantelMap[m]={ano,mes:m,demanda_projetada:null,demanda_recebida:null,demanda_atendida:null,tme_setor:null};
+  renderPlantel();
+}
+function renderPlantel(){
+  let sumP=0,sumR=0,sumA=0,cnt=0;
+  const rows=[];
+  for(let m=1;m<=12;m++){
+    const r=plantelMap[m];
+    if(r.demanda_projetada!=null)sumP+=parseFloat(r.demanda_projetada)||0;
+    if(r.demanda_recebida!=null)sumR+=parseFloat(r.demanda_recebida)||0;
+    if(r.demanda_atendida!=null)sumA+=parseFloat(r.demanda_atendida)||0;
+    if(r.demanda_projetada!=null||r.demanda_recebida!=null||r.demanda_atendida!=null||r.tme_setor)cnt++;
+    // Realização = Recebida ÷ Projetada
+    const real=(r.demanda_projetada&&r.demanda_recebida)?Math.round((r.demanda_recebida/r.demanda_projetada)*100):null;
+    // Cobertura = Atendida ÷ Recebida
+    const cob=(r.demanda_recebida&&r.demanda_atendida)?Math.round((r.demanda_atendida/r.demanda_recebida)*100):null;
+    const corReal=real==null?{bg:'#fff',tx:'#9c9583'}:(real>=95?{bg:'#dfebe0',tx:'#1e5426'}:real>=80?{bg:'#fdf3d9',tx:'#7a5a1f'}:{bg:'#f5dcdc',tx:'#801c1c'});
+    const corCob=cob==null?{bg:'#fff',tx:'#9c9583'}:(cob>=95?{bg:'#dfebe0',tx:'#1e5426'}:cob>=80?{bg:'#fdf3d9',tx:'#7a5a1f'}:{bg:'#f5dcdc',tx:'#801c1c'});
+    rows.push(`<tr>
+      <td style="padding:6px 10px;font-weight:500;font-size:13px;background:#faf8f2;border-radius:4px 0 0 4px">${MESES[m-1]}</td>
+      <td style="padding:4px"><input type="number" step="1" value="${r.demanda_projetada!=null?r.demanda_projetada:''}" oninput="setPlantel(${m},'demanda_projetada',this.value)" style="width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:5px;font-size:13px;text-align:right"></td>
+      <td style="padding:4px"><input type="number" step="1" value="${r.demanda_recebida!=null?r.demanda_recebida:''}" oninput="setPlantel(${m},'demanda_recebida',this.value)" style="width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:5px;font-size:13px;text-align:right"></td>
+      <td style="padding:6px 8px;background:${corReal.bg};color:${corReal.tx};font-weight:700;text-align:center;font-size:12px">${real!=null?real+'%':'—'}</td>
+      <td style="padding:4px"><input type="number" step="1" value="${r.demanda_atendida!=null?r.demanda_atendida:''}" oninput="setPlantel(${m},'demanda_atendida',this.value)" style="width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:5px;font-size:13px;text-align:right"></td>
+      <td style="padding:6px 8px;background:${corCob.bg};color:${corCob.tx};font-weight:700;text-align:center;font-size:12px">${cob!=null?cob+'%':'—'}</td>
+      <td style="padding:4px"><input type="text" value="${esc(r.tme_setor||'')}" oninput="setPlantel(${m},'tme_setor',this.value)" placeholder="HH:MM:SS" style="width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:5px;font-size:13px;text-align:center"></td>
+    </tr>`);
+  }
+  const realAno=(sumP&&sumR)?Math.round((sumR/sumP)*100):null;
+  const cobAno=(sumR&&sumA)?Math.round((sumA/sumR)*100):null;
+  $('pt-kpis').innerHTML=[
+    ['Meses preench.',cnt,''],
+    ['Projetada total',sumP?sumP:'—',''],
+    ['Recebida total',sumR?sumR:'—',''],
+    ['Realização ano',realAno!=null?realAno+'%':'—',realAno==null?'':(realAno>=95?'s-uso':realAno>=80?'s-manut':'s-desc')],
+    ['Atendida total',sumA?sumA:'—',''],
+    ['Cobertura ano',cobAno!=null?cobAno+'%':'—',cobAno==null?'':(cobAno>=95?'s-uso':cobAno>=80?'s-manut':'s-desc')]
+  ].map(k=>`<div class="stat ${k[2]}"><b>${k[1]}</b><span>${esc(k[0])}</span></div>`).join('');
+  const th=(t)=>`<th style="text-align:center;padding:8px 6px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);white-space:nowrap">${t}</th>`;
+  $('pt-tabela').innerHTML=`<table style="width:100%;border-collapse:separate;border-spacing:0 3px;min-width:820px">
+    <thead><tr style="background:#faf8f2">
+      <th style="text-align:left;padding:8px 10px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);width:10%">Mês</th>
+      ${th('Demanda Projetada')}${th('Demanda Recebida')}${th('% Realização')}${th('Demanda Atendida')}${th('% Cobertura')}${th('TME')}
+    </tr></thead>
+    <tbody>${rows.join('')}</tbody></table>
+    <p class="hint" style="font-size:11px;margin-top:6px">💡 <b>% Realização</b> = Recebida ÷ Projetada · <b>% Cobertura</b> = Atendida ÷ Recebida · Verde ≥95% · Amarelo 80–94% · Vermelho &lt;80%</p>`;
+}
+function setPlantel(mes,field,val){
+  if(field==='tme_setor'){plantelMap[mes][field]=val||null;}
+  else{const p=val===''?null:parseFloat(val);plantelMap[mes][field]=isNaN(p)?null:p;renderPlantel();}
+}
+async function salvarPlantel(){
+  const ano=parseInt($('pt-ano').value);if(!ano){alert('Selecione o ano.');return;}
+  const regs=[];const now=new Date().toISOString();
+  for(let m=1;m<=12;m++){
+    const r=plantelMap[m];
+    if(r.demanda_projetada==null&&r.demanda_recebida==null&&r.demanda_atendida==null&&!r.tme_setor)continue;
+    regs.push({ano,mes:m,demanda_projetada:r.demanda_projetada,demanda_recebida:r.demanda_recebida,demanda_atendida:r.demanda_atendida,tme_setor:r.tme_setor||null,atualizado_em:now});
+  }
+  if(!regs.length){alert('Nenhum mês preenchido.');return;}
+  const{error}=await db.from('metas_setor').upsert(regs,{onConflict:'ano,mes'});
+  if(error){alert('Erro: '+error.message);return;}
+  toast(`✓ Salvo (${regs.length} mês${regs.length>1?'es':''})`);
 }
 
 // ============================================================
