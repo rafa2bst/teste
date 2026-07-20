@@ -235,6 +235,7 @@
       <div class="group-items">
         <button id="nav-aloc">Equipe hoje</button>
         <button id="nav-met">Metas do dia</button>
+        <button id="nav-metcol">Metas colaborador</button>
       </div>
     </div>
 
@@ -1167,6 +1168,30 @@
     <div id="mcad-conteudo"></div>
   </div>
 
+  <!-- VIEW: METAS COLABORADOR (SOMENTE RAFAEL) -->
+  <div id="view-metcol" style="display:none">
+    <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
+      <h2>Metas de produtividade por colaborador</h2>
+      <p class="hint">Meta mensal, resultado alcançado e absorção (%) de cada colaborador da Área Técnica. Acesso exclusivo.</p>
+    </div>
+    <div class="form-card">
+      <div class="row2">
+        <div><label>Colaborador</label><select id="mc-colab" onchange="loadMetasCol()"></select></div>
+        <div><label>Ano</label><select id="mc-ano" onchange="loadMetasCol()"></select></div>
+      </div>
+      <div id="mc-kpis" class="kpis" style="margin-top:10px"></div>
+      <div id="mc-tabela" style="margin-top:10px;overflow-x:auto"></div>
+      <div class="actions" style="margin-top:12px"><button class="btn-primary" onclick="salvarMetCol()">Salvar meses preenchidos</button></div>
+    </div>
+    <div class="sec-title">Panorama anual</div>
+    <p class="hint">Comparativo consolidado por ano de todos os colaboradores.</p>
+    <div class="row2">
+      <div><label>Ano</label><select id="mc-ano2" onchange="renderPanoramaMc()"></select></div>
+      <div></div>
+    </div>
+    <div id="mc-panorama" style="margin-top:8px"></div>
+  </div>
+
   <!-- VIEW: KANBAN PERFORMANCE -->
   <div id="view-perf" style="display:none">
     <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
@@ -1466,6 +1491,8 @@ async function showApp(user){
   setupPresence();
   $('nav').style.display='flex';
   ['nav-cad','nav-rel','nav-eq','nav-us','nav-aloc','nav-met','nav-perf','nav-dperf','nav-fer','nav-fol','nav-ho','nav-ate','nav-aniv','nav-ocor','nav-prob','nav-trein','nav-anom','nav-fat','nav-dash','nav-soladm','nav-feradm','nav-atadm','nav-ocadm','nav-mtadm','nav-tar','nav-rot','nav-onb'].forEach(id=>$(id).style.display=isAdminUser?'':'none');
+  // Metas colaborador: EXCLUSIVO do Rafael (nao aparece nem para outros admins)
+  $('nav-metcol').style.display=(currentEmail==='rafael.andrade.sa@gmail.com')?'':'none';
   $('nav-solf').style.display=isAdminUser?'none':'';
   $('nav-solfer').style.display=isAdminUser?'none':'';
   $('nav-solat').style.display=isAdminUser?'none':'';
@@ -1621,7 +1648,7 @@ async function registrarManutencao(patr){
 
 // ===== Views =====
 function showView(v){
-  const adminViews=['cadastro','relatorios','eq','us','ferias','folgas','ho','aloc','met','perf','dperf','atestados','aniv','ocor','prob','trein','anom','fat','dash','soladm','feradm','atadm','ocadm','mtadm','tar','rot','onb'];
+  const adminViews=['cadastro','relatorios','eq','us','ferias','folgas','ho','aloc','met','metcol','perf','dperf','atestados','aniv','ocor','prob','trein','anom','fat','dash','soladm','feradm','atadm','ocadm','mtadm','tar','rot','onb'];
   if(adminViews.includes(v)&&!isAdminUser)v='solfolga';
   $('view-cadastro').style.display=v==='cadastro'?'block':'none';
   $('view-relatorios').style.display=v==='relatorios'?'block':'none';
@@ -1654,6 +1681,7 @@ function showView(v){
   $('view-mho').style.display=v==='mho'?'block':'none';
   $('view-aloc').style.display=v==='aloc'?'block':'none';
   $('view-met').style.display=v==='met'?'block':'none';
+  $('view-metcol').style.display=v==='metcol'?'block':'none';
   $('view-perf').style.display=(v==='perf'||v==='mperf')?'block':'none';
   $('view-dperf').style.display=v==='dperf'?'block':'none';
   $('view-mequipehj').style.display=v==='mequipehj'?'block':'none';
@@ -1692,6 +1720,7 @@ function showView(v){
   $('nav-mho').classList.toggle('active',v==='mho');
   $('nav-aloc').classList.toggle('active',v==='aloc');
   $('nav-met').classList.toggle('active',v==='met');
+  $('nav-metcol').classList.toggle('active',v==='metcol');
   $('nav-perf').classList.toggle('active',v==='perf');
   $('nav-dperf').classList.toggle('active',v==='dperf');
   $('nav-mperf').classList.toggle('active',v==='mperf');
@@ -1734,6 +1763,7 @@ function showView(v){
   if(v==='mho')openMho();
   if(v==='aloc')openAloc();
   if(v==='met')openMet();
+  if(v==='metcol')openMetCol();
   if(v==='perf'||v==='mperf')openPerf();
   if(v==='dperf')openDailyPerf();
   if(v==='mequipehj')openMequipehj();
@@ -3499,6 +3529,140 @@ async function excluirMeta(id){
 }
 $('nav-met').onclick=()=>showView('met');
 $('met-data')&&($('met-data').addEventListener('change',carregarMetaData));
+
+// ============================================================
+// ===== Metas colaborador (EXCLUSIVO Rafael) =================
+// ============================================================
+$('nav-metcol').onclick=()=>showView('metcol');
+let metasColMap={},metasAno={};
+
+async function openMetCol(){
+  const nomes=colaboradoresAreaTecnica();
+  const selC=$('mc-colab'),curC=selC.value;
+  selC.innerHTML=nomes.map(n=>`<option>${esc(n)}</option>`).join('');
+  if(curC)selC.value=curC;
+  const anoAtual=new Date().getFullYear();
+  const anos=[];for(let a=anoAtual-2;a<=anoAtual+1;a++)anos.push(a);
+  const selA=$('mc-ano'),curA=selA.value||anoAtual;
+  selA.innerHTML=anos.map(a=>`<option ${a==curA?'selected':''}>${a}</option>`).join('');
+  const selA2=$('mc-ano2'),curA2=selA2.value||anoAtual;
+  selA2.innerHTML=anos.map(a=>`<option ${a==curA2?'selected':''}>${a}</option>`).join('');
+  await loadMetasCol();
+  await renderPanoramaMc();
+}
+async function loadMetasCol(){
+  const colab=$('mc-colab').value,ano=parseInt($('mc-ano').value);
+  if(!colab||!ano){$('mc-tabela').innerHTML='';return;}
+  const{data,error}=await db.from('metas_colaborador').select('*').eq('colaborador',colab).eq('ano',ano);
+  if(error){$('mc-tabela').innerHTML='<div class="empty"><b>Sem acesso ou tabela não existe.</b>Rode o SQL.</div>';return;}
+  metasColMap={};(data||[]).forEach(m=>{metasColMap[m.mes]={...m};});
+  for(let m=1;m<=12;m++)if(!metasColMap[m])metasColMap[m]={colaborador:colab,ano,mes:m,meta:null,resultado:null,observacao:null};
+  renderMetCol();
+}
+function absorcao(meta,res){if(meta==null||res==null||meta===0)return null;return Math.round((res/meta)*100);}
+function corAbs(pct){if(pct==null)return {bg:'#f4f1ea',tx:'#9c9583'};if(pct>=100)return{bg:'#dfebe0',tx:'#1e5426'};if(pct>=80)return{bg:'#fdf3d9',tx:'#7a5a1f'};return{bg:'#f5dcdc',tx:'#801c1c'};}
+function renderMetCol(){
+  const rows=[];let sumMeta=0,sumRes=0,mesesPreenchidos=0;
+  for(let m=1;m<=12;m++){
+    const r=metasColMap[m];
+    const pct=absorcao(r.meta,r.resultado);
+    if(r.meta!=null){sumMeta+=parseFloat(r.meta)||0;}
+    if(r.resultado!=null){sumRes+=parseFloat(r.resultado)||0;}
+    if(r.meta!=null||r.resultado!=null)mesesPreenchidos++;
+    const col=corAbs(pct);
+    rows.push(`<tr>
+      <td style="padding:8px 10px;font-weight:500;background:#faf8f2;border-radius:6px 0 0 6px">${MESES[m-1]}</td>
+      <td style="padding:6px;background:#faf8f2"><input type="number" step="0.01" value="${r.meta!=null?r.meta:''}" oninput="setMetaCol(${m},'meta',this.value)" style="width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:14px;text-align:right"></td>
+      <td style="padding:6px;background:#faf8f2"><input type="number" step="0.01" value="${r.resultado!=null?r.resultado:''}" oninput="setMetaCol(${m},'resultado',this.value)" style="width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:14px;text-align:right"></td>
+      <td style="padding:8px 12px;background:${col.bg};color:${col.tx};font-weight:700;text-align:center;border-radius:0 6px 6px 0">${pct!=null?pct+'%':'—'}</td>
+    </tr>`);
+  }
+  const pctAno=absorcao(sumMeta||null,sumRes||null);
+  const colAno=corAbs(pctAno);
+  $('mc-kpis').innerHTML=[
+    ['Meses preenchidos',mesesPreenchidos,''],
+    ['Meta acumulada',sumMeta?sumMeta.toFixed(2):'—',''],
+    ['Resultado acumulado',sumRes?sumRes.toFixed(2):'—',''],
+    ['Absorção anual',pctAno!=null?pctAno+'%':'—',pctAno==null?'':(pctAno>=100?'s-uso':pctAno>=80?'s-manut':'s-desc')]
+  ].map(k=>`<div class="stat ${k[2]}"><b>${k[1]}</b><span>${esc(k[0])}</span></div>`).join('');
+  $('mc-tabela').innerHTML=`<table style="width:100%;border-collapse:separate;border-spacing:0 4px;min-width:520px">
+    <thead><tr>
+      <th style="text-align:left;padding:8px 10px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft)">Mês</th>
+      <th style="text-align:right;padding:8px 10px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft);width:22%">Meta</th>
+      <th style="text-align:right;padding:8px 10px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft);width:22%">Resultado</th>
+      <th style="text-align:center;padding:8px 10px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft);width:18%">Absorção</th>
+    </tr></thead>
+    <tbody>${rows.join('')}</tbody></table>`;
+}
+function setMetaCol(mes,field,val){
+  const parsed=val===''?null:parseFloat(val);
+  metasColMap[mes][field]=(isNaN(parsed)?null:parsed);
+  // Re-render só as células de absorção e KPIs (para não perder foco)
+  let sumMeta=0,sumRes=0,mesesPreenchidos=0;
+  for(let m=1;m<=12;m++){
+    const r=metasColMap[m];
+    if(r.meta!=null){sumMeta+=parseFloat(r.meta)||0;}
+    if(r.resultado!=null){sumRes+=parseFloat(r.resultado)||0;}
+    if(r.meta!=null||r.resultado!=null)mesesPreenchidos++;
+  }
+  const pct=absorcao(metasColMap[mes].meta,metasColMap[mes].resultado);
+  const col=corAbs(pct);
+  const cell=$('mc-tabela').querySelector(`tbody tr:nth-child(${mes}) td:nth-child(4)`);
+  if(cell){cell.style.background=col.bg;cell.style.color=col.tx;cell.textContent=pct!=null?pct+'%':'—';}
+  const pctAno=absorcao(sumMeta||null,sumRes||null);
+  $('mc-kpis').innerHTML=[
+    ['Meses preenchidos',mesesPreenchidos,''],
+    ['Meta acumulada',sumMeta?sumMeta.toFixed(2):'—',''],
+    ['Resultado acumulado',sumRes?sumRes.toFixed(2):'—',''],
+    ['Absorção anual',pctAno!=null?pctAno+'%':'—',pctAno==null?'':(pctAno>=100?'s-uso':pctAno>=80?'s-manut':'s-desc')]
+  ].map(k=>`<div class="stat ${k[2]}"><b>${k[1]}</b><span>${esc(k[0])}</span></div>`).join('');
+}
+async function salvarMetCol(){
+  const colab=$('mc-colab').value,ano=parseInt($('mc-ano').value);
+  if(!colab||!ano){alert('Selecione colaborador e ano.');return;}
+  const regs=[];
+  for(let m=1;m<=12;m++){
+    const r=metasColMap[m];
+    if(r.meta==null&&r.resultado==null&&!r.observacao)continue;
+    regs.push({colaborador:colab,ano,mes:m,meta:r.meta,resultado:r.resultado,observacao:r.observacao||null,atualizado_em:new Date().toISOString()});
+  }
+  if(!regs.length){alert('Nenhum mês foi preenchido.');return;}
+  const{error}=await db.from('metas_colaborador').upsert(regs,{onConflict:'colaborador,ano,mes'});
+  if(error){alert('Erro: '+error.message);return;}
+  toast(`Salvo ✓ (${regs.length} mês${regs.length>1?'es':''})`);
+  await renderPanoramaMc();
+}
+async function renderPanoramaMc(){
+  const ano=parseInt($('mc-ano2').value);if(!ano)return;
+  const{data,error}=await db.from('metas_colaborador').select('*').eq('ano',ano);
+  if(error){$('mc-panorama').innerHTML='';return;}
+  const arr=data||[];
+  if(!arr.length){$('mc-panorama').innerHTML='<div class="empty">Nenhum registro para este ano.</div>';return;}
+  // Group by colab
+  const porColab={};arr.forEach(r=>{if(!porColab[r.colaborador])porColab[r.colaborador]=[];porColab[r.colaborador].push(r);});
+  const nomes=Object.keys(porColab).sort();
+  let html='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:800px">';
+  html+='<thead><tr style="border-bottom:2px solid var(--line);background:#faf8f2"><th style="text-align:left;padding:8px 10px;position:sticky;left:0;background:#faf8f2;z-index:1">Colaborador</th>';
+  for(let m=1;m<=12;m++)html+=`<th style="text-align:center;padding:8px 4px;font-size:11px;color:var(--ink-soft)">${MESES[m-1].slice(0,3)}</th>`;
+  html+='<th style="text-align:center;padding:8px 10px;font-weight:700">Ano</th></tr></thead><tbody>';
+  nomes.forEach(nome=>{
+    let sumM=0,sumR=0;
+    const cells=[];
+    for(let m=1;m<=12;m++){
+      const rec=porColab[nome].find(x=>x.mes===m);
+      const pct=rec?absorcao(rec.meta,rec.resultado):null;
+      if(rec){if(rec.meta!=null)sumM+=parseFloat(rec.meta)||0;if(rec.resultado!=null)sumR+=parseFloat(rec.resultado)||0;}
+      const c=corAbs(pct);
+      cells.push(`<td style="text-align:center;padding:4px;background:${pct!=null?c.bg:'#fff'};color:${c.tx};font-weight:${pct!=null?'600':'400'};border-radius:4px">${pct!=null?pct+'%':'—'}</td>`);
+    }
+    const pctAno=absorcao(sumM||null,sumR||null);
+    const cAno=corAbs(pctAno);
+    html+=`<tr style="border-bottom:1px solid var(--line)"><td style="padding:8px 10px;font-weight:500;position:sticky;left:0;background:#fff;z-index:1">${esc(nome)}</td>${cells.join('')}<td style="text-align:center;padding:8px 10px;background:${cAno.bg};color:${cAno.tx};font-weight:700">${pctAno!=null?pctAno+'%':'—'}</td></tr>`;
+  });
+  html+='</tbody></table></div>';
+  html+=`<p class="hint" style="margin-top:8px;font-size:12px">🟢 verde = ≥100% · 🟡 amarelo = 80–99% · 🔴 vermelho = &lt;80% · — = sem dado</p>`;
+  $('mc-panorama').innerHTML=html;
+}
 
 // ============================================================
 // ===== Performance: Kanban de clientes + Dailies =============
