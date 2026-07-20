@@ -1182,6 +1182,10 @@
       <div id="mc-kpis" class="kpis" style="margin-top:10px"></div>
       <div id="mc-tabela" style="margin-top:10px;overflow-x:auto"></div>
       <div class="actions" style="margin-top:12px"><button class="btn-primary" onclick="salvarMetCol()">Salvar meses preenchidos</button></div>
+      <div style="margin-top:18px;background:#fbf9f2;border:1px solid var(--line);border-radius:10px;padding:14px">
+        <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft);font-weight:700;margin-bottom:8px">📈 Evolução ao longo do ano</div>
+        <div style="position:relative;height:320px"><canvas id="mc-chart"></canvas></div>
+      </div>
     </div>
     <div class="sec-title">Panorama anual</div>
     <p class="hint">Comparativo consolidado por ano de todos os colaboradores.</p>
@@ -3534,7 +3538,7 @@ $('met-data')&&($('met-data').addEventListener('change',carregarMetaData));
 // ===== Metas colaborador (EXCLUSIVO Rafael) =================
 // ============================================================
 $('nav-metcol').onclick=()=>showView('metcol');
-let metasColMap={},metasAno={};
+let metasColMap={},metasAno={},mcChart=null,mcChartTimer=null;
 
 async function openMetCol(){
   const nomes=colaboradoresAreaTecnica();
@@ -3553,6 +3557,7 @@ async function openMetCol(){
 async function loadMetasCol(){
   const colab=$('mc-colab').value,ano=parseInt($('mc-ano').value);
   if(!colab||!ano){$('mc-tabela').innerHTML='';return;}
+  if(mcChart){mcChart.destroy();mcChart=null;}
   const{data,error}=await db.from('metas_colaborador').select('*').eq('colaborador',colab).eq('ano',ano);
   if(error){$('mc-tabela').innerHTML='<div class="empty"><b>Sem acesso ou tabela não existe.</b>Rode o SQL.</div>';return;}
   metasColMap={};(data||[]).forEach(m=>{metasColMap[m.mes]={...m};});
@@ -3593,6 +3598,40 @@ function renderMetCol(){
       <th style="text-align:center;padding:8px 10px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft);width:18%">Absorção</th>
     </tr></thead>
     <tbody>${rows.join('')}</tbody></table>`;
+  renderMetColChart();
+}
+function renderMetColChart(){
+  const ctx=$('mc-chart');if(!ctx||typeof Chart==='undefined')return;
+  const metas=[],resultados=[],absorcoes=[];
+  for(let m=1;m<=12;m++){
+    const r=metasColMap[m];
+    metas.push(r.meta!=null?parseFloat(r.meta):null);
+    resultados.push(r.resultado!=null?parseFloat(r.resultado):null);
+    absorcoes.push(absorcao(r.meta,r.resultado));
+  }
+  const labels=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const cfg={
+    type:'bar',
+    data:{labels,datasets:[
+      {label:'Meta',data:metas,backgroundColor:'rgba(31,111,92,0.35)',borderColor:'#1f6f5c',borderWidth:1,type:'bar',order:2,yAxisID:'y'},
+      {label:'Resultado',data:resultados,backgroundColor:'rgba(201,126,47,0.4)',borderColor:'#c97e2f',borderWidth:1,type:'bar',order:2,yAxisID:'y'},
+      {label:'Absorção (%)',data:absorcoes,borderColor:'#a64141',backgroundColor:'rgba(166,65,65,0.15)',type:'line',yAxisID:'y1',order:1,tension:0.3,pointRadius:5,pointHoverRadius:7,pointBackgroundColor:'#a64141',borderWidth:2,spanGaps:true}
+    ]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{position:'bottom',labels:{padding:14,font:{size:12}}},
+        tooltip:{callbacks:{label:(c)=>{const l=c.dataset.label;if(l.includes('Absorção'))return`${l}: ${c.parsed.y!=null?c.parsed.y+'%':'—'}`;return`${l}: ${c.parsed.y!=null?c.parsed.y:'—'}`;}}}
+      },
+      scales:{
+        y:{beginAtZero:true,title:{display:true,text:'Meta / Resultado',font:{size:11}},grid:{color:'rgba(0,0,0,.05)'}},
+        y1:{type:'linear',position:'right',beginAtZero:true,grid:{drawOnChartArea:false},title:{display:true,text:'Absorção (%)',font:{size:11}},suggestedMax:120,ticks:{callback:v=>v+'%'}}
+      }
+    }
+  };
+  if(mcChart){mcChart.data.datasets[0].data=metas;mcChart.data.datasets[1].data=resultados;mcChart.data.datasets[2].data=absorcoes;mcChart.update('none');}
+  else{mcChart=new Chart(ctx.getContext('2d'),cfg);}
 }
 function setMetaCol(mes,field,val){
   const parsed=val===''?null:parseFloat(val);
@@ -3616,6 +3655,7 @@ function setMetaCol(mes,field,val){
     ['Resultado acumulado',sumRes?sumRes.toFixed(2):'—',''],
     ['Absorção anual',pctAno!=null?pctAno+'%':'—',pctAno==null?'':(pctAno>=100?'s-uso':pctAno>=80?'s-manut':'s-desc')]
   ].map(k=>`<div class="stat ${k[2]}"><b>${k[1]}</b><span>${esc(k[0])}</span></div>`).join('');
+  clearTimeout(mcChartTimer);mcChartTimer=setTimeout(renderMetColChart,250);
 }
 async function salvarMetCol(){
   const colab=$('mc-colab').value,ano=parseInt($('mc-ano').value);
