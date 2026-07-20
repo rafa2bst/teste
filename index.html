@@ -1271,6 +1271,17 @@
       <div id="pt-kpis" class="kpis" style="margin-top:12px"></div>
       <div id="pt-tabela" style="margin-top:14px;overflow-x:auto"></div>
       <div class="actions" style="margin-top:12px"><button class="btn-primary" onclick="salvarPlantel()">Salvar planejamento</button></div>
+      <div style="margin-top:20px;border-top:1px dashed #d9b3b3;padding-top:14px">
+        <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#a64141;font-weight:700;margin-bottom:6px">⚠ Zona de perigo</div>
+        <p class="hint" style="font-size:12px;margin-bottom:10px">Limpa dados do <b>ano selecionado</b>. Use quando quiser refazer.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn-del" onclick="zerarColunaPlantel('demanda_atendida')">🗑 Zerar Demanda Atendida</button>
+          <button class="btn-del" onclick="zerarColunaPlantel('demanda_recebida')">🗑 Zerar Demanda Recebida</button>
+          <button class="btn-del" onclick="zerarColunaPlantel('demanda_projetada')">🗑 Zerar Demanda Projetada</button>
+          <button class="btn-del" onclick="zerarColunaPlantel('tme_setor')">🗑 Zerar TME</button>
+          <button class="btn-del" onclick="zerarTudoPlantel()" style="border-color:#801c1c;background:#f5dcdc">🗑 Zerar TUDO do ano</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -4213,6 +4224,26 @@ async function salvarPlantel(){
   const{error}=await db.from('metas_setor').upsert(regs,{onConflict:'ano,mes'});
   if(error){alert('Erro: '+error.message);return;}
   toast(`✓ Salvo (${regs.length} mês${regs.length>1?'es':''})`);
+}
+async function zerarColunaPlantel(col){
+  const ano=parseInt($('pt-ano').value);if(!ano){alert('Selecione o ano.');return;}
+  const labels={demanda_projetada:'Demanda Projetada',demanda_recebida:'Demanda Recebida',demanda_atendida:'Demanda Atendida',tme_setor:'TME'};
+  if(!confirm(`Zerar "${labels[col]}" de todo o ano ${ano}?`))return;
+  const upd={[col]:null,atualizado_em:new Date().toISOString()};
+  const{error}=await db.from('metas_setor').update(upd).eq('ano',ano);
+  if(error){alert('Erro: '+error.message);return;}
+  toast(`✓ "${labels[col]}" zerada`);
+  await loadPlantel();
+}
+async function zerarTudoPlantel(){
+  const ano=parseInt($('pt-ano').value);if(!ano){alert('Selecione o ano.');return;}
+  if(!confirm(`⚠ ATENÇÃO: vai apagar TODO o planejamento do ano ${ano} (Projetada, Recebida, Atendida e TME de todos os 12 meses).\n\nConfirma?`))return;
+  const typed=prompt('Digite APAGAR pra confirmar:');
+  if(typed!=='APAGAR'){alert('Cancelado.');return;}
+  const{error}=await db.from('metas_setor').delete().eq('ano',ano);
+  if(error){alert('Erro: '+error.message);return;}
+  toast(`✓ Planejamento de ${ano} apagado`);
+  await loadPlantel();
 }
 
 // ============================================================
