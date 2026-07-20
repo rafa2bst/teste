@@ -1172,19 +1172,29 @@
   <div id="view-metcol" style="display:none">
     <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
       <h2>Metas de produtividade por colaborador</h2>
-      <p class="hint">Meta mensal, resultado alcançado e absorção (%) de cada colaborador da Área Técnica. Acesso exclusivo.</p>
+      <p class="hint">Meta e resultado mensal, TMA, qtd. atendimentos, absorção, votação, satisfação. Acesso exclusivo.</p>
     </div>
     <div class="form-card">
       <div class="row2">
         <div><label>Colaborador</label><select id="mc-colab" onchange="loadMetasCol()"></select></div>
-        <div><label>Ano</label><select id="mc-ano" onchange="loadMetasCol()"></select></div>
+        <div><label>Ano</label><select id="mc-ano" onchange="onMcAnoChange()"></select></div>
       </div>
-      <div id="mc-kpis" class="kpis" style="margin-top:10px"></div>
+
+      <!-- Painel do Setor (Demanda Recebida/Atendida por mes) -->
+      <div style="margin-top:18px;background:#f0eadc;border:1px solid #d4c69d;border-radius:10px;padding:12px 14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+          <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#7a5a1f;font-weight:700">🏢 Setor — Demanda mensal</div>
+          <button class="btn-primary" onclick="salvarSetor()" style="padding:6px 14px;font-size:13px">Salvar setor</button>
+        </div>
+        <div id="ms-tabela" style="overflow-x:auto"></div>
+      </div>
+
+      <div id="mc-kpis" class="kpis" style="margin-top:14px"></div>
       <div id="mc-tabela" style="margin-top:10px;overflow-x:auto"></div>
-      <div class="actions" style="margin-top:12px"><button class="btn-primary" onclick="salvarMetCol()">Salvar meses preenchidos</button></div>
+      <div class="actions" style="margin-top:12px"><button class="btn-primary" onclick="salvarMetCol()">Salvar meses do colaborador</button></div>
       <div style="margin-top:18px;background:#fbf9f2;border:1px solid var(--line);border-radius:10px;padding:14px">
         <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft);font-weight:700;margin-bottom:8px">📈 Evolução ao longo do ano</div>
-        <div style="position:relative;height:320px"><canvas id="mc-chart"></canvas></div>
+        <div style="position:relative;height:340px"><canvas id="mc-chart"></canvas></div>
       </div>
     </div>
     <div class="sec-title">Panorama anual</div>
@@ -3538,7 +3548,7 @@ $('met-data')&&($('met-data').addEventListener('change',carregarMetaData));
 // ===== Metas colaborador (EXCLUSIVO Rafael) =================
 // ============================================================
 $('nav-metcol').onclick=()=>showView('metcol');
-let metasColMap={},metasAno={},mcChart=null,mcChartTimer=null;
+let metasColMap={},metasAno={},mcChart=null,mcChartTimer=null,metasSetorMap={};
 
 async function openMetCol(){
   const nomes=colaboradoresAreaTecnica();
@@ -3551,8 +3561,67 @@ async function openMetCol(){
   selA.innerHTML=anos.map(a=>`<option ${a==curA?'selected':''}>${a}</option>`).join('');
   const selA2=$('mc-ano2'),curA2=selA2.value||anoAtual;
   selA2.innerHTML=anos.map(a=>`<option ${a==curA2?'selected':''}>${a}</option>`).join('');
+  await loadMetasSetor();
   await loadMetasCol();
   await renderPanoramaMc();
+}
+async function onMcAnoChange(){await loadMetasSetor();await loadMetasCol();}
+async function loadMetasSetor(){
+  const ano=parseInt($('mc-ano').value);if(!ano)return;
+  const{data,error}=await db.from('metas_setor').select('*').eq('ano',ano);
+  if(error){$('ms-tabela').innerHTML='<div style="padding:8px;font-size:12px;color:var(--ink-soft)"><b>Tabela do setor ainda não existe.</b> Rode o SQL.</div>';return;}
+  metasSetorMap={};(data||[]).forEach(m=>{metasSetorMap[m.mes]={...m};});
+  for(let m=1;m<=12;m++)if(!metasSetorMap[m])metasSetorMap[m]={ano,mes:m,demanda_recebida:null,demanda_atendida:null};
+  renderSetorTabela();
+}
+function renderSetorTabela(){
+  const rows=[];let sumR=0,sumA=0;
+  for(let m=1;m<=12;m++){
+    const r=metasSetorMap[m];
+    if(r.demanda_recebida!=null)sumR+=parseFloat(r.demanda_recebida)||0;
+    if(r.demanda_atendida!=null)sumA+=parseFloat(r.demanda_atendida)||0;
+    const cob=(r.demanda_recebida&&r.demanda_atendida)?Math.round((r.demanda_atendida/r.demanda_recebida)*100):null;
+    const col=cob==null?{bg:'#fff',tx:'#9c9583'}:(cob>=95?{bg:'#dfebe0',tx:'#1e5426'}:cob>=80?{bg:'#fdf3d9',tx:'#7a5a1f'}:{bg:'#f5dcdc',tx:'#801c1c'});
+    rows.push(`<tr>
+      <td style="padding:6px 8px;font-weight:500;font-size:13px">${MESES[m-1].slice(0,3)}</td>
+      <td style="padding:4px"><input type="number" step="1" value="${r.demanda_recebida!=null?r.demanda_recebida:''}" oninput="setSetor(${m},'demanda_recebida',this.value)" style="width:100%;padding:5px 7px;border:1px solid var(--line);border-radius:5px;font-size:13px;text-align:right"></td>
+      <td style="padding:4px"><input type="number" step="1" value="${r.demanda_atendida!=null?r.demanda_atendida:''}" oninput="setSetor(${m},'demanda_atendida',this.value)" style="width:100%;padding:5px 7px;border:1px solid var(--line);border-radius:5px;font-size:13px;text-align:right"></td>
+      <td style="padding:6px 8px;background:${col.bg};color:${col.tx};font-weight:700;text-align:center;font-size:12px;border-radius:4px">${cob!=null?cob+'%':'—'}</td>
+    </tr>`);
+  }
+  const totalCob=(sumR&&sumA)?Math.round((sumA/sumR)*100):null;
+  const tCol=totalCob==null?{bg:'#fff',tx:'#9c9583'}:(totalCob>=95?{bg:'#dfebe0',tx:'#1e5426'}:totalCob>=80?{bg:'#fdf3d9',tx:'#7a5a1f'}:{bg:'#f5dcdc',tx:'#801c1c'});
+  $('ms-tabela').innerHTML=`<table style="width:100%;border-collapse:separate;border-spacing:0 2px;min-width:420px">
+    <thead><tr>
+      <th style="text-align:left;padding:4px 8px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#7a5a1f;width:12%">Mês</th>
+      <th style="text-align:right;padding:4px 8px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#7a5a1f">Demanda Recebida</th>
+      <th style="text-align:right;padding:4px 8px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#7a5a1f">Demanda Atendida</th>
+      <th style="text-align:center;padding:4px 8px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#7a5a1f;width:14%">Cobertura</th>
+    </tr></thead>
+    <tbody>${rows.join('')}
+    <tr style="font-weight:700;border-top:2px solid #d4c69d"><td style="padding:6px 8px;font-size:13px">TOTAL</td>
+      <td style="padding:6px 8px;text-align:right;font-size:13px">${sumR||'—'}</td>
+      <td style="padding:6px 8px;text-align:right;font-size:13px">${sumA||'—'}</td>
+      <td style="padding:6px 8px;text-align:center;background:${tCol.bg};color:${tCol.tx};font-size:13px;border-radius:4px">${totalCob!=null?totalCob+'%':'—'}</td>
+    </tr></tbody></table>`;
+}
+function setSetor(mes,field,val){
+  const p=val===''?null:parseFloat(val);
+  metasSetorMap[mes][field]=isNaN(p)?null:p;
+  renderSetorTabela();
+}
+async function salvarSetor(){
+  const ano=parseInt($('mc-ano').value);if(!ano){alert('Selecione o ano.');return;}
+  const regs=[];
+  for(let m=1;m<=12;m++){
+    const r=metasSetorMap[m];
+    if(r.demanda_recebida==null&&r.demanda_atendida==null)continue;
+    regs.push({ano,mes:m,demanda_recebida:r.demanda_recebida,demanda_atendida:r.demanda_atendida,atualizado_em:new Date().toISOString()});
+  }
+  if(!regs.length){alert('Nenhum mês do setor foi preenchido.');return;}
+  const{error}=await db.from('metas_setor').upsert(regs,{onConflict:'ano,mes'});
+  if(error){alert('Erro: '+error.message);return;}
+  toast(`Setor salvo ✓ (${regs.length} mês${regs.length>1?'es':''})`);
 }
 async function loadMetasCol(){
   const colab=$('mc-colab').value,ano=parseInt($('mc-ano').value);
@@ -3561,110 +3630,82 @@ async function loadMetasCol(){
   const{data,error}=await db.from('metas_colaborador').select('*').eq('colaborador',colab).eq('ano',ano);
   if(error){$('mc-tabela').innerHTML='<div class="empty"><b>Sem acesso ou tabela não existe.</b>Rode o SQL.</div>';return;}
   metasColMap={};(data||[]).forEach(m=>{metasColMap[m.mes]={...m};});
-  for(let m=1;m<=12;m++)if(!metasColMap[m])metasColMap[m]={colaborador:colab,ano,mes:m,meta:null,resultado:null,observacao:null};
+  for(let m=1;m<=12;m++)if(!metasColMap[m])metasColMap[m]={colaborador:colab,ano,mes:m,tma:null,qtd_atendimento:null,atendidas_sem_filtro:null,dias_ferias:null,dias_ausencia:null,dias_trabalhados:null,meta_dia_sem_ajuste:null,meta:null,resultado:null,pct_absorcao:null,pct_votacao:null,pct_satisfacao:null,observacao:null};
   renderMetCol();
 }
 function absorcao(meta,res){if(meta==null||res==null||meta===0)return null;return Math.round((res/meta)*100);}
 function corAbs(pct){if(pct==null)return {bg:'#f4f1ea',tx:'#9c9583'};if(pct>=100)return{bg:'#dfebe0',tx:'#1e5426'};if(pct>=80)return{bg:'#fdf3d9',tx:'#7a5a1f'};return{bg:'#f5dcdc',tx:'#801c1c'};}
+function nCell(m,field,step){
+  const r=metasColMap[m],v=r[field];
+  return`<td style="padding:3px 4px"><input type="number" step="${step||'0.01'}" value="${v!=null?v:''}" oninput="setColNum(${m},'${field}',this.value)" style="width:100%;padding:5px 6px;border:1px solid var(--line);border-radius:5px;font-size:12px;text-align:right"></td>`;
+}
+function tCell(m,field,ph){
+  const r=metasColMap[m],v=r[field]||'';
+  return`<td style="padding:3px 4px"><input type="text" value="${esc(v)}" oninput="setColTxt(${m},'${field}',this.value)" placeholder="${ph||''}" style="width:100%;padding:5px 6px;border:1px solid var(--line);border-radius:5px;font-size:12px;text-align:center"></td>`;
+}
 function renderMetCol(){
-  const rows=[];let sumMeta=0,sumRes=0,mesesPreenchidos=0;
+  const rows=[];let sumMeta=0,sumRes=0,mesesPreenchidos=0,sumQtd=0;
   for(let m=1;m<=12;m++){
     const r=metasColMap[m];
-    const pct=absorcao(r.meta,r.resultado);
-    if(r.meta!=null){sumMeta+=parseFloat(r.meta)||0;}
-    if(r.resultado!=null){sumRes+=parseFloat(r.resultado)||0;}
-    if(r.meta!=null||r.resultado!=null)mesesPreenchidos++;
+    const pctStored=r.pct_absorcao;
+    const pctCalc=absorcao(r.meta,r.resultado);
+    const pct=pctStored!=null?Math.round(parseFloat(pctStored)*100):pctCalc;
+    if(r.meta!=null)sumMeta+=parseFloat(r.meta)||0;
+    if(r.resultado!=null)sumRes+=parseFloat(r.resultado)||0;
+    if(r.qtd_atendimento!=null)sumQtd+=parseFloat(r.qtd_atendimento)||0;
+    const preenchido=r.tma||r.qtd_atendimento!=null||r.meta!=null||r.resultado!=null||r.pct_absorcao!=null;
+    if(preenchido)mesesPreenchidos++;
     const col=corAbs(pct);
     rows.push(`<tr>
-      <td style="padding:8px 10px;font-weight:500;background:#faf8f2;border-radius:6px 0 0 6px">${MESES[m-1]}</td>
-      <td style="padding:6px;background:#faf8f2"><input type="number" step="0.01" value="${r.meta!=null?r.meta:''}" oninput="setMetaCol(${m},'meta',this.value)" style="width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:14px;text-align:right"></td>
-      <td style="padding:6px;background:#faf8f2"><input type="number" step="0.01" value="${r.resultado!=null?r.resultado:''}" oninput="setMetaCol(${m},'resultado',this.value)" style="width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:14px;text-align:right"></td>
-      <td style="padding:8px 12px;background:${col.bg};color:${col.tx};font-weight:700;text-align:center;border-radius:0 6px 6px 0">${pct!=null?pct+'%':'—'}</td>
+      <td style="padding:6px 8px;font-weight:500;font-size:12px;background:#faf8f2;border-radius:4px 0 0 4px;white-space:nowrap">${MESES[m-1].slice(0,3)}</td>
+      ${tCell(m,'tma','HH:MM:SS')}
+      ${nCell(m,'qtd_atendimento','1')}
+      ${nCell(m,'atendidas_sem_filtro','1')}
+      ${nCell(m,'dias_ferias','0.1')}
+      ${nCell(m,'dias_ausencia','0.1')}
+      ${nCell(m,'dias_trabalhados','0.1')}
+      ${nCell(m,'meta_dia_sem_ajuste','0.1')}
+      ${nCell(m,'meta','0.1')}
+      ${nCell(m,'resultado','0.1')}
+      ${nCell(m,'pct_absorcao','0.001')}
+      ${nCell(m,'pct_votacao','0.001')}
+      ${nCell(m,'pct_satisfacao','0.001')}
+      <td style="padding:6px 8px;background:${col.bg};color:${col.tx};font-weight:700;text-align:center;font-size:12px;border-radius:0 4px 4px 0;white-space:nowrap">${pct!=null?pct+'%':'—'}</td>
     </tr>`);
   }
   const pctAno=absorcao(sumMeta||null,sumRes||null);
-  const colAno=corAbs(pctAno);
   $('mc-kpis').innerHTML=[
-    ['Meses preenchidos',mesesPreenchidos,''],
-    ['Meta acumulada',sumMeta?sumMeta.toFixed(2):'—',''],
-    ['Resultado acumulado',sumRes?sumRes.toFixed(2):'—',''],
+    ['Meses preench.',mesesPreenchidos,''],
+    ['Qtd atend. ano',sumQtd?sumQtd:'—',''],
+    ['Meta Dia acum.',sumMeta?sumMeta.toFixed(1):'—',''],
+    ['Média Dia acum.',sumRes?sumRes.toFixed(1):'—',''],
     ['Absorção anual',pctAno!=null?pctAno+'%':'—',pctAno==null?'':(pctAno>=100?'s-uso':pctAno>=80?'s-manut':'s-desc')]
   ].map(k=>`<div class="stat ${k[2]}"><b>${k[1]}</b><span>${esc(k[0])}</span></div>`).join('');
-  $('mc-tabela').innerHTML=`<table style="width:100%;border-collapse:separate;border-spacing:0 4px;min-width:520px">
-    <thead><tr>
-      <th style="text-align:left;padding:8px 10px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft)">Mês</th>
-      <th style="text-align:right;padding:8px 10px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft);width:22%">Meta</th>
-      <th style="text-align:right;padding:8px 10px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft);width:22%">Resultado</th>
-      <th style="text-align:center;padding:8px 10px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft);width:18%">Absorção</th>
+  const th=(t)=>`<th style="text-align:center;padding:6px 4px;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);white-space:nowrap">${t}</th>`;
+  $('mc-tabela').innerHTML=`<table style="width:100%;border-collapse:separate;border-spacing:0 3px;min-width:1180px;font-size:12px">
+    <thead><tr style="background:#faf8f2">
+      <th style="text-align:left;padding:6px 8px;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);width:5%">Mês</th>
+      ${th('TMA')}${th('Qtd atend.')}${th('S/ filtro')}${th('Férias')}${th('Ausênc.')}${th('Dias Tr.')}${th('Meta S/Aj')}${th('Meta Dia')}${th('Média Dia')}${th('% Abs.')}${th('% Vot.')}${th('Satisf.')}${th('Absorção')}
     </tr></thead>
-    <tbody>${rows.join('')}</tbody></table>`;
-  renderMetColChart();
-}
-function renderMetColChart(){
-  const ctx=$('mc-chart');if(!ctx||typeof Chart==='undefined')return;
-  const metas=[],resultados=[],absorcoes=[];
-  for(let m=1;m<=12;m++){
-    const r=metasColMap[m];
-    metas.push(r.meta!=null?parseFloat(r.meta):null);
-    resultados.push(r.resultado!=null?parseFloat(r.resultado):null);
-    absorcoes.push(absorcao(r.meta,r.resultado));
-  }
-  const labels=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-  const cfg={
-    type:'bar',
-    data:{labels,datasets:[
-      {label:'Meta',data:metas,backgroundColor:'rgba(31,111,92,0.35)',borderColor:'#1f6f5c',borderWidth:1,type:'bar',order:2,yAxisID:'y'},
-      {label:'Resultado',data:resultados,backgroundColor:'rgba(201,126,47,0.4)',borderColor:'#c97e2f',borderWidth:1,type:'bar',order:2,yAxisID:'y'},
-      {label:'Absorção (%)',data:absorcoes,borderColor:'#a64141',backgroundColor:'rgba(166,65,65,0.15)',type:'line',yAxisID:'y1',order:1,tension:0.3,pointRadius:5,pointHoverRadius:7,pointBackgroundColor:'#a64141',borderWidth:2,spanGaps:true}
-    ]},
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      interaction:{mode:'index',intersect:false},
-      plugins:{
-        legend:{position:'bottom',labels:{padding:14,font:{size:12}}},
-        tooltip:{callbacks:{label:(c)=>{const l=c.dataset.label;if(l.includes('Absorção'))return`${l}: ${c.parsed.y!=null?c.parsed.y+'%':'—'}`;return`${l}: ${c.parsed.y!=null?c.parsed.y:'—'}`;}}}
-      },
-      scales:{
-        y:{beginAtZero:true,title:{display:true,text:'Meta / Resultado',font:{size:11}},grid:{color:'rgba(0,0,0,.05)'}},
-        y1:{type:'linear',position:'right',beginAtZero:true,grid:{drawOnChartArea:false},title:{display:true,text:'Absorção (%)',font:{size:11}},suggestedMax:120,ticks:{callback:v=>v+'%'}}
-      }
-    }
-  };
-  if(mcChart){mcChart.data.datasets[0].data=metas;mcChart.data.datasets[1].data=resultados;mcChart.data.datasets[2].data=absorcoes;mcChart.update('none');}
-  else{mcChart=new Chart(ctx.getContext('2d'),cfg);}
-}
-function setMetaCol(mes,field,val){
-  const parsed=val===''?null:parseFloat(val);
-  metasColMap[mes][field]=(isNaN(parsed)?null:parsed);
-  // Re-render só as células de absorção e KPIs (para não perder foco)
-  let sumMeta=0,sumRes=0,mesesPreenchidos=0;
-  for(let m=1;m<=12;m++){
-    const r=metasColMap[m];
-    if(r.meta!=null){sumMeta+=parseFloat(r.meta)||0;}
-    if(r.resultado!=null){sumRes+=parseFloat(r.resultado)||0;}
-    if(r.meta!=null||r.resultado!=null)mesesPreenchidos++;
-  }
-  const pct=absorcao(metasColMap[mes].meta,metasColMap[mes].resultado);
-  const col=corAbs(pct);
-  const cell=$('mc-tabela').querySelector(`tbody tr:nth-child(${mes}) td:nth-child(4)`);
-  if(cell){cell.style.background=col.bg;cell.style.color=col.tx;cell.textContent=pct!=null?pct+'%':'—';}
-  const pctAno=absorcao(sumMeta||null,sumRes||null);
-  $('mc-kpis').innerHTML=[
-    ['Meses preenchidos',mesesPreenchidos,''],
-    ['Meta acumulada',sumMeta?sumMeta.toFixed(2):'—',''],
-    ['Resultado acumulado',sumRes?sumRes.toFixed(2):'—',''],
-    ['Absorção anual',pctAno!=null?pctAno+'%':'—',pctAno==null?'':(pctAno>=100?'s-uso':pctAno>=80?'s-manut':'s-desc')]
-  ].map(k=>`<div class="stat ${k[2]}"><b>${k[1]}</b><span>${esc(k[0])}</span></div>`).join('');
+    <tbody>${rows.join('')}</tbody></table>
+    <p class="hint" style="font-size:11px;margin-top:6px">💡 <b>% Absorção / Votação / Satisfação</b>: informe como decimal (ex.: 1.097 = 109.7%; 0.992 = 99.2%). A coluna final <b>Absorção</b> mostra o percentual final calculado, ou de <b>Média Dia ÷ Meta Dia</b> se a absorção não foi preenchida.</p>`;
   clearTimeout(mcChartTimer);mcChartTimer=setTimeout(renderMetColChart,250);
 }
+function setColNum(mes,field,val){
+  const p=val===''?null:parseFloat(val);
+  metasColMap[mes][field]=isNaN(p)?null:p;
+  clearTimeout(mcChartTimer);mcChartTimer=setTimeout(()=>{renderMetCol();},300);
+}
+function setColTxt(mes,field,val){metasColMap[mes][field]=val||null;}
 async function salvarMetCol(){
   const colab=$('mc-colab').value,ano=parseInt($('mc-ano').value);
   if(!colab||!ano){alert('Selecione colaborador e ano.');return;}
   const regs=[];
   for(let m=1;m<=12;m++){
     const r=metasColMap[m];
-    if(r.meta==null&&r.resultado==null&&!r.observacao)continue;
-    regs.push({colaborador:colab,ano,mes:m,meta:r.meta,resultado:r.resultado,observacao:r.observacao||null,atualizado_em:new Date().toISOString()});
+    const preenchido=r.tma||r.qtd_atendimento!=null||r.atendidas_sem_filtro!=null||r.dias_ferias!=null||r.dias_ausencia!=null||r.dias_trabalhados!=null||r.meta_dia_sem_ajuste!=null||r.meta!=null||r.resultado!=null||r.pct_absorcao!=null||r.pct_votacao!=null||r.pct_satisfacao!=null||r.observacao;
+    if(!preenchido)continue;
+    regs.push({colaborador:colab,ano,mes:m,tma:r.tma||null,qtd_atendimento:r.qtd_atendimento,atendidas_sem_filtro:r.atendidas_sem_filtro,dias_ferias:r.dias_ferias,dias_ausencia:r.dias_ausencia,dias_trabalhados:r.dias_trabalhados,meta_dia_sem_ajuste:r.meta_dia_sem_ajuste,meta:r.meta,resultado:r.resultado,pct_absorcao:r.pct_absorcao,pct_votacao:r.pct_votacao,pct_satisfacao:r.pct_satisfacao,observacao:r.observacao||null,atualizado_em:new Date().toISOString()});
   }
   if(!regs.length){alert('Nenhum mês foi preenchido.');return;}
   const{error}=await db.from('metas_colaborador').upsert(regs,{onConflict:'colaborador,ano,mes'});
@@ -3672,13 +3713,61 @@ async function salvarMetCol(){
   toast(`Salvo ✓ (${regs.length} mês${regs.length>1?'es':''})`);
   await renderPanoramaMc();
 }
+function renderMetColChart(){
+  const ctx=$('mc-chart');if(!ctx||typeof Chart==='undefined')return;
+  const qtdAtend=[],mediaDia=[],metaDia=[],absorcoes=[],satisfacoes=[];
+  for(let m=1;m<=12;m++){
+    const r=metasColMap[m];
+    qtdAtend.push(r.qtd_atendimento!=null?parseFloat(r.qtd_atendimento):null);
+    metaDia.push(r.meta!=null?parseFloat(r.meta):null);
+    mediaDia.push(r.resultado!=null?parseFloat(r.resultado):null);
+    const pctStored=r.pct_absorcao;
+    const pctCalc=absorcao(r.meta,r.resultado);
+    const pct=pctStored!=null?Math.round(parseFloat(pctStored)*100):pctCalc;
+    absorcoes.push(pct);
+    satisfacoes.push(r.pct_satisfacao!=null?Math.round(parseFloat(r.pct_satisfacao)*100):null);
+  }
+  const labels=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const cfg={
+    type:'bar',
+    data:{labels,datasets:[
+      {label:'Qtd atend.',data:qtdAtend,backgroundColor:'rgba(59,130,246,0.35)',borderColor:'#3b82f6',borderWidth:1,type:'bar',order:3,yAxisID:'y'},
+      {label:'Meta Dia',data:metaDia,backgroundColor:'rgba(31,111,92,0.25)',borderColor:'#1f6f5c',borderWidth:1,type:'bar',order:3,yAxisID:'y2'},
+      {label:'Média Dia',data:mediaDia,backgroundColor:'rgba(201,126,47,0.35)',borderColor:'#c97e2f',borderWidth:1,type:'bar',order:3,yAxisID:'y2'},
+      {label:'% Absorção',data:absorcoes,borderColor:'#a64141',backgroundColor:'rgba(166,65,65,0.1)',type:'line',yAxisID:'y1',order:1,tension:0.3,pointRadius:5,pointBackgroundColor:'#a64141',borderWidth:2,spanGaps:true},
+      {label:'% Satisfação',data:satisfacoes,borderColor:'#3f8f4a',backgroundColor:'rgba(63,143,74,0.1)',type:'line',yAxisID:'y1',order:1,tension:0.3,pointRadius:5,pointBackgroundColor:'#3f8f4a',borderWidth:2,spanGaps:true}
+    ]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{position:'bottom',labels:{padding:12,font:{size:11},boxWidth:12}},
+        tooltip:{callbacks:{label:(c)=>{const l=c.dataset.label;if(l.includes('%'))return`${l}: ${c.parsed.y!=null?c.parsed.y+'%':'—'}`;return`${l}: ${c.parsed.y!=null?c.parsed.y:'—'}`;}}}
+      },
+      scales:{
+        y:{beginAtZero:true,position:'left',title:{display:true,text:'Qtd atend. (mês)',font:{size:10}},grid:{color:'rgba(0,0,0,.05)'}},
+        y2:{type:'linear',position:'left',beginAtZero:true,display:false},
+        y1:{type:'linear',position:'right',beginAtZero:true,grid:{drawOnChartArea:false},title:{display:true,text:'%',font:{size:10}},suggestedMax:120,ticks:{callback:v=>v+'%'}}
+      }
+    }
+  };
+  if(mcChart){
+    mcChart.data.datasets[0].data=qtdAtend;
+    mcChart.data.datasets[1].data=metaDia;
+    mcChart.data.datasets[2].data=mediaDia;
+    mcChart.data.datasets[3].data=absorcoes;
+    mcChart.data.datasets[4].data=satisfacoes;
+    mcChart.update('none');
+  }else{
+    mcChart=new Chart(ctx.getContext('2d'),cfg);
+  }
+}
 async function renderPanoramaMc(){
   const ano=parseInt($('mc-ano2').value);if(!ano)return;
   const{data,error}=await db.from('metas_colaborador').select('*').eq('ano',ano);
   if(error){$('mc-panorama').innerHTML='';return;}
   const arr=data||[];
   if(!arr.length){$('mc-panorama').innerHTML='<div class="empty">Nenhum registro para este ano.</div>';return;}
-  // Group by colab
   const porColab={};arr.forEach(r=>{if(!porColab[r.colaborador])porColab[r.colaborador]=[];porColab[r.colaborador].push(r);});
   const nomes=Object.keys(porColab).sort();
   let html='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:800px">';
@@ -3690,7 +3779,9 @@ async function renderPanoramaMc(){
     const cells=[];
     for(let m=1;m<=12;m++){
       const rec=porColab[nome].find(x=>x.mes===m);
-      const pct=rec?absorcao(rec.meta,rec.resultado):null;
+      const pctStored=rec?rec.pct_absorcao:null;
+      const pctCalc=rec?absorcao(rec.meta,rec.resultado):null;
+      const pct=pctStored!=null?Math.round(parseFloat(pctStored)*100):pctCalc;
       if(rec){if(rec.meta!=null)sumM+=parseFloat(rec.meta)||0;if(rec.resultado!=null)sumR+=parseFloat(rec.resultado)||0;}
       const c=corAbs(pct);
       cells.push(`<td style="text-align:center;padding:4px;background:${pct!=null?c.bg:'#fff'};color:${c.tx};font-weight:${pct!=null?'600':'400'};border-radius:4px">${pct!=null?pct+'%':'—'}</td>`);
