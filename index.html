@@ -237,6 +237,7 @@
         <button id="nav-aloc">Equipe hoje</button>
         <button id="nav-met">Metas do dia</button>
         <button id="nav-metcol">Metas colaborador</button>
+        <button id="nav-compano">Comparativo anual</button>
       </div>
     </div>
 
@@ -1207,13 +1208,38 @@
         <div style="position:relative;height:340px"><canvas id="mc-chart"></canvas></div>
       </div>
     </div>
-    <div class="sec-title">Panorama anual</div>
-    <p class="hint">Comparativo consolidado por ano de todos os colaboradores.</p>
-    <div class="row2">
-      <div><label>Ano</label><select id="mc-ano2" onchange="renderPanoramaMc()"></select></div>
-      <div></div>
+  </div>
+
+  <!-- VIEW: COMPARATIVO ANUAL (SOMENTE RAFAEL) -->
+  <div id="view-compano" style="display:none">
+    <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
+      <h2>Comparativo anual de colaboradores</h2>
+      <p class="hint">Escolha uma métrica e um ano pra ver a evolução comparada de todos os colaboradores.</p>
     </div>
-    <div id="mc-panorama" style="margin-top:8px"></div>
+    <div class="form-card">
+      <div class="row2">
+        <div><label>Métrica</label><select id="ca-metrica" onchange="renderCompAno()">
+          <option value="pct_absorcao">% Absorção</option>
+          <option value="pct_satisfacao">% Satisfação</option>
+          <option value="pct_votacao">% Votação</option>
+          <option value="qtd_atendimento">Qtd. Atendimento</option>
+          <option value="atendidas_sem_filtro">Atendidas sem filtro</option>
+          <option value="tma">TMA (tempo médio)</option>
+          <option value="meta">Meta Dia</option>
+          <option value="resultado">Média Dia</option>
+          <option value="meta_dia_sem_ajuste">Meta Dia S/ Ajuste</option>
+          <option value="dias_trabalhados">Dias trabalhados</option>
+          <option value="dias_ferias">Dias de férias</option>
+          <option value="dias_ausencia">Dias de ausência</option>
+        </select></div>
+        <div><label>Ano</label><select id="ca-ano" onchange="onCompAnoAnoChange()"></select></div>
+      </div>
+      <div id="ca-tabela" style="margin-top:14px;overflow-x:auto"></div>
+      <div id="ca-chart-wrap" style="margin-top:18px;background:#fbf9f2;border:1px solid var(--line);border-radius:10px;padding:14px;display:none">
+        <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft);font-weight:700;margin-bottom:8px">📈 Evolução mensal</div>
+        <div style="position:relative;height:360px"><canvas id="ca-chart"></canvas></div>
+      </div>
+    </div>
   </div>
 
   <!-- VIEW: KANBAN PERFORMANCE -->
@@ -1515,8 +1541,9 @@ async function showApp(user){
   setupPresence();
   $('nav').style.display='flex';
   ['nav-cad','nav-rel','nav-eq','nav-us','nav-aloc','nav-met','nav-perf','nav-dperf','nav-fer','nav-fol','nav-ho','nav-ate','nav-aniv','nav-ocor','nav-prob','nav-trein','nav-anom','nav-fat','nav-dash','nav-soladm','nav-feradm','nav-atadm','nav-ocadm','nav-mtadm','nav-tar','nav-rot','nav-onb'].forEach(id=>$(id).style.display=isAdminUser?'':'none');
-  // Metas colaborador: EXCLUSIVO do Rafael (nao aparece nem para outros admins)
+  // Metas colaborador + Comparativo anual: EXCLUSIVO do Rafael (nao aparece nem para outros admins)
   $('nav-metcol').style.display=(currentEmail==='rafael.andrade.sa@gmail.com')?'':'none';
+  $('nav-compano').style.display=(currentEmail==='rafael.andrade.sa@gmail.com')?'':'none';
   $('nav-solf').style.display=isAdminUser?'none':'';
   $('nav-solfer').style.display=isAdminUser?'none':'';
   $('nav-solat').style.display=isAdminUser?'none':'';
@@ -1672,7 +1699,7 @@ async function registrarManutencao(patr){
 
 // ===== Views =====
 function showView(v){
-  const adminViews=['cadastro','relatorios','eq','us','ferias','folgas','ho','aloc','met','metcol','perf','dperf','atestados','aniv','ocor','prob','trein','anom','fat','dash','soladm','feradm','atadm','ocadm','mtadm','tar','rot','onb'];
+  const adminViews=['cadastro','relatorios','eq','us','ferias','folgas','ho','aloc','met','metcol','compano','perf','dperf','atestados','aniv','ocor','prob','trein','anom','fat','dash','soladm','feradm','atadm','ocadm','mtadm','tar','rot','onb'];
   if(adminViews.includes(v)&&!isAdminUser)v='solfolga';
   $('view-cadastro').style.display=v==='cadastro'?'block':'none';
   $('view-relatorios').style.display=v==='relatorios'?'block':'none';
@@ -1706,6 +1733,7 @@ function showView(v){
   $('view-aloc').style.display=v==='aloc'?'block':'none';
   $('view-met').style.display=v==='met'?'block':'none';
   $('view-metcol').style.display=v==='metcol'?'block':'none';
+  $('view-compano').style.display=v==='compano'?'block':'none';
   $('view-perf').style.display=(v==='perf'||v==='mperf')?'block':'none';
   $('view-dperf').style.display=v==='dperf'?'block':'none';
   $('view-mequipehj').style.display=v==='mequipehj'?'block':'none';
@@ -1745,6 +1773,7 @@ function showView(v){
   $('nav-aloc').classList.toggle('active',v==='aloc');
   $('nav-met').classList.toggle('active',v==='met');
   $('nav-metcol').classList.toggle('active',v==='metcol');
+  $('nav-compano').classList.toggle('active',v==='compano');
   $('nav-perf').classList.toggle('active',v==='perf');
   $('nav-dperf').classList.toggle('active',v==='dperf');
   $('nav-mperf').classList.toggle('active',v==='mperf');
@@ -1788,6 +1817,7 @@ function showView(v){
   if(v==='aloc')openAloc();
   if(v==='met')openMet();
   if(v==='metcol')openMetCol();
+  if(v==='compano')openCompAno();
   if(v==='perf'||v==='mperf')openPerf();
   if(v==='dperf')openDailyPerf();
   if(v==='mequipehj')openMequipehj();
@@ -3569,11 +3599,8 @@ async function openMetCol(){
   const anos=[];for(let a=anoAtual-2;a<=anoAtual+1;a++)anos.push(a);
   const selA=$('mc-ano'),curA=selA.value||anoAtual;
   selA.innerHTML=anos.map(a=>`<option ${a==curA?'selected':''}>${a}</option>`).join('');
-  const selA2=$('mc-ano2'),curA2=selA2.value||anoAtual;
-  selA2.innerHTML=anos.map(a=>`<option ${a==curA2?'selected':''}>${a}</option>`).join('');
   await loadMetasSetor();
   await loadMetasCol();
-  await renderPanoramaMc();
 }
 async function onMcAnoChange(){await loadMetasSetor();await loadMetasCol();}
 async function loadMetasSetor(){
@@ -3721,7 +3748,6 @@ async function salvarMetCol(){
   const{error}=await db.from('metas_colaborador').upsert(regs,{onConflict:'colaborador,ano,mes'});
   if(error){alert('Erro: '+error.message);return;}
   toast(`Salvo ✓ (${regs.length} mês${regs.length>1?'es':''})`);
-  await renderPanoramaMc();
 }
 function renderMetColChart(){
   const ctx=$('mc-chart');if(!ctx||typeof Chart==='undefined')return;
@@ -3772,39 +3798,6 @@ function renderMetColChart(){
     mcChart=new Chart(ctx.getContext('2d'),cfg);
   }
 }
-async function renderPanoramaMc(){
-  const ano=parseInt($('mc-ano2').value);if(!ano)return;
-  const{data,error}=await db.from('metas_colaborador').select('*').eq('ano',ano);
-  if(error){$('mc-panorama').innerHTML='';return;}
-  const arr=data||[];
-  if(!arr.length){$('mc-panorama').innerHTML='<div class="empty">Nenhum registro para este ano.</div>';return;}
-  const porColab={};arr.forEach(r=>{if(!porColab[r.colaborador])porColab[r.colaborador]=[];porColab[r.colaborador].push(r);});
-  const nomes=Object.keys(porColab).sort();
-  let html='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:800px">';
-  html+='<thead><tr style="border-bottom:2px solid var(--line);background:#faf8f2"><th style="text-align:left;padding:8px 10px;position:sticky;left:0;background:#faf8f2;z-index:1">Colaborador</th>';
-  for(let m=1;m<=12;m++)html+=`<th style="text-align:center;padding:8px 4px;font-size:11px;color:var(--ink-soft)">${MESES[m-1].slice(0,3)}</th>`;
-  html+='<th style="text-align:center;padding:8px 10px;font-weight:700">Ano</th></tr></thead><tbody>';
-  nomes.forEach(nome=>{
-    let sumM=0,sumR=0;
-    const cells=[];
-    for(let m=1;m<=12;m++){
-      const rec=porColab[nome].find(x=>x.mes===m);
-      const pctStored=rec?rec.pct_absorcao:null;
-      const pctCalc=rec?absorcao(rec.meta,rec.resultado):null;
-      const pct=pctStored!=null?Math.round(parseFloat(pctStored)*100):pctCalc;
-      if(rec){if(rec.meta!=null)sumM+=parseFloat(rec.meta)||0;if(rec.resultado!=null)sumR+=parseFloat(rec.resultado)||0;}
-      const c=corAbs(pct);
-      cells.push(`<td style="text-align:center;padding:4px;background:${pct!=null?c.bg:'#fff'};color:${c.tx};font-weight:${pct!=null?'600':'400'};border-radius:4px">${pct!=null?pct+'%':'—'}</td>`);
-    }
-    const pctAno=absorcao(sumM||null,sumR||null);
-    const cAno=corAbs(pctAno);
-    html+=`<tr style="border-bottom:1px solid var(--line)"><td style="padding:8px 10px;font-weight:500;position:sticky;left:0;background:#fff;z-index:1">${esc(nome)}</td>${cells.join('')}<td style="text-align:center;padding:8px 10px;background:${cAno.bg};color:${cAno.tx};font-weight:700">${pctAno!=null?pctAno+'%':'—'}</td></tr>`;
-  });
-  html+='</tbody></table></div>';
-  html+=`<p class="hint" style="margin-top:8px;font-size:12px">🟢 verde = ≥100% · 🟡 amarelo = 80–99% · 🔴 vermelho = &lt;80% · — = sem dado</p>`;
-  $('mc-panorama').innerHTML=html;
-}
-
 // ===== Import de Excel para metas_colaborador/setor =====
 let _mcBlocks=[];
 const MC_HEADER_MAP={'agente':'colaborador','tma':'tma','qtdatendimento':'qtd_atendimento','atendidassemfiltro':'atendidas_sem_filtro','ferias':'dias_ferias','ausencias':'dias_ausencia','diastrab':'dias_trabalhados','metadiasajuste':'meta_dia_sem_ajuste','metadia':'meta','mediadia':'resultado','absorcao60':'pct_absorcao','votacao40':'pct_votacao','satisfacao':'pct_satisfacao'};
@@ -3903,7 +3896,101 @@ async function importarMcBlocos(){
   cancelarImportMc();
   // Recarregar tabelas com o ano importado se for igual ao selecionado
   if(parseInt($('mc-ano').value)===ano){await loadMetasSetor();await loadMetasCol();}
-  await renderPanoramaMc();
+}
+
+// ===== Comparativo anual de colaboradores (EXCLUSIVO Rafael) =====
+$('nav-compano').onclick=()=>showView('compano');
+let compAnoDados=[],caChart=null;
+const CA_METRICA_LABELS={pct_absorcao:'% Absorção',pct_satisfacao:'% Satisfação',pct_votacao:'% Votação',qtd_atendimento:'Qtd. Atendimento',atendidas_sem_filtro:'Atendidas sem filtro',tma:'TMA',meta:'Meta Dia',resultado:'Média Dia',meta_dia_sem_ajuste:'Meta Dia S/ Ajuste',dias_trabalhados:'Dias trabalhados',dias_ferias:'Dias de férias',dias_ausencia:'Dias de ausência'};
+
+async function openCompAno(){
+  const anoAtual=new Date().getFullYear();
+  const anos=[];for(let a=anoAtual-2;a<=anoAtual+1;a++)anos.push(a);
+  const sel=$('ca-ano'),cur=sel.value||anoAtual;
+  sel.innerHTML=anos.map(a=>`<option ${a==cur?'selected':''}>${a}</option>`).join('');
+  await loadCompAnoDados();
+  renderCompAno();
+}
+async function onCompAnoAnoChange(){await loadCompAnoDados();renderCompAno();}
+async function loadCompAnoDados(){
+  const ano=parseInt($('ca-ano').value);if(!ano)return;
+  const{data,error}=await db.from('metas_colaborador').select('*').eq('ano',ano);
+  if(error){compAnoDados=[];return;}
+  compAnoDados=data||[];
+}
+function renderCompAno(){
+  const met=$('ca-metrica').value;
+  if(!compAnoDados.length){$('ca-tabela').innerHTML='<div class="empty">Nenhum registro para este ano. Importe primeiro em Metas colaborador.</div>';$('ca-chart-wrap').style.display='none';if(caChart){caChart.destroy();caChart=null;}return;}
+  const porColab={};compAnoDados.forEach(r=>{if(!porColab[r.colaborador])porColab[r.colaborador]={};porColab[r.colaborador][r.mes]=r;});
+  const nomes=Object.keys(porColab).sort();
+  const isPct=['pct_absorcao','pct_votacao','pct_satisfacao'].includes(met);
+  const isTma=met==='tma';
+  const isCount=['qtd_atendimento','atendidas_sem_filtro'].includes(met);
+  const fmt=(v)=>{if(v==null||v==='')return '—';if(isTma)return String(v);if(isPct)return Math.round(parseFloat(v)*100)+'%';if(isCount)return Math.round(parseFloat(v));return parseFloat(v).toFixed(1);};
+  const corCel=(v)=>{
+    if(v==null||isTma||!isPct)return null;
+    const pct=Math.round(parseFloat(v)*100);
+    if(met==='pct_absorcao'){if(pct>=100)return{bg:'#dfebe0',tx:'#1e5426'};if(pct>=80)return{bg:'#fdf3d9',tx:'#7a5a1f'};return{bg:'#f5dcdc',tx:'#801c1c'};}
+    if(met==='pct_satisfacao'){if(pct>=95)return{bg:'#dfebe0',tx:'#1e5426'};if(pct>=85)return{bg:'#fdf3d9',tx:'#7a5a1f'};return{bg:'#f5dcdc',tx:'#801c1c'};}
+    if(met==='pct_votacao'){if(pct>=50)return{bg:'#dfebe0',tx:'#1e5426'};if(pct>=35)return{bg:'#fdf3d9',tx:'#7a5a1f'};return{bg:'#f5dcdc',tx:'#801c1c'};}
+    return null;
+  };
+  let html='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:800px">';
+  html+='<thead><tr style="border-bottom:2px solid var(--line);background:#faf8f2"><th style="text-align:left;padding:8px 10px;position:sticky;left:0;background:#faf8f2;z-index:1">Colaborador</th>';
+  for(let m=1;m<=12;m++)html+=`<th style="text-align:center;padding:8px 4px;font-size:11px;color:var(--ink-soft)">${MESES[m-1].slice(0,3)}</th>`;
+  html+=`<th style="text-align:center;padding:8px 10px;font-weight:700">${isCount?'Total':'Média'}</th></tr></thead><tbody>`;
+  nomes.forEach(nome=>{
+    let sum=0,count=0;
+    const cells=[];
+    for(let m=1;m<=12;m++){
+      const rec=porColab[nome][m];
+      const v=rec?rec[met]:null;
+      const cor=corCel(v);
+      if(v!=null&&v!==''&&!isTma){const n=parseFloat(v);if(!isNaN(n)){sum+=n;count++;}}
+      cells.push(`<td style="text-align:center;padding:6px 4px;${cor?`background:${cor.bg};color:${cor.tx};font-weight:600`:''}">${fmt(v)}</td>`);
+    }
+    let total=null;
+    if(count>0){total=(isCount)?sum:sum/count;}
+    const corT=corCel(total);
+    html+=`<tr style="border-bottom:1px solid var(--line)"><td style="padding:8px 10px;font-weight:500;position:sticky;left:0;background:#fff;z-index:1">${esc(nome)}</td>${cells.join('')}<td style="text-align:center;padding:8px 10px;font-weight:700;${corT?`background:${corT.bg};color:${corT.tx}`:''}">${fmt(total)}</td></tr>`;
+  });
+  html+='</tbody></table></div>';
+  if(isPct)html+=`<p class="hint" style="margin-top:8px;font-size:12px">🟢 verde · 🟡 amarelo · 🔴 vermelho — cores refletem faixas típicas da métrica</p>`;
+  $('ca-tabela').innerHTML=html;
+  renderCompAnoChart(porColab,nomes,met,isPct,isTma);
+}
+function renderCompAnoChart(porColab,nomes,met,isPct,isTma){
+  const cvs=$('ca-chart');if(!cvs||typeof Chart==='undefined')return;
+  if(isTma){$('ca-chart-wrap').style.display='none';if(caChart){caChart.destroy();caChart=null;}return;}
+  const colors=['#1f6f5c','#c97e2f','#3b82f6','#a64141','#7c3aed','#059669','#dc2626','#0891b2','#9333ea','#ca8a04','#0284c7','#e11d48'];
+  const datasets=nomes.map((nome,i)=>{
+    const data=[];
+    for(let m=1;m<=12;m++){
+      const rec=porColab[nome][m];
+      let v=rec?rec[met]:null;
+      if(v!=null&&v!==''){v=parseFloat(v);if(isPct)v=Math.round(v*100);}
+      else v=null;
+      data.push(v);
+    }
+    return{label:nome,data,borderColor:colors[i%colors.length],backgroundColor:colors[i%colors.length]+'20',tension:0.3,spanGaps:true,pointRadius:4,borderWidth:2};
+  });
+  const labels=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const cfg={
+    type:'line',data:{labels,datasets},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        title:{display:true,text:CA_METRICA_LABELS[met]||met,font:{size:14,weight:'bold'}},
+        legend:{position:'bottom',labels:{padding:10,font:{size:11},boxWidth:12}},
+        tooltip:{callbacks:{label:(c)=>{if(c.parsed.y==null)return`${c.dataset.label}: —`;return isPct?`${c.dataset.label}: ${c.parsed.y}%`:`${c.dataset.label}: ${c.parsed.y}`;}}}
+      },
+      scales:{y:{beginAtZero:true,ticks:{callback:v=>isPct?v+'%':v}}}
+    }
+  };
+  $('ca-chart-wrap').style.display='block';
+  if(caChart){caChart.data.labels=labels;caChart.data.datasets=datasets;caChart.options.plugins.title.text=CA_METRICA_LABELS[met]||met;caChart.update('none');}
+  else{caChart=new Chart(cvs.getContext('2d'),cfg);}
 }
 
 // ============================================================
