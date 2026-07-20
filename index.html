@@ -238,6 +238,14 @@
       </div>
     </div>
 
+    <div class="nav-group" data-group="perf">
+      <button class="group-label">📊 Performance</button>
+      <div class="group-items">
+        <button id="nav-perf">Kanban de clientes</button>
+        <button id="nav-dperf">Dailies</button>
+      </div>
+    </div>
+
     <div class="nav-group" data-group="cad">
       <button class="group-label">📋 Cadastros</button>
       <div class="group-items">
@@ -319,6 +327,7 @@
         <button id="nav-meutr">Meus treinamentos</button>
         <button id="nav-mho">Meus Dias no escritório</button>
         <button id="nav-mequipehj">Equipe hoje</button>
+        <button id="nav-mperf">Kanban Performance</button>
       </div>
     </div>
 
@@ -1158,6 +1167,91 @@
     <div id="mcad-conteudo"></div>
   </div>
 
+  <!-- VIEW: KANBAN PERFORMANCE -->
+  <div id="view-perf" style="display:none">
+    <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
+      <h2>Kanban de Clientes — Performance</h2>
+      <p class="hint">Cada card = 1 cliente em teste. Clique num card para ver o histórico e registrar o daily de hoje.</p>
+    </div>
+    <div class="toolbar">
+      <button class="btn-primary" onclick="openNovoCliPerf()" style="flex:none">+ Novo cliente</button>
+      <div class="search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="perf-busca" placeholder="Buscar por cliente, SGD, técnico..." oninput="renderPerfKanban()">
+      </div>
+      <select id="perf-ftec" onchange="renderPerfKanban()" style="width:auto;min-width:160px"><option value="">Todos os técnicos</option></select>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:var(--ink);margin:0;text-transform:none;letter-spacing:0"><input type="checkbox" id="perf-fmeus" onchange="renderPerfKanban()" style="width:auto"> Só os meus</label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:var(--ink);margin:0;text-transform:none;letter-spacing:0"><input type="checkbox" id="perf-farq" onchange="renderPerfKanban()" style="width:auto"> Mostrar arquivados</label>
+    </div>
+    <div id="perf-kpis" class="kpis"></div>
+    <div id="perf-kanban" style="display:flex;gap:12px;overflow-x:auto;padding-bottom:8px;margin-top:6px"></div>
+  </div>
+
+  <!-- VIEW: DAILIES PERFORMANCE -->
+  <div id="view-dperf" style="display:none">
+    <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
+      <h2>Dailies — Painel do coordenador</h2>
+      <p class="hint">Feedback diário de cada técnico. Veja quem enviou, quem falta, e casos que precisam de ajuda.</p>
+    </div>
+    <div class="toolbar">
+      <div><label style="font-size:12px">Data</label><input id="dperf-data" type="date" onchange="loadDailyPerf()" style="width:170px"></div>
+      <div><label style="font-size:12px">Técnico</label><select id="dperf-ftec" onchange="renderDailyPerf()" style="width:180px"><option value="">Todos</option></select></div>
+    </div>
+    <div id="dperf-kpis" class="kpis"></div>
+    <div id="dperf-lista"></div>
+  </div>
+
+  <!-- MODAL: Cliente Performance (cadastro + daily + histórico) -->
+  <div id="clip-modal" class="modal-bg" style="display:none" onclick="if(event.target===this)closeCliPerfModal()">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 id="clip-title">Cliente em teste</h3>
+        <button class="modal-close" onclick="closeCliPerfModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="clip-id">
+        <div class="row2">
+          <div><label>Cliente *</label><input id="clip-cliente" placeholder="Nome do cliente"></div>
+          <div><label>Chamado SGD</label><input id="clip-sgd" placeholder="Nº ou link"></div>
+        </div>
+        <div class="row2">
+          <div><label>Técnico responsável *</label><select id="clip-tec"></select></div>
+          <div><label>Prioridade</label><select id="clip-prio"><option>Alta</option><option selected>Média</option><option>Baixa</option></select></div>
+        </div>
+        <label>Descrição do problema</label>
+        <textarea id="clip-desc" rows="2" placeholder="O que está sendo investigado, cenário, cliente..."></textarea>
+        <label>Próximo passo</label>
+        <input id="clip-prox" placeholder="O que vem a seguir">
+        <div class="row2">
+          <div><label>Status atual</label><select id="clip-status"></select></div>
+          <div><label>Última movimentação</label><input id="clip-ultmov" type="date"></div>
+        </div>
+        <label style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:500;text-transform:none;letter-spacing:0"><input type="checkbox" id="clip-arq" style="width:auto"> Arquivar (some do quadro, mas fica no histórico)</label>
+
+        <div class="sec-title" style="margin-top:16px">📆 Registrar daily de hoje</div>
+        <div class="form-card" style="background:#fbf9f2;padding:12px;margin:0">
+          <label>O que foi feito hoje neste cliente</label>
+          <textarea id="clip-dtxt" rows="2" placeholder="Ex.: Rodei nova simulação, importação caiu de 6h para 3h..."></textarea>
+          <div class="row2">
+            <div><label>Novo status (se mudou)</label><select id="clip-dnovost"></select></div>
+            <div><label>Próximo passo</label><input id="clip-dprox" placeholder="O que vem depois"></div>
+          </div>
+          <label style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:500;text-transform:none;letter-spacing:0"><input type="checkbox" id="clip-daju" style="width:auto" onchange="$('clip-daju-obs').style.display=this.checked?'':'none'"> Preciso de ajuda / travei</label>
+          <textarea id="clip-daju-obs" rows="2" style="display:none;margin-top:6px" placeholder="Descreva o que precisa"></textarea>
+          <div style="margin-top:8px"><button class="btn-primary" onclick="salvarDailyPerf()" style="width:100%">Salvar daily</button></div>
+        </div>
+
+        <div class="sec-title" style="margin-top:14px">📜 Histórico deste cliente</div>
+        <div id="clip-historico" style="max-height:280px;overflow-y:auto"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-primary" onclick="salvarCliPerf()">Salvar cadastro</button>
+        <button class="btn-del" onclick="excluirCliPerf()">Excluir cliente</button>
+        <button class="btn-edit" onclick="closeCliPerfModal()">Fechar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- VIEW: METAS (admin) -->
   <div id="view-met" style="display:none">
     <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
@@ -1349,7 +1443,9 @@ const isAdmin=u=>!!u&&ADMIN_EMAILS.includes((u.email||'').toLowerCase());
 
 let maquinas=[],atribuicoes=[],manutencoes=[],isAdminUser=false,editingPatr=null,ferias=[],editingFeria=null,folgas=[],editingFolga=null,atestados=[],editingAtest=null,feCal=null,foCal=null,atCal=null,anivs=[],editingAniv=null,ocors=[],editingOcor=null,probs=[],editingProb=null,anCal=null,treins=[],editingTrein=null,anoms=[],editingAnom=null;
 const charts={};
-let currentEmail='',authMode='login',sols=[],ferReqs=[],atSols=[],ocSols=[],tickets=[],maqStatusFilter='',anomTratFilter='',tarefas=[],currentTaskId=null,rotinas=[],selectedRotId=null,treinoCatalogo=[],treinoAtribs=[],onbSelectedColab='',equipe=[],usuarios=[],homeOffice=[],folgasAniv=[],alocacoes=[],autoAusencias=[],metaDoDia=null,metasHist=[],presenceChannel=null,onlineEmails=new Set();
+let currentEmail='',authMode='login',sols=[],ferReqs=[],atSols=[],ocSols=[],tickets=[],maqStatusFilter='',anomTratFilter='',tarefas=[],currentTaskId=null,rotinas=[],selectedRotId=null,treinoCatalogo=[],treinoAtribs=[],onbSelectedColab='',equipe=[],usuarios=[],homeOffice=[],folgasAniv=[],alocacoes=[],autoAusencias=[],metaDoDia=null,metasHist=[],presenceChannel=null,onlineEmails=new Set(),clientesPerf=[],dailiesPerf=[],currentCliPerfId=null;
+const PERF_STATUS=['Backlog','Em teste','Aguardando cliente','Travado','Concluído'];
+const PERF_STATUS_COLOR={'Backlog':{bg:'#f4f1ea',bd:'#cdc6b8',tx:'#6b6350'},'Em teste':{bg:'#e6efe9',bd:'#1f6f5c',tx:'#175547'},'Aguardando cliente':{bg:'#fbf0e6',bd:'#c97e2f',tx:'#7a4e1f'},'Travado':{bg:'#f5dcdc',bd:'#a64141',tx:'#801c1c'},'Concluído':{bg:'#dfebe0',bd:'#3f8f4a',tx:'#1e5426'}};
 const $=id=>document.getElementById(id);
 const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const hoje=()=>new Date().toISOString().slice(0,10);
@@ -1369,7 +1465,7 @@ async function showApp(user){
   try{const{data}=await db.from('equipe').select('*').order('nome_completo');equipe=data||[];}catch(e){}
   setupPresence();
   $('nav').style.display='flex';
-  ['nav-cad','nav-rel','nav-eq','nav-us','nav-aloc','nav-met','nav-fer','nav-fol','nav-ho','nav-ate','nav-aniv','nav-ocor','nav-prob','nav-trein','nav-anom','nav-fat','nav-dash','nav-soladm','nav-feradm','nav-atadm','nav-ocadm','nav-mtadm','nav-tar','nav-rot','nav-onb'].forEach(id=>$(id).style.display=isAdminUser?'':'none');
+  ['nav-cad','nav-rel','nav-eq','nav-us','nav-aloc','nav-met','nav-perf','nav-dperf','nav-fer','nav-fol','nav-ho','nav-ate','nav-aniv','nav-ocor','nav-prob','nav-trein','nav-anom','nav-fat','nav-dash','nav-soladm','nav-feradm','nav-atadm','nav-ocadm','nav-mtadm','nav-tar','nav-rot','nav-onb'].forEach(id=>$(id).style.display=isAdminUser?'':'none');
   $('nav-solf').style.display=isAdminUser?'none':'';
   $('nav-solfer').style.display=isAdminUser?'none':'';
   $('nav-solat').style.display=isAdminUser?'none':'';
@@ -1525,7 +1621,7 @@ async function registrarManutencao(patr){
 
 // ===== Views =====
 function showView(v){
-  const adminViews=['cadastro','relatorios','eq','us','ferias','folgas','ho','aloc','met','atestados','aniv','ocor','prob','trein','anom','fat','dash','soladm','feradm','atadm','ocadm','mtadm','tar','rot','onb'];
+  const adminViews=['cadastro','relatorios','eq','us','ferias','folgas','ho','aloc','met','perf','dperf','atestados','aniv','ocor','prob','trein','anom','fat','dash','soladm','feradm','atadm','ocadm','mtadm','tar','rot','onb'];
   if(adminViews.includes(v)&&!isAdminUser)v='solfolga';
   $('view-cadastro').style.display=v==='cadastro'?'block':'none';
   $('view-relatorios').style.display=v==='relatorios'?'block':'none';
@@ -1558,6 +1654,8 @@ function showView(v){
   $('view-mho').style.display=v==='mho'?'block':'none';
   $('view-aloc').style.display=v==='aloc'?'block':'none';
   $('view-met').style.display=v==='met'?'block':'none';
+  $('view-perf').style.display=(v==='perf'||v==='mperf')?'block':'none';
+  $('view-dperf').style.display=v==='dperf'?'block':'none';
   $('view-mequipehj').style.display=v==='mequipehj'?'block':'none';
   $('view-mcad').style.display=v==='mcad'?'block':'none';
   $('view-meutr').style.display=v==='meutr'?'block':'none';
@@ -1594,6 +1692,9 @@ function showView(v){
   $('nav-mho').classList.toggle('active',v==='mho');
   $('nav-aloc').classList.toggle('active',v==='aloc');
   $('nav-met').classList.toggle('active',v==='met');
+  $('nav-perf').classList.toggle('active',v==='perf');
+  $('nav-dperf').classList.toggle('active',v==='dperf');
+  $('nav-mperf').classList.toggle('active',v==='mperf');
   $('nav-mequipehj').classList.toggle('active',v==='mequipehj');
   $('nav-mcad').classList.toggle('active',v==='mcad');
   $('nav-meutr').classList.toggle('active',v==='meutr');
@@ -1633,6 +1734,8 @@ function showView(v){
   if(v==='mho')openMho();
   if(v==='aloc')openAloc();
   if(v==='met')openMet();
+  if(v==='perf'||v==='mperf')openPerf();
+  if(v==='dperf')openDailyPerf();
   if(v==='mequipehj')openMequipehj();
   if(v==='mcad')openMcad();
   if(v==='meutr')openMeutr();
@@ -3396,6 +3499,259 @@ async function excluirMeta(id){
 }
 $('nav-met').onclick=()=>showView('met');
 $('met-data')&&($('met-data').addEventListener('change',carregarMetaData));
+
+// ============================================================
+// ===== Performance: Kanban de clientes + Dailies =============
+// ============================================================
+$('nav-perf').onclick=()=>showView('perf');
+$('nav-dperf').onclick=()=>showView('dperf');
+$('nav-mperf').onclick=()=>showView('mperf');
+
+async function openPerf(){
+  await Promise.all([loadClientesPerf(),loadDailiesPerfAll()]);
+  popularSelectsPerf();
+  renderPerfKanban();
+}
+async function loadClientesPerf(){
+  const{data,error}=await db.from('clientes_performance').select('*').order('ultima_movimentacao',{ascending:false});
+  if(error){$('perf-kanban').innerHTML='<div class="empty"><b>Tabela ainda não existe</b>Rode o SQL e recarregue a página.</div>';return;}
+  clientesPerf=data||[];
+}
+async function loadDailiesPerfAll(){
+  const{data}=await db.from('daily_performance').select('*').order('criado_em',{ascending:false}).limit(500);
+  dailiesPerf=data||[];
+}
+function popularSelectsPerf(){
+  const nomes=colaboradoresAreaTecnica();
+  const sel=$('perf-ftec'),cur=sel.value;
+  sel.innerHTML='<option value="">Todos os técnicos</option>'+nomes.map(n=>`<option>${esc(n)}</option>`).join('');
+  sel.value=cur;
+  const selD=$('dperf-ftec'),curD=selD.value;
+  selD.innerHTML='<option value="">Todos</option>'+nomes.map(n=>`<option>${esc(n)}</option>`).join('');
+  selD.value=curD;
+}
+function renderPerfKanban(){
+  const q=$('perf-busca').value.trim().toLowerCase(),ftec=$('perf-ftec').value,fmeus=$('perf-fmeus').checked,farq=$('perf-farq').checked;
+  const meuNome=nomeFromEmail(currentEmail);
+  let arr=clientesPerf.filter(c=>{
+    if(!farq&&c.arquivado)return false;
+    if(farq&&!c.arquivado)return false;
+    if(ftec&&c.tecnico!==ftec)return false;
+    if(fmeus&&c.tecnico!==meuNome)return false;
+    if(q){const b=[c.cliente,c.chamado_sgd,c.tecnico,c.descricao,c.proximo_passo].filter(Boolean).join(' ').toLowerCase();if(!b.includes(q))return false;}
+    return true;
+  });
+  const hoje=new Date().toISOString().slice(0,10);
+  const paradosCount=arr.filter(c=>c.status!=='Concluído'&&diasEntre(c.ultima_movimentacao,hoje)>=3).length;
+  const travados=arr.filter(c=>c.status==='Travado').length;
+  const pedirAjuda=new Set(dailiesPerf.filter(d=>d.precisa_ajuda&&d.data===hoje).map(d=>d.cliente_id));
+  $('perf-kpis').innerHTML=[
+    ['Total',arr.length,''],
+    ['Em teste',arr.filter(c=>c.status==='Em teste').length,'s-uso'],
+    ['Travados',travados,travados?'s-desc':''],
+    ['Sem movimentação ≥3d',paradosCount,paradosCount?'s-manut':''],
+    ['Pedidos de ajuda hoje',pedirAjuda.size,pedirAjuda.size?'s-desc':'']
+  ].map(k=>`<div class="stat ${k[2]}"><b>${k[1]}</b><span>${esc(k[0])}</span></div>`).join('');
+  // Kanban columns
+  const byStatus={};PERF_STATUS.forEach(s=>byStatus[s]=[]);
+  arr.forEach(c=>{if(byStatus[c.status]!==undefined)byStatus[c.status].push(c);});
+  $('perf-kanban').innerHTML=PERF_STATUS.map(s=>{
+    const col=PERF_STATUS_COLOR[s];
+    const cards=byStatus[s]||[];
+    return`<div style="flex:1;min-width:240px;max-width:280px;background:${col.bg};border-radius:12px;padding:10px;display:flex;flex-direction:column">
+      <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:${col.tx};font-weight:700;padding:2px 4px 8px;border-bottom:2px solid ${col.bd};margin-bottom:8px">${esc(s)} (${cards.length})</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${cards.map(c=>renderCliPerfCard(c,pedirAjuda.has(c.id),hoje)).join('')||`<div style="color:var(--ink-soft);font-style:italic;font-size:13px;padding:12px 4px;text-align:center">— vazio —</div>`}
+      </div>
+    </div>`;
+  }).join('');
+}
+function renderCliPerfCard(c,pedirAjuda,hoje){
+  const parado=c.status!=='Concluído'&&diasEntre(c.ultima_movimentacao,hoje);
+  const paradoBadge=parado>=3?`<span style="background:#f5dcdc;color:#801c1c;padding:2px 6px;border-radius:6px;font-size:11px;font-weight:600">${parado}d parado</span>`:'';
+  const ajudaBadge=pedirAjuda?`<span style="background:#fde6c8;color:#7a4e1f;padding:2px 6px;border-radius:6px;font-size:11px;font-weight:600">🆘 ajuda</span>`:'';
+  const prioDot={'Alta':'#a64141','Média':'#c97e2f','Baixa':'#9c9583'}[c.prioridade]||'#9c9583';
+  return`<div onclick="openCliPerfModal('${c.id}')" style="background:#fff;border-radius:8px;padding:10px 12px;box-shadow:0 1px 3px rgba(0,0,0,.06);cursor:pointer;border-left:3px solid ${prioDot}">
+    <div style="font-weight:600;font-size:14px;color:var(--ink);margin-bottom:4px">${esc(c.cliente)}</div>
+    ${c.chamado_sgd?`<div style="font-size:12px;color:var(--ink-soft)">📋 ${esc(c.chamado_sgd)}</div>`:''}
+    <div style="font-size:12px;color:var(--ink-soft);margin-top:2px">👤 ${esc(c.tecnico||'—')}</div>
+    ${c.proximo_passo?`<div style="font-size:12px;color:var(--ink);margin-top:4px;font-style:italic">→ ${esc(c.proximo_passo)}</div>`:''}
+    <div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap">${paradoBadge}${ajudaBadge}</div>
+  </div>`;
+}
+function diasEntre(d1,d2){if(!d1||!d2)return 0;const a=new Date(d1+'T12:00'),b=new Date(d2+'T12:00');return Math.round((b-a)/86400000);}
+
+// ===== Modal do cliente =====
+function openNovoCliPerf(){
+  currentCliPerfId=null;
+  $('clip-title').textContent='Novo cliente em teste';
+  $('clip-id').value='';
+  $('clip-cliente').value='';$('clip-sgd').value='';
+  $('clip-desc').value='';$('clip-prox').value='';
+  $('clip-ultmov').value=new Date().toISOString().slice(0,10);
+  $('clip-arq').checked=false;
+  const nomes=colaboradoresAreaTecnica();
+  const meuNome=nomeFromEmail(currentEmail);
+  $('clip-tec').innerHTML=nomes.map(n=>`<option ${n===meuNome?'selected':''}>${esc(n)}</option>`).join('');
+  $('clip-prio').value='Média';
+  $('clip-status').innerHTML=PERF_STATUS.map(s=>`<option>${esc(s)}</option>`).join('');
+  $('clip-status').value='Backlog';
+  $('clip-dnovost').innerHTML='<option value="">— (manter atual) —</option>'+PERF_STATUS.map(s=>`<option>${esc(s)}</option>`).join('');
+  $('clip-dtxt').value='';$('clip-dprox').value='';$('clip-daju').checked=false;$('clip-daju-obs').value='';$('clip-daju-obs').style.display='none';
+  $('clip-historico').innerHTML='<div class="empty">Este cliente ainda não existe.</div>';
+  $('clip-modal').style.display='flex';
+}
+function openCliPerfModal(id){
+  const c=clientesPerf.find(x=>x.id===id);if(!c)return;
+  currentCliPerfId=id;
+  $('clip-title').textContent=c.cliente;
+  $('clip-id').value=c.id;
+  $('clip-cliente').value=c.cliente||'';$('clip-sgd').value=c.chamado_sgd||'';
+  $('clip-desc').value=c.descricao||'';$('clip-prox').value=c.proximo_passo||'';
+  $('clip-ultmov').value=c.ultima_movimentacao||'';
+  $('clip-arq').checked=!!c.arquivado;
+  const nomes=colaboradoresAreaTecnica();
+  $('clip-tec').innerHTML=nomes.map(n=>`<option ${n===c.tecnico?'selected':''}>${esc(n)}</option>`).join('');
+  $('clip-prio').value=c.prioridade||'Média';
+  $('clip-status').innerHTML=PERF_STATUS.map(s=>`<option ${s===c.status?'selected':''}>${esc(s)}</option>`).join('');
+  $('clip-dnovost').innerHTML='<option value="">— (manter atual) —</option>'+PERF_STATUS.map(s=>`<option>${esc(s)}</option>`).join('');
+  $('clip-dtxt').value='';$('clip-dprox').value='';$('clip-daju').checked=false;$('clip-daju-obs').value='';$('clip-daju-obs').style.display='none';
+  renderHistorico(id);
+  $('clip-modal').style.display='flex';
+}
+function renderHistorico(cliId){
+  const hist=dailiesPerf.filter(d=>d.cliente_id===cliId).sort((a,b)=>b.criado_em.localeCompare(a.criado_em));
+  if(!hist.length){$('clip-historico').innerHTML='<div class="empty">Ainda não há dailies registrados.</div>';return;}
+  $('clip-historico').innerHTML=hist.map(h=>{
+    const mud=(h.status_anterior&&h.status_novo&&h.status_anterior!==h.status_novo)?` <span style="background:#eee;padding:1px 6px;border-radius:6px;font-size:11px">${esc(h.status_anterior)} → ${esc(h.status_novo)}</span>`:'';
+    const ajuda=h.precisa_ajuda?` <span style="background:#fde6c8;color:#7a4e1f;padding:1px 6px;border-radius:6px;font-size:11px">🆘 pediu ajuda</span>`:'';
+    return`<div style="border-left:2px solid #cdc6b8;padding:8px 12px;margin-bottom:6px;background:#faf8f2">
+      <div style="font-size:12px;color:var(--ink-soft)"><b>${fmt(h.data)}</b> · ${esc(h.tecnico)}${mud}${ajuda}</div>
+      ${h.update_texto?`<div style="margin-top:4px;font-size:13px">${esc(h.update_texto)}</div>`:''}
+      ${h.proximo_passo?`<div style="margin-top:2px;font-size:12px;color:var(--ink-soft)">→ ${esc(h.proximo_passo)}</div>`:''}
+      ${h.obs_ajuda?`<div style="margin-top:4px;font-size:12px;color:#7a4e1f;font-style:italic">Ajuda: ${esc(h.obs_ajuda)}</div>`:''}
+    </div>`;
+  }).join('');
+}
+function closeCliPerfModal(){$('clip-modal').style.display='none';currentCliPerfId=null;}
+async function salvarCliPerf(){
+  const cliente=$('clip-cliente').value.trim();if(!cliente){alert('Informe o cliente.');return;}
+  const dados={
+    cliente,
+    chamado_sgd:$('clip-sgd').value.trim()||null,
+    tecnico:$('clip-tec').value||null,
+    prioridade:$('clip-prio').value,
+    descricao:$('clip-desc').value.trim()||null,
+    proximo_passo:$('clip-prox').value.trim()||null,
+    status:$('clip-status').value,
+    ultima_movimentacao:$('clip-ultmov').value||null,
+    arquivado:$('clip-arq').checked
+  };
+  const id=$('clip-id').value;
+  let error,newId=id;
+  if(id){({error}=await db.from('clientes_performance').update(dados).eq('id',id));}
+  else{const r=await db.from('clientes_performance').insert(dados).select('id').maybeSingle();error=r.error;newId=r.data?.id;}
+  if(error){alert('Erro: '+error.message);return;}
+  toast(id?'Salvo ✓':'Cliente adicionado ✓');
+  currentCliPerfId=newId;
+  await openPerf();
+  if(newId&&$('clip-modal').style.display==='flex'){openCliPerfModal(newId);}else{closeCliPerfModal();}
+}
+async function salvarDailyPerf(){
+  const cliId=currentCliPerfId;if(!cliId){alert('Salve o cadastro do cliente primeiro.');return;}
+  const c=clientesPerf.find(x=>x.id===cliId);
+  const txt=$('clip-dtxt').value.trim();
+  const novoSt=$('clip-dnovost').value;
+  const prox=$('clip-dprox').value.trim();
+  const ajuda=$('clip-daju').checked;
+  const ajudaObs=$('clip-daju-obs').value.trim();
+  if(!txt&&!novoSt&&!prox&&!ajuda){alert('Escreva o que foi feito, mude o status, defina próximo passo, ou marque pedido de ajuda.');return;}
+  const meuNome=nomeFromEmail(currentEmail);
+  const hoje=new Date().toISOString().slice(0,10);
+  const daily={
+    data:hoje,tecnico:meuNome,tecnico_email:currentEmail,cliente_id:cliId,cliente_nome:c?.cliente||null,
+    status_anterior:c?.status||null,status_novo:novoSt||c?.status||null,
+    update_texto:txt||null,proximo_passo:prox||null,precisa_ajuda:ajuda,obs_ajuda:ajuda?(ajudaObs||null):null
+  };
+  const{error}=await db.from('daily_performance').insert(daily);
+  if(error){alert('Erro ao salvar daily: '+error.message);return;}
+  // Atualizar o cadastro do cliente se necessário
+  const patch={ultima_movimentacao:hoje};
+  if(novoSt&&novoSt!==c.status)patch.status=novoSt;
+  if(prox)patch.proximo_passo=prox;
+  if(novoSt==='Concluído')patch.concluido_em=hoje;
+  await db.from('clientes_performance').update(patch).eq('id',cliId);
+  toast('Daily salvo ✓');
+  await openPerf();
+  openCliPerfModal(cliId);
+}
+async function excluirCliPerf(){
+  const id=$('clip-id').value;if(!id){closeCliPerfModal();return;}
+  const c=clientesPerf.find(x=>x.id===id);
+  if(!confirm(`Excluir "${c.cliente}" e todo o histórico de dailies dele? Esta ação é irreversível.\n\nDica: se quiser só tirar do quadro, marque "Arquivar" e Salvar.`))return;
+  const{error}=await db.from('clientes_performance').delete().eq('id',id);
+  if(error){alert('Erro: '+error.message);return;}
+  toast('Excluído');closeCliPerfModal();openPerf();
+}
+
+// ===== Painel de dailies (coordenador) =====
+async function openDailyPerf(){
+  if(!$('dperf-data').value)$('dperf-data').value=new Date().toISOString().slice(0,10);
+  if(!clientesPerf.length)await loadClientesPerf();
+  await loadDailyPerf();
+}
+async function loadDailyPerf(){
+  const data=$('dperf-data').value;
+  const{data:d,error}=await db.from('daily_performance').select('*').eq('data',data).order('criado_em',{ascending:false});
+  if(error){$('dperf-lista').innerHTML='<div class="empty"><b>Tabela ainda não existe</b>Rode o SQL.</div>';return;}
+  dailiesPerf=d||[];
+  popularSelectsPerf();
+  renderDailyPerf();
+}
+function renderDailyPerf(){
+  const data=$('dperf-data').value,ftec=$('dperf-ftec').value;
+  const arr=dailiesPerf.filter(d=>!ftec||d.tecnico===ftec);
+  // Técnicos com clientes ativos (que deveriam enviar daily)
+  const tecComClientes=new Set(clientesPerf.filter(c=>!c.arquivado&&c.status!=='Concluído'&&c.tecnico).map(c=>c.tecnico));
+  const tecQueEnviou=new Set(arr.map(d=>d.tecnico));
+  const naoEnviou=[...tecComClientes].filter(t=>!tecQueEnviou.has(t)).sort();
+  const ajuda=arr.filter(d=>d.precisa_ajuda);
+  $('dperf-kpis').innerHTML=[
+    ['Dailies enviados',arr.length,arr.length?'s-uso':''],
+    ['Técnicos com daily',tecQueEnviou.size,''],
+    ['Ainda faltam',naoEnviou.length,naoEnviou.length?'s-manut':'s-uso'],
+    ['Pedidos de ajuda',ajuda.length,ajuda.length?'s-desc':'']
+  ].map(k=>`<div class="stat ${k[2]}"><b>${k[1]}</b><span>${esc(k[0])}</span></div>`).join('');
+  let html='';
+  if(naoEnviou.length){
+    html+=`<div style="background:#fbf0e6;border-left:4px solid #c97e2f;padding:12px 16px;border-radius:10px;margin:10px 0">
+      <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#7a4e1f;font-weight:700;margin-bottom:6px">⚠ Ainda não enviaram daily (${naoEnviou.length})</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">${naoEnviou.map(n=>`<span style="background:#fff;border:1px solid #d4b895;padding:4px 10px;border-radius:12px;font-size:13px">${esc(n)}</span>`).join('')}</div>
+    </div>`;
+  }
+  if(!arr.length){html+='<div class="empty">Nenhum daily registrado nesta data.</div>';$('dperf-lista').innerHTML=html;return;}
+  // Agrupar por técnico
+  const porTec={};arr.forEach(d=>{if(!porTec[d.tecnico])porTec[d.tecnico]=[];porTec[d.tecnico].push(d);});
+  html+=Object.keys(porTec).sort().map(t=>{
+    const ds=porTec[t];
+    return`<div style="margin-top:12px">
+      <div class="sec-title">👤 ${esc(t)} <span style="color:var(--ink-soft);font-weight:400;font-size:13px">(${ds.length} cliente${ds.length>1?'s':''})</span></div>
+      ${ds.map(d=>{
+        const mud=(d.status_anterior&&d.status_novo&&d.status_anterior!==d.status_novo)?` <span style="background:#eee;padding:2px 6px;border-radius:6px;font-size:11px">${esc(d.status_anterior)} → ${esc(d.status_novo)}</span>`:` <span style="background:#eee;padding:2px 6px;border-radius:6px;font-size:11px">${esc(d.status_novo||'?')}</span>`;
+        const aju=d.precisa_ajuda?` <span style="background:#f5dcdc;color:#801c1c;padding:2px 6px;border-radius:6px;font-size:11px;font-weight:600">🆘 ajuda</span>`:'';
+        return`<div class="row-item" style="cursor:pointer;align-items:flex-start" onclick="openCliPerfModal('${d.cliente_id}')">
+          <div style="flex:1">
+            <div class="ri-main">${esc(d.cliente_nome||'(cliente removido)')}${mud}${aju}</div>
+            ${d.update_texto?`<div class="ri-sub" style="margin-top:2px">${esc(d.update_texto)}</div>`:''}
+            ${d.proximo_passo?`<div class="ri-sub" style="font-style:italic;color:var(--ink-soft)">→ ${esc(d.proximo_passo)}</div>`:''}
+            ${d.obs_ajuda?`<div class="ri-sub" style="color:#7a4e1f"><b>Ajuda:</b> ${esc(d.obs_ajuda)}</div>`:''}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }).join('');
+  $('dperf-lista').innerHTML=html;
+}
 
 // ===== Equipe hoje (colaborador, somente leitura) =====
 function navMeqDia(d){
