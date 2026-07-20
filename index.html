@@ -1212,9 +1212,10 @@
 
   <!-- VIEW: COMPARATIVO ANUAL (SOMENTE RAFAEL) -->
   <div id="view-compano" style="display:none">
+    <style>#view-compano .form-card{max-width:none}body.compano-view .wrap{max-width:1400px !important}</style>
     <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
       <h2>Comparativo anual de colaboradores</h2>
-      <p class="hint">Escolha uma métrica e um ano pra ver a evolução comparada de todos os colaboradores.</p>
+      <p class="hint">Escolha uma métrica e um ano pra ver a evolução comparada. As cores da tabela mostram o ranking mês a mês (verde = melhor · vermelho = pior).</p>
     </div>
     <div class="form-card">
       <div class="row2">
@@ -1224,21 +1225,31 @@
           <option value="pct_votacao">% Votação</option>
           <option value="qtd_atendimento">Qtd. Atendimento</option>
           <option value="atendidas_sem_filtro">Atendidas sem filtro</option>
-          <option value="tma">TMA (tempo médio)</option>
+          <option value="tma">TMA (tempo médio, menor melhor)</option>
           <option value="meta">Meta Dia</option>
           <option value="resultado">Média Dia</option>
           <option value="meta_dia_sem_ajuste">Meta Dia S/ Ajuste</option>
           <option value="dias_trabalhados">Dias trabalhados</option>
-          <option value="dias_ferias">Dias de férias</option>
-          <option value="dias_ausencia">Dias de ausência</option>
+          <option value="dias_ferias">Dias de férias (menor melhor)</option>
+          <option value="dias_ausencia">Dias de ausência (menor melhor)</option>
         </select></div>
         <div><label>Ano</label><select id="ca-ano" onchange="onCompAnoAnoChange()"></select></div>
       </div>
       <div id="ca-tabela" style="margin-top:14px;overflow-x:auto"></div>
       <div id="ca-chart-wrap" style="margin-top:18px;background:#fbf9f2;border:1px solid var(--line);border-radius:10px;padding:14px;display:none">
         <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft);font-weight:700;margin-bottom:8px">📈 Evolução mensal</div>
-        <div style="position:relative;height:360px"><canvas id="ca-chart"></canvas></div>
+        <div style="position:relative;height:520px"><canvas id="ca-chart"></canvas></div>
       </div>
+    </div>
+
+    <div class="sec-title">🏆 Ranking mensal</div>
+    <p class="hint">Selecione o mês pra ver o ranking dos colaboradores na métrica escolhida acima.</p>
+    <div class="form-card">
+      <div class="row2">
+        <div><label>Mês</label><select id="ca-rk-mes" onchange="renderRankingMes()"></select></div>
+        <div style="display:flex;align-items:end;padding-bottom:10px"><div style="font-size:12px;color:var(--ink-soft);background:#f4f1ea;padding:6px 12px;border-radius:6px">Usa a mesma métrica selecionada acima</div></div>
+      </div>
+      <div id="ca-rk-lista" style="margin-top:14px"></div>
     </div>
   </div>
 
@@ -1734,6 +1745,7 @@ function showView(v){
   $('view-met').style.display=v==='met'?'block':'none';
   $('view-metcol').style.display=v==='metcol'?'block':'none';
   $('view-compano').style.display=v==='compano'?'block':'none';
+  document.body.classList.toggle('compano-view',v==='compano');
   $('view-perf').style.display=(v==='perf'||v==='mperf')?'block':'none';
   $('view-dperf').style.display=v==='dperf'?'block':'none';
   $('view-mequipehj').style.display=v==='mequipehj'?'block':'none';
@@ -3902,16 +3914,25 @@ async function importarMcBlocos(){
 $('nav-compano').onclick=()=>showView('compano');
 let compAnoDados=[],caChart=null;
 const CA_METRICA_LABELS={pct_absorcao:'% Absorção',pct_satisfacao:'% Satisfação',pct_votacao:'% Votação',qtd_atendimento:'Qtd. Atendimento',atendidas_sem_filtro:'Atendidas sem filtro',tma:'TMA',meta:'Meta Dia',resultado:'Média Dia',meta_dia_sem_ajuste:'Meta Dia S/ Ajuste',dias_trabalhados:'Dias trabalhados',dias_ferias:'Dias de férias',dias_ausencia:'Dias de ausência'};
+// true = maior valor é melhor · false = menor valor é melhor
+const CA_HIGHER_BETTER={pct_absorcao:true,pct_satisfacao:true,pct_votacao:true,qtd_atendimento:true,atendidas_sem_filtro:true,meta:true,resultado:true,meta_dia_sem_ajuste:true,dias_trabalhados:true,tma:false,dias_ferias:false,dias_ausencia:false};
+
+function tmaSec(v){if(v==null||v==='')return null;if(typeof v==='number')return v*86400;const p=String(v).split(':').map(x=>parseInt(x)||0);if(p.length===3)return p[0]*3600+p[1]*60+p[2];if(p.length===2)return p[0]*60+p[1];return null;}
+function toNum(v,met){if(v==null||v==='')return null;if(met==='tma')return tmaSec(v);const n=parseFloat(v);return isNaN(n)?null:n;}
+function rankColor(pos,total){if(total<=1)return{bg:'#e6efe9',tx:'#1a3a2a'};const r=pos/(total-1);const hue=Math.round(120*(1-r));return{bg:`hsl(${hue}, 68%, 82%)`,tx:'#2a2a1e'};}
 
 async function openCompAno(){
   const anoAtual=new Date().getFullYear();
   const anos=[];for(let a=anoAtual-2;a<=anoAtual+1;a++)anos.push(a);
   const sel=$('ca-ano'),cur=sel.value||anoAtual;
   sel.innerHTML=anos.map(a=>`<option ${a==cur?'selected':''}>${a}</option>`).join('');
+  const selM=$('ca-rk-mes'),curM=selM.value||(new Date().getMonth()+1);
+  selM.innerHTML=MESES.map((m,i)=>`<option value="${i+1}" ${(i+1)==curM?'selected':''}>${m}</option>`).join('');
   await loadCompAnoDados();
   renderCompAno();
+  renderRankingMes();
 }
-async function onCompAnoAnoChange(){await loadCompAnoDados();renderCompAno();}
+async function onCompAnoAnoChange(){await loadCompAnoDados();renderCompAno();renderRankingMes();}
 async function loadCompAnoDados(){
   const ano=parseInt($('ca-ano').value);if(!ano)return;
   const{data,error}=await db.from('metas_colaborador').select('*').eq('ano',ano);
@@ -3920,44 +3941,50 @@ async function loadCompAnoDados(){
 }
 function renderCompAno(){
   const met=$('ca-metrica').value;
-  if(!compAnoDados.length){$('ca-tabela').innerHTML='<div class="empty">Nenhum registro para este ano. Importe primeiro em Metas colaborador.</div>';$('ca-chart-wrap').style.display='none';if(caChart){caChart.destroy();caChart=null;}return;}
+  if(!compAnoDados.length){$('ca-tabela').innerHTML='<div class="empty">Nenhum registro para este ano. Importe primeiro em Metas colaborador.</div>';$('ca-chart-wrap').style.display='none';if(caChart){caChart.destroy();caChart=null;}renderRankingMes();return;}
   const porColab={};compAnoDados.forEach(r=>{if(!porColab[r.colaborador])porColab[r.colaborador]={};porColab[r.colaborador][r.mes]=r;});
   const nomes=Object.keys(porColab).sort();
   const isPct=['pct_absorcao','pct_votacao','pct_satisfacao'].includes(met);
   const isTma=met==='tma';
   const isCount=['qtd_atendimento','atendidas_sem_filtro'].includes(met);
+  const higher=CA_HIGHER_BETTER[met]!==false;
   const fmt=(v)=>{if(v==null||v==='')return '—';if(isTma)return String(v);if(isPct)return Math.round(parseFloat(v)*100)+'%';if(isCount)return Math.round(parseFloat(v));return parseFloat(v).toFixed(1);};
-  const corCel=(v)=>{
-    if(v==null||isTma||!isPct)return null;
-    const pct=Math.round(parseFloat(v)*100);
-    if(met==='pct_absorcao'){if(pct>=100)return{bg:'#dfebe0',tx:'#1e5426'};if(pct>=80)return{bg:'#fdf3d9',tx:'#7a5a1f'};return{bg:'#f5dcdc',tx:'#801c1c'};}
-    if(met==='pct_satisfacao'){if(pct>=95)return{bg:'#dfebe0',tx:'#1e5426'};if(pct>=85)return{bg:'#fdf3d9',tx:'#7a5a1f'};return{bg:'#f5dcdc',tx:'#801c1c'};}
-    if(met==='pct_votacao'){if(pct>=50)return{bg:'#dfebe0',tx:'#1e5426'};if(pct>=35)return{bg:'#fdf3d9',tx:'#7a5a1f'};return{bg:'#f5dcdc',tx:'#801c1c'};}
-    return null;
-  };
+  // Ranking por coluna (mês): melhor -> pior
+  const corPorColabMes={}; // corPorColabMes[nome][mes] = {bg,tx}
+  nomes.forEach(n=>corPorColabMes[n]={});
+  for(let m=1;m<=12;m++){
+    const items=nomes.map(n=>{const rec=porColab[n][m];return{n,val:rec?toNum(rec[met],met):null};}).filter(x=>x.val!=null);
+    if(!items.length)continue;
+    items.sort((a,b)=>higher?b.val-a.val:a.val-b.val);
+    items.forEach((it,idx)=>{corPorColabMes[it.n][m]=rankColor(idx,items.length);});
+  }
+  // Ranking da coluna Total/Média
+  const totals={};
+  nomes.forEach(nome=>{let sum=0,count=0;for(let m=1;m<=12;m++){const rec=porColab[nome][m];const n=rec?toNum(rec[met],met):null;if(n!=null){sum+=n;count++;}}totals[nome]=count>0?(isCount?sum:sum/count):null;});
+  const totItems=nomes.map(n=>({n,val:totals[n]})).filter(x=>x.val!=null).sort((a,b)=>higher?b.val-a.val:a.val-b.val);
+  const corTotal={};totItems.forEach((it,idx)=>{corTotal[it.n]=rankColor(idx,totItems.length);});
+
   let html='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:800px">';
   html+='<thead><tr style="border-bottom:2px solid var(--line);background:#faf8f2"><th style="text-align:left;padding:8px 10px;position:sticky;left:0;background:#faf8f2;z-index:1">Colaborador</th>';
   for(let m=1;m<=12;m++)html+=`<th style="text-align:center;padding:8px 4px;font-size:11px;color:var(--ink-soft)">${MESES[m-1].slice(0,3)}</th>`;
   html+=`<th style="text-align:center;padding:8px 10px;font-weight:700">${isCount?'Total':'Média'}</th></tr></thead><tbody>`;
   nomes.forEach(nome=>{
-    let sum=0,count=0;
     const cells=[];
     for(let m=1;m<=12;m++){
       const rec=porColab[nome][m];
       const v=rec?rec[met]:null;
-      const cor=corCel(v);
-      if(v!=null&&v!==''&&!isTma){const n=parseFloat(v);if(!isNaN(n)){sum+=n;count++;}}
+      const cor=corPorColabMes[nome][m];
       cells.push(`<td style="text-align:center;padding:6px 4px;${cor?`background:${cor.bg};color:${cor.tx};font-weight:600`:''}">${fmt(v)}</td>`);
     }
-    let total=null;
-    if(count>0){total=(isCount)?sum:sum/count;}
-    const corT=corCel(total);
-    html+=`<tr style="border-bottom:1px solid var(--line)"><td style="padding:8px 10px;font-weight:500;position:sticky;left:0;background:#fff;z-index:1">${esc(nome)}</td>${cells.join('')}<td style="text-align:center;padding:8px 10px;font-weight:700;${corT?`background:${corT.bg};color:${corT.tx}`:''}">${fmt(total)}</td></tr>`;
+    const t=totals[nome];const corT=corTotal[nome];
+    let tFmt;if(t==null)tFmt='—';else if(isTma){const h=Math.floor(t/3600),mm=Math.floor((t%3600)/60),ss=Math.round(t%60);tFmt=`${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;}else if(isPct)tFmt=Math.round(t*100)+'%';else if(isCount)tFmt=Math.round(t);else tFmt=t.toFixed(1);
+    html+=`<tr style="border-bottom:1px solid var(--line)"><td style="padding:8px 10px;font-weight:500;position:sticky;left:0;background:#fff;z-index:1">${esc(nome)}</td>${cells.join('')}<td style="text-align:center;padding:8px 10px;font-weight:700;${corT?`background:${corT.bg};color:${corT.tx}`:''}">${tFmt}</td></tr>`;
   });
   html+='</tbody></table></div>';
-  if(isPct)html+=`<p class="hint" style="margin-top:8px;font-size:12px">🟢 verde · 🟡 amarelo · 🔴 vermelho — cores refletem faixas típicas da métrica</p>`;
+  html+=`<p class="hint" style="margin-top:8px;font-size:12px">🟢 verde = melhor colocado no mês · 🟡 intermediário · 🔴 pior colocado${higher?'':' (métrica onde <b>menor é melhor</b>)'} · — sem dado</p>`;
   $('ca-tabela').innerHTML=html;
   renderCompAnoChart(porColab,nomes,met,isPct,isTma);
+  renderRankingMes();
 }
 function renderCompAnoChart(porColab,nomes,met,isPct,isTma){
   const cvs=$('ca-chart');if(!cvs||typeof Chart==='undefined')return;
@@ -3991,6 +4018,40 @@ function renderCompAnoChart(porColab,nomes,met,isPct,isTma){
   $('ca-chart-wrap').style.display='block';
   if(caChart){caChart.data.labels=labels;caChart.data.datasets=datasets;caChart.options.plugins.title.text=CA_METRICA_LABELS[met]||met;caChart.update('none');}
   else{caChart=new Chart(cvs.getContext('2d'),cfg);}
+}
+function renderRankingMes(){
+  const met=$('ca-metrica').value;
+  const mes=parseInt($('ca-rk-mes').value);
+  if(!compAnoDados.length||!mes){$('ca-rk-lista').innerHTML='<div class="empty">Sem dados para gerar ranking.</div>';return;}
+  const higher=CA_HIGHER_BETTER[met]!==false;
+  const isPct=['pct_absorcao','pct_votacao','pct_satisfacao'].includes(met);
+  const isTma=met==='tma';
+  const isCount=['qtd_atendimento','atendidas_sem_filtro'].includes(met);
+  const items=[];
+  const porColab={};compAnoDados.forEach(r=>{if(!porColab[r.colaborador])porColab[r.colaborador]={};porColab[r.colaborador][r.mes]=r;});
+  Object.keys(porColab).forEach(nome=>{
+    const rec=porColab[nome][mes];
+    const raw=rec?rec[met]:null;
+    const num=raw==null?null:(isTma?tmaSec(raw):parseFloat(raw));
+    if(num!=null&&!isNaN(num))items.push({nome,raw,num});
+  });
+  if(!items.length){$('ca-rk-lista').innerHTML=`<div class="empty">Sem lançamentos para ${MESES[mes-1]}.</div>`;return;}
+  items.sort((a,b)=>higher?b.num-a.num:a.num-b.num);
+  const fmt=(v,raw)=>{if(isTma)return String(raw);if(isPct)return Math.round(parseFloat(raw)*100)+'%';if(isCount)return Math.round(parseFloat(raw));return parseFloat(raw).toFixed(1);};
+  const medals=['🥇','🥈','🥉'];
+  let html=`<div style="font-size:13px;color:var(--ink-soft);margin-bottom:10px"><b>${esc(CA_METRICA_LABELS[met]||met)}</b> · ${MESES[mes-1]} · ${higher?'maior é melhor':'menor é melhor'}</div>`;
+  html+='<div style="display:flex;flex-direction:column;gap:6px">';
+  items.forEach((it,idx)=>{
+    const cor=rankColor(idx,items.length);
+    const emoji=idx<3?medals[idx]:`<span style="width:24px;display:inline-block;text-align:center;font-weight:700;color:var(--ink-soft)">${idx+1}º</span>`;
+    html+=`<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:${cor.bg};color:${cor.tx};border-radius:8px;font-size:14px">
+      <div style="font-size:${idx<3?'22px':'14px'};min-width:32px;text-align:center">${emoji}</div>
+      <div style="flex:1;font-weight:${idx<3?'600':'500'}">${esc(it.nome)}</div>
+      <div style="font-weight:700;font-size:15px">${fmt(it.num,it.raw)}</div>
+    </div>`;
+  });
+  html+='</div>';
+  $('ca-rk-lista').innerHTML=html;
 }
 
 // ============================================================
