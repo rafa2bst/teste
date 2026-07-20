@@ -1192,15 +1192,6 @@
         <div><label>Ano</label><select id="mc-ano" onchange="onMcAnoChange()"></select></div>
       </div>
 
-      <!-- Painel do Setor (Demanda Recebida/Atendida por mes) -->
-      <div style="margin-top:18px;background:#f0eadc;border:1px solid #d4c69d;border-radius:10px;padding:12px 14px">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
-          <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#7a5a1f;font-weight:700">🏢 Setor — Demanda mensal</div>
-          <button class="btn-primary" onclick="salvarSetor()" style="padding:6px 14px;font-size:13px">Salvar setor</button>
-        </div>
-        <div id="ms-tabela" style="overflow-x:auto"></div>
-      </div>
-
       <div id="mc-kpis" class="kpis" style="margin-top:14px"></div>
       <div id="mc-tabela" style="margin-top:10px;overflow-x:auto"></div>
       <div class="actions" style="margin-top:12px"><button class="btn-primary" onclick="salvarMetCol()">Salvar meses do colaborador</button></div>
@@ -3645,10 +3636,9 @@ async function openMetCol(){
   const anos=[];for(let a=anoAtual-2;a<=anoAtual+1;a++)anos.push(a);
   const selA=$('mc-ano'),curA=selA.value||anoAtual;
   selA.innerHTML=anos.map(a=>`<option ${a==curA?'selected':''}>${a}</option>`).join('');
-  await loadMetasSetor();
   await loadMetasCol();
 }
-async function onMcAnoChange(){await loadMetasSetor();await loadMetasCol();}
+async function onMcAnoChange(){await loadMetasCol();}
 async function loadMetasSetor(){
   const ano=parseInt($('mc-ano').value);if(!ano)return;
   const{data,error}=await db.from('metas_setor').select('*').eq('ano',ano);
@@ -3945,7 +3935,7 @@ async function importarMcBlocos(){
   if(errs.length){alert('Erro(s) na importação:\n'+errs.join('\n'));return;}
   toast(`✓ Importado: ${colabRegs.length} lançamento(s) de colaborador`);
   cancelarImportMc();
-  if(parseInt($('mc-ano').value)===ano){await loadMetasSetor();await loadMetasCol();}
+  if(parseInt($('mc-ano').value)===ano){await loadMetasCol();}
 }
 
 // ===== Comparativo anual de colaboradores (EXCLUSIVO Rafael) =====
