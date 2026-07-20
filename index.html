@@ -6,6 +6,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   :root{
     --paper:#f4f1ea;--card:#fdfcf9;--ink:#1c1c19;--ink-soft:#5b594f;--line:#e3ddd0;
@@ -1174,6 +1175,15 @@
       <h2>Metas de produtividade por colaborador</h2>
       <p class="hint">Meta e resultado mensal, TMA, qtd. atendimentos, absorção, votação, satisfação. Acesso exclusivo.</p>
     </div>
+
+    <!-- Bloco de import -->
+    <div class="form-card" style="background:#eff6ff;border:1px solid #93c5fd;margin-bottom:14px">
+      <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#1e40af;font-weight:700;margin-bottom:6px">📥 Importar Excel</div>
+      <p class="hint" style="font-size:12px;margin-bottom:8px">Sobe o Excel com blocos mensais no leiaute conhecido (Agente, TMA, Qtd. Atendimento, Meta Dia, etc.). Cada bloco = 1 mês. Depois indique o mês/ano de cada bloco.</p>
+      <input type="file" id="mc-file" accept=".xlsx,.xls" onchange="parseMcExcel()" style="font-size:13px;margin-bottom:6px">
+      <div id="mc-import-preview" style="margin-top:8px"></div>
+    </div>
+
     <div class="form-card">
       <div class="row2">
         <div><label>Colaborador</label><select id="mc-colab" onchange="loadMetasCol()"></select></div>
@@ -3793,6 +3803,107 @@ async function renderPanoramaMc(){
   html+='</tbody></table></div>';
   html+=`<p class="hint" style="margin-top:8px;font-size:12px">🟢 verde = ≥100% · 🟡 amarelo = 80–99% · 🔴 vermelho = &lt;80% · — = sem dado</p>`;
   $('mc-panorama').innerHTML=html;
+}
+
+// ===== Import de Excel para metas_colaborador/setor =====
+let _mcBlocks=[];
+const MC_HEADER_MAP={'agente':'colaborador','tma':'tma','qtdatendimento':'qtd_atendimento','atendidassemfiltro':'atendidas_sem_filtro','ferias':'dias_ferias','ausencias':'dias_ausencia','diastrab':'dias_trabalhados','metadiasajuste':'meta_dia_sem_ajuste','metadia':'meta','mediadia':'resultado','absorcao60':'pct_absorcao','votacao40':'pct_votacao','satisfacao':'pct_satisfacao'};
+function normHdrMc(h){return String(h||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'').trim();}
+function fuzzyKeyMc(n){const parts=norm(n).split(/\s+/).filter(Boolean);if(!parts.length)return '';if(parts.length===1)return parts[0];return parts[0]+'_'+parts[parts.length-1].slice(0,4);}
+function canonicalNomeMc(raw){const k=fuzzyKeyMc(raw);for(const e of equipe){const en=e.nome_curto||e.nome_completo;if(en&&fuzzyKeyMc(en)===k)return en;}return String(raw||'').trim();}
+function tmaToTextMc(v){if(v==null||v==='')return null;if(typeof v==='string')return v.trim();if(typeof v==='number'&&v>=0&&v<2){const s=Math.round(v*86400),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;}return String(v);}
+async function parseMcExcel(){
+  const file=$('mc-file').files[0];if(!file)return;
+  if(typeof XLSX==='undefined'){alert('Biblioteca XLSX não carregou. Recarregue a página.');return;}
+  try{
+    const buf=await file.arrayBuffer();
+    const wb=XLSX.read(buf,{type:'array'});
+    const sheet=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(sheet,{header:1,raw:true,blankrows:true,defval:null});
+    _mcBlocks=[];let cur=null;
+    rows.forEach(row=>{
+      if(!row)return;
+      const first=String(row[0]||'').trim().toLowerCase();
+      if(first==='agente'){
+        const hm={};row.forEach((h,i)=>{const k=normHdrMc(h);if(MC_HEADER_MAP[k])hm[MC_HEADER_MAP[k]]=i;});
+        cur={colabs:[],setor:null,headerMap:hm};_mcBlocks.push(cur);
+      }else if(cur){
+        const isTotal=row[0]==null&&row.slice(1).some(v=>v!=null);
+        if(isTotal){cur.setor=row;}
+        else if(row[0]){
+          const rec={};for(const[f,ci]of Object.entries(cur.headerMap))rec[f]=row[ci];
+          if(rec.colaborador)cur.colabs.push(rec);
+        }
+      }
+    });
+    previewMcBlocks();
+  }catch(e){alert('Erro ao ler arquivo: '+e.message);}
+}
+function previewMcBlocks(){
+  if(!_mcBlocks.length){$('mc-import-preview').innerHTML='<div style="padding:8px;background:#fff5f5;border:1px solid #fca5a5;border-radius:6px;font-size:12px;color:#7a1c1c">Nenhum bloco reconhecido (deve começar com "Agente" na 1ª célula da linha de cabeçalho).</div>';return;}
+  const anoAtual=new Date().getFullYear();const anos=[];for(let a=anoAtual-2;a<=anoAtual+1;a++)anos.push(a);
+  const anoOpts=anos.map(a=>`<option ${a===anoAtual?'selected':''}>${a}</option>`).join('');
+  const mesOpts=(def)=>MESES.map((m,i)=>`<option value="${i+1}" ${i+1===def?'selected':''}>${m}</option>`).join('');
+  let html=`<div style="background:#fff;border:1px solid #93c5fd;border-radius:6px;padding:10px 12px;margin-top:6px">
+    <div style="margin-bottom:8px;font-size:13px"><b>${_mcBlocks.length} bloco(s) detectado(s).</b> Indique o mês/ano de cada:</div>
+    <div class="row2" style="margin-bottom:8px">
+      <div><label style="font-size:11px">Ano</label><select id="mci-ano">${anoOpts}</select></div>
+      <div><label style="font-size:11px">Primeiro mês</label><select id="mci-primeiro" onchange="atualizaMesesBlocos()">${mesOpts(1)}</select></div>
+    </div>`;
+  _mcBlocks.forEach((b,i)=>{
+    const qtd=b.setor&&b.headerMap.qtd_atendimento!=null?b.setor[b.headerMap.qtd_atendimento]:'—';
+    html+=`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;border-top:1px solid #e5e7eb">
+      <select id="mci-bloco-${i}" style="width:130px">${mesOpts(i+1)}</select>
+      <span style="flex:1">Bloco ${i+1}: <b>${b.colabs.length}</b> colab(s) · Qtd. Atendimento total: <b>${qtd||'—'}</b></span>
+    </div>`;
+  });
+  html+=`<div style="margin-top:12px;display:flex;gap:8px">
+    <button class="btn-primary" onclick="importarMcBlocos()" style="padding:8px 16px">Importar ${_mcBlocks.length} bloco(s)</button>
+    <button class="btn-edit" onclick="cancelarImportMc()">Cancelar</button>
+  </div></div>`;
+  $('mc-import-preview').innerHTML=html;
+  atualizaMesesBlocos();
+}
+function atualizaMesesBlocos(){
+  const p=parseInt($('mci-primeiro').value);
+  _mcBlocks.forEach((_,i)=>{const s=$('mci-bloco-'+i);if(s)s.value=((p+i-1)%12)+1;});
+}
+function cancelarImportMc(){$('mc-import-preview').innerHTML='';$('mc-file').value='';_mcBlocks=[];}
+async function importarMcBlocos(){
+  const ano=parseInt($('mci-ano').value);
+  if(!ano){alert('Selecione o ano.');return;}
+  const setorRegs=[],colabRegs=[];
+  const now=new Date().toISOString();
+  _mcBlocks.forEach((b,i)=>{
+    const mes=parseInt($('mci-bloco-'+i).value);
+    if(!mes)return;
+    // Setor: demanda_atendida = Qtd. Atendimento total
+    if(b.setor&&b.headerMap.qtd_atendimento!=null){
+      const q=b.setor[b.headerMap.qtd_atendimento];
+      if(q!=null){setorRegs.push({ano,mes,demanda_atendida:parseFloat(q)||null,atualizado_em:now});}
+    }
+    // Colabs
+    b.colabs.forEach(rec=>{
+      const colab=canonicalNomeMc(rec.colaborador);
+      if(!colab)return;
+      const r={colaborador:colab,ano,mes,atualizado_em:now};
+      for(const[f,v]of Object.entries(rec)){
+        if(f==='colaborador')continue;
+        if(f==='tma')r[f]=tmaToTextMc(v);
+        else{const p=v==null||v===''?null:parseFloat(v);r[f]=isNaN(p)?null:p;}
+      }
+      colabRegs.push(r);
+    });
+  });
+  const errs=[];
+  if(setorRegs.length){const{error}=await db.from('metas_setor').upsert(setorRegs,{onConflict:'ano,mes'});if(error)errs.push('Setor: '+error.message);}
+  if(colabRegs.length){const{error}=await db.from('metas_colaborador').upsert(colabRegs,{onConflict:'colaborador,ano,mes'});if(error)errs.push('Colaborador: '+error.message);}
+  if(errs.length){alert('Erro(s) na importação:\n'+errs.join('\n'));return;}
+  toast(`✓ Importado: ${setorRegs.length} bloco(s) setor + ${colabRegs.length} lançamento(s) colab`);
+  cancelarImportMc();
+  // Recarregar tabelas com o ano importado se for igual ao selecionado
+  if(parseInt($('mc-ano').value)===ano){await loadMetasSetor();await loadMetasCol();}
+  await renderPanoramaMc();
 }
 
 // ============================================================
