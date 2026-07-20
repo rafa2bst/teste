@@ -1208,6 +1208,11 @@
         <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft);font-weight:700;margin-bottom:8px">📈 Evolução ao longo do ano</div>
         <div style="position:relative;height:340px"><canvas id="mc-chart"></canvas></div>
       </div>
+      <div style="margin-top:20px;border-top:1px dashed #d9b3b3;padding-top:14px">
+        <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#a64141;font-weight:700;margin-bottom:6px">⚠ Zona de perigo</div>
+        <p class="hint" style="font-size:12px;margin-bottom:10px">Apaga <b>todos os lançamentos de metas de todos os colaboradores em todos os anos</b>. A tabela Setor (Demanda Projetada/Recebida/Atendida/TME) não é afetada.</p>
+        <button class="btn-del" onclick="apagarTodasMetasCol()">🗑 Apagar todas as metas de colaboradores</button>
+      </div>
     </div>
   </div>
 
@@ -3790,6 +3795,15 @@ async function salvarMetCol(){
   if(error){alert('Erro: '+error.message);return;}
   toast(`Salvo ✓ (${regs.length} mês${regs.length>1?'es':''})`);
 }
+async function apagarTodasMetasCol(){
+  if(!confirm('⚠ ATENÇÃO: isso vai apagar TODAS as metas lançadas de TODOS os colaboradores em TODOS os anos.\n\nA tabela do Setor (Demanda Projetada/Recebida/Atendida/TME) não será afetada.\n\nConfirma?'))return;
+  const typed=prompt('Pra confirmar, digite exatamente: APAGAR');
+  if(typed!=='APAGAR'){alert('Cancelado.');return;}
+  const{error}=await db.from('metas_colaborador').delete().neq('id','00000000-0000-0000-0000-000000000000');
+  if(error){alert('Erro: '+error.message);return;}
+  toast('✓ Todas as metas de colaboradores foram apagadas');
+  await loadMetasCol();
+}
 function renderMetColChart(){
   const ctx=$('mc-chart');if(!ctx||typeof Chart==='undefined')return;
   const qtdAtend=[],mediaDia=[],metaDia=[],absorcoes=[],satisfacoes=[];
@@ -3906,17 +3920,14 @@ function cancelarImportMc(){$('mc-import-preview').innerHTML='';$('mc-file').val
 async function importarMcBlocos(){
   const ano=parseInt($('mci-ano').value);
   if(!ano){alert('Selecione o ano.');return;}
-  const setorRegs=[],colabRegs=[];
+  const colabRegs=[];
   const now=new Date().toISOString();
   _mcBlocks.forEach((b,i)=>{
     const mes=parseInt($('mci-bloco-'+i).value);
     if(!mes)return;
-    // Setor: demanda_atendida = Qtd. Atendimento total
-    if(b.setor&&b.headerMap.qtd_atendimento!=null){
-      const q=b.setor[b.headerMap.qtd_atendimento];
-      if(q!=null){setorRegs.push({ano,mes,demanda_atendida:parseFloat(q)||null,atualizado_em:now});}
-    }
-    // Colabs
+    // Não importamos dados do setor (Demanda Atendida) porque o total do Excel
+    // não reflete a demanda real do setor (outras pessoas também atendem).
+    // Preenchimento é manual em Plan. Estratégico Telefone.
     b.colabs.forEach(rec=>{
       const colab=canonicalNomeMc(rec.colaborador);
       if(!colab)return;
@@ -3930,12 +3941,10 @@ async function importarMcBlocos(){
     });
   });
   const errs=[];
-  if(setorRegs.length){const{error}=await db.from('metas_setor').upsert(setorRegs,{onConflict:'ano,mes'});if(error)errs.push('Setor: '+error.message);}
   if(colabRegs.length){const{error}=await db.from('metas_colaborador').upsert(colabRegs,{onConflict:'colaborador,ano,mes'});if(error)errs.push('Colaborador: '+error.message);}
   if(errs.length){alert('Erro(s) na importação:\n'+errs.join('\n'));return;}
-  toast(`✓ Importado: ${setorRegs.length} bloco(s) setor + ${colabRegs.length} lançamento(s) colab`);
+  toast(`✓ Importado: ${colabRegs.length} lançamento(s) de colaborador`);
   cancelarImportMc();
-  // Recarregar tabelas com o ano importado se for igual ao selecionado
   if(parseInt($('mc-ano').value)===ano){await loadMetasSetor();await loadMetasCol();}
 }
 
