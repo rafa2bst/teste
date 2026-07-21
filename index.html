@@ -239,6 +239,7 @@
         <button id="nav-metcol">Metas colaborador</button>
         <button id="nav-compano">Comparativo anual</button>
         <button id="nav-plantel">Plan. Estratégico Telefone</button>
+        <button id="nav-exp2b">Exportar Ausências → 2B</button>
       </div>
     </div>
 
@@ -1285,6 +1286,25 @@
     </div>
   </div>
 
+  <!-- VIEW: EXPORTAR AUSÊNCIAS 2B (SOMENTE ADMIN) -->
+  <div id="view-exp2b" style="display:none">
+    <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
+      <h2>Exportar Ausências → 2B</h2>
+      <p class="hint">Consolida <b>folgas + férias + atestados + ocorrências</b> do mês selecionado num arquivo Excel exatamente no leiaute do site 2B, pronto para importar.</p>
+    </div>
+    <div class="form-card">
+      <div class="row2">
+        <div><label>Mês</label><select id="e2b-mes" onchange="previewExp2B()"></select></div>
+        <div><label>Ano</label><select id="e2b-ano" onchange="previewExp2B()"></select></div>
+      </div>
+      <div class="row2">
+        <div style="display:flex;align-items:end;padding-bottom:8px"><div style="font-size:12px;color:var(--ink-soft);background:#f4f1ea;padding:6px 12px;border-radius:6px">✍️ Status fixo: <b>Em analise</b> · o 2B revisa depois</div></div>
+        <div style="display:flex;align-items:end;padding-bottom:8px"><label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;margin:0"><input type="checkbox" id="e2b-expfer" checked style="width:auto"> Expandir férias em 1 linha por dia</label></div>
+      </div>
+      <div id="e2b-preview" style="margin-top:14px"></div>
+    </div>
+  </div>
+
   <!-- VIEW: KANBAN PERFORMANCE -->
   <div id="view-perf" style="display:none">
     <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
@@ -1583,7 +1603,7 @@ async function showApp(user){
   try{const{data}=await db.from('equipe').select('*').order('nome_completo');equipe=data||[];}catch(e){}
   setupPresence();
   $('nav').style.display='flex';
-  ['nav-cad','nav-rel','nav-eq','nav-us','nav-aloc','nav-met','nav-perf','nav-dperf','nav-fer','nav-fol','nav-ho','nav-ate','nav-aniv','nav-ocor','nav-prob','nav-trein','nav-anom','nav-fat','nav-dash','nav-soladm','nav-feradm','nav-atadm','nav-ocadm','nav-mtadm','nav-tar','nav-rot','nav-onb'].forEach(id=>$(id).style.display=isAdminUser?'':'none');
+  ['nav-cad','nav-rel','nav-eq','nav-us','nav-aloc','nav-met','nav-perf','nav-dperf','nav-exp2b','nav-fer','nav-fol','nav-ho','nav-ate','nav-aniv','nav-ocor','nav-prob','nav-trein','nav-anom','nav-fat','nav-dash','nav-soladm','nav-feradm','nav-atadm','nav-ocadm','nav-mtadm','nav-tar','nav-rot','nav-onb'].forEach(id=>$(id).style.display=isAdminUser?'':'none');
   // Metas colaborador + Comparativo anual: EXCLUSIVO do Rafael (nao aparece nem para outros admins)
   $('nav-metcol').style.display=(currentEmail==='rafael.andrade.sa@gmail.com')?'':'none';
   $('nav-compano').style.display=(currentEmail==='rafael.andrade.sa@gmail.com')?'':'none';
@@ -1743,7 +1763,7 @@ async function registrarManutencao(patr){
 
 // ===== Views =====
 function showView(v){
-  const adminViews=['cadastro','relatorios','eq','us','ferias','folgas','ho','aloc','met','metcol','compano','plantel','perf','dperf','atestados','aniv','ocor','prob','trein','anom','fat','dash','soladm','feradm','atadm','ocadm','mtadm','tar','rot','onb'];
+  const adminViews=['cadastro','relatorios','eq','us','ferias','folgas','ho','aloc','met','metcol','compano','plantel','exp2b','perf','dperf','atestados','aniv','ocor','prob','trein','anom','fat','dash','soladm','feradm','atadm','ocadm','mtadm','tar','rot','onb'];
   if(adminViews.includes(v)&&!isAdminUser)v='solfolga';
   $('view-cadastro').style.display=v==='cadastro'?'block':'none';
   $('view-relatorios').style.display=v==='relatorios'?'block':'none';
@@ -1779,7 +1799,8 @@ function showView(v){
   $('view-metcol').style.display=v==='metcol'?'block':'none';
   $('view-compano').style.display=v==='compano'?'block':'none';
   $('view-plantel').style.display=v==='plantel'?'block':'none';
-  document.body.classList.toggle('compano-view',v==='compano'||v==='plantel');
+  $('view-exp2b').style.display=v==='exp2b'?'block':'none';
+  document.body.classList.toggle('compano-view',v==='compano'||v==='plantel'||v==='exp2b');
   $('view-perf').style.display=(v==='perf'||v==='mperf')?'block':'none';
   $('view-dperf').style.display=v==='dperf'?'block':'none';
   $('view-mequipehj').style.display=v==='mequipehj'?'block':'none';
@@ -1821,6 +1842,7 @@ function showView(v){
   $('nav-metcol').classList.toggle('active',v==='metcol');
   $('nav-compano').classList.toggle('active',v==='compano');
   $('nav-plantel').classList.toggle('active',v==='plantel');
+  $('nav-exp2b').classList.toggle('active',v==='exp2b');
   $('nav-perf').classList.toggle('active',v==='perf');
   $('nav-dperf').classList.toggle('active',v==='dperf');
   $('nav-mperf').classList.toggle('active',v==='mperf');
@@ -1866,6 +1888,7 @@ function showView(v){
   if(v==='metcol')openMetCol();
   if(v==='compano')openCompAno();
   if(v==='plantel')openPlantel();
+  if(v==='exp2b')openExp2B();
   if(v==='perf'||v==='mperf')openPerf();
   if(v==='dperf')openDailyPerf();
   if(v==='mequipehj')openMequipehj();
@@ -4245,6 +4268,181 @@ async function zerarTudoPlantel(){
   toast(`✓ Planejamento de ${ano} apagado`);
   await loadPlantel();
 }
+
+// ===== Exportar Ausências para 2B =====
+$('nav-exp2b').onclick=()=>showView('exp2b');
+const E2B_GESTOR='RAFAEL PEREIRA DE ANDRADE';
+const E2B_STATUS='Em analise';
+// 16 motivos oficiais do site 2B (código = índice+1)
+const MOTIVOS_2B=[
+  'Atestados','Vacinação covid-19','Folga Banco de Horas','Liberação do Gestor',
+  'Licença Maternidade','Licença Paternidade','Motivos Pessoais','Folga Aniversário',
+  'Treinamento','Ferias','Folga Abono Sindicato','Falta de internet/Energia',
+  'Consulta','Feedback','Apoio Web','Problemas equipamento'
+];
+// Mapeador: recebe texto livre (tipo ou observação) e devolve motivo oficial + confiança
+function e2bMapMotivo(texto,fonte){
+  const t=(texto||'').toLowerCase();
+  // Regras específicas (ordem importa)
+  if(/vacin|covid/.test(t))return'Vacinação covid-19';
+  if(/materni/.test(t))return'Licença Maternidade';
+  if(/paterni/.test(t))return'Licença Paternidade';
+  if(/aniv/.test(t))return'Folga Aniversário';
+  if(/abono/.test(t))return'Folga Abono Sindicato';
+  if(/(banco.?de.?hora|folga.?bh|\bbh\b)/.test(t))return'Folga Banco de Horas';
+  if(/treinamento|treino|capacita/.test(t))return'Treinamento';
+  if(/internet|energia|luz(?!ia)/.test(t))return'Falta de internet/Energia';
+  if(/feedback/.test(t))return'Feedback';
+  if(/apoio.?web/.test(t))return'Apoio Web';
+  if(/(problema|defeito|quebrado|falha).*(equipamento|maquina|computador|pc|monitor|headset|nobreak)/.test(t))return'Problemas equipamento';
+  if(/consulta|dentista|medic/.test(t))return'Consulta';
+  if(/motivo.?pessoal|assunto.?pessoal|pessoal/.test(t))return'Motivos Pessoais';
+  if(/liber/.test(t))return'Liberação do Gestor';
+  // Defaults por fonte
+  if(fonte==='folga')return'Folga Banco de Horas';
+  if(fonte==='ferias')return'Ferias';
+  if(fonte==='atestado')return'Atestados';
+  if(fonte==='ocorrencia')return'Liberação do Gestor';
+  return'Liberação do Gestor';
+}
+
+async function openExp2B(){
+  const hoje=new Date();
+  const anos=[];for(let a=hoje.getFullYear()-1;a<=hoje.getFullYear()+1;a++)anos.push(a);
+  const selA=$('e2b-ano'),curA=selA.value||hoje.getFullYear();
+  selA.innerHTML=anos.map(a=>`<option ${a==curA?'selected':''}>${a}</option>`).join('');
+  const selM=$('e2b-mes'),curM=selM.value||(hoje.getMonth()+1);
+  selM.innerHTML=MESES.map((m,i)=>`<option value="${i+1}" ${(i+1)==curM?'selected':''}>${m}</option>`).join('');
+  await previewExp2B();
+}
+function e2bNomeCompleto(nomeRaw){
+  if(!nomeRaw)return '';
+  const k=fuzzyKeyMc(nomeRaw);
+  for(const e of equipe){
+    const en=e.nome_completo||'',ec=e.nome_curto||'';
+    if(fuzzyKeyMc(en)===k||fuzzyKeyMc(ec)===k)return (e.nome_completo||nomeRaw).toUpperCase();
+  }
+  return String(nomeRaw).toUpperCase();
+}
+function e2bFmtData(iso){if(!iso)return '';const[y,m,d]=iso.split('T')[0].split('-');return `${d}/${m}/${y}`;}
+function e2bFmtNum(n){if(n==null)return '';return Number(n).toFixed(2).replace('.',',');}
+async function previewExp2B(){
+  const ano=parseInt($('e2b-ano').value),mes=parseInt($('e2b-mes').value);
+  if(!ano||!mes)return;
+  const dataIni=`${ano}-${String(mes).padStart(2,'0')}-01`;
+  const ultDia=new Date(ano,mes,0).getDate();
+  const dataFim=`${ano}-${String(mes).padStart(2,'0')}-${String(ultDia).padStart(2,'0')}`;
+  const expandirFer=$('e2b-expfer').checked;
+  // Buscar todas as fontes
+  const [fol,fer,ate,oc]=await Promise.all([
+    db.from('folgas').select('*').gte('data',dataIni).lte('data',dataFim),
+    db.from('ferias').select('*').lte('data_inicio',dataFim).gte('data_fim',dataIni),
+    db.from('atestados').select('*').gte('data',dataIni).lte('data',dataFim),
+    db.from('ocorrencias').select('*').gte('data',dataIni).lte('data',dataFim)
+  ]);
+  const linhas=[];
+  // Folgas
+  (fol.data||[]).forEach(f=>{
+    const motivo=e2bMapMotivo((f.tipo||'')+' '+(f.observacao||''),'folga');
+    linhas.push({cod:'',funcionario:e2bNomeCompleto(f.colaborador),data:e2bFmtData(f.data),tipo:'Integral',obs:f.observacao||'',motivo,mes,ano,gestor:E2B_GESTOR,status:E2B_STATUS,tempo:'',motivoAtest:'',cid:'',ausenciaDia:'1,00'});
+  });
+  // Férias - expandir cada dia ou 1 linha só
+  (fer.data||[]).forEach(f=>{
+    if(expandirFer){
+      const dI=new Date(Math.max(new Date(f.data_inicio+'T12:00').getTime(),new Date(dataIni+'T12:00').getTime()));
+      const dF=new Date(Math.min(new Date(f.data_fim+'T12:00').getTime(),new Date(dataFim+'T12:00').getTime()));
+      const cur=new Date(dI);
+      while(cur<=dF){
+        const iso=cur.toISOString().slice(0,10);
+        linhas.push({cod:'',funcionario:e2bNomeCompleto(f.colaborador),data:e2bFmtData(iso),tipo:'Integral',obs:f.observacao||'',motivo:'Ferias',mes:cur.getMonth()+1,ano:cur.getFullYear(),gestor:E2B_GESTOR,status:E2B_STATUS,tempo:'',motivoAtest:'',cid:'',ausenciaDia:'1,00'});
+        cur.setDate(cur.getDate()+1);
+      }
+    }else{
+      linhas.push({cod:'',funcionario:e2bNomeCompleto(f.colaborador),data:e2bFmtData(f.data_inicio),tipo:'Integral',obs:`Férias ${e2bFmtData(f.data_inicio)} a ${e2bFmtData(f.data_fim)}`,motivo:'Ferias',mes,ano,gestor:E2B_GESTOR,status:E2B_STATUS,tempo:'',motivoAtest:'',cid:'',ausenciaDia:'1,00'});
+    }
+  });
+  // Atestados
+  (ate.data||[]).forEach(a=>{
+    const motivo=e2bMapMotivo((a.tipo||'')+' '+(a.motivo||'')+' '+(a.observacao||''),'atestado');
+    linhas.push({cod:'',funcionario:e2bNomeCompleto(a.colaborador),data:e2bFmtData(a.data),tipo:'Integral',obs:a.observacao||'',motivo,mes,ano,gestor:E2B_GESTOR,status:E2B_STATUS,tempo:'',motivoAtest:a.motivo||'',cid:a.cid||'',ausenciaDia:'1,00'});
+  });
+  // Ocorrências
+  (oc.data||[]).forEach(o=>{
+    let fracao=o.fracao!=null?parseFloat(o.fracao):null;
+    if(fracao==null||isNaN(fracao)||fracao===0)fracao=1;
+    let tipo='Integral',ausDia='1,00',tempo='';
+    if(fracao>=0.99){tipo='Integral';ausDia='1,00';}
+    else if(Math.abs(fracao-0.5)<0.01){tipo='Parcial';ausDia='0,50';}
+    else{tipo='Fracionada';const tempoMin=Math.round(fracao*480);tempo=e2bFmtNum(tempoMin);ausDia=e2bFmtNum(fracao);}
+    const motivo=e2bMapMotivo((o.tipo||'')+' '+(o.observacao||''),'ocorrencia');
+    linhas.push({cod:'',funcionario:e2bNomeCompleto(o.colaborador),data:e2bFmtData(o.data),tipo,obs:o.observacao||o.tipo||'',motivo,mes,ano,gestor:E2B_GESTOR,status:E2B_STATUS,tempo,motivoAtest:'',cid:'',ausenciaDia:ausDia});
+  });
+  // Ordenar por data desc, depois por funcionário
+  linhas.sort((a,b)=>{const[da,ma,ya]=a.data.split('/'),[db_,mb,yb]=b.data.split('/');const cmp=`${yb}${mb}${db_}`.localeCompare(`${ya}${ma}${da}`);return cmp||a.funcionario.localeCompare(b.funcionario);});
+  window._exp2bLinhas=linhas;
+  renderExp2BPreview(linhas);
+}
+function e2bChangeMotivo(idx,val){
+  if(window._exp2bLinhas&&window._exp2bLinhas[idx]){
+    window._exp2bLinhas[idx].motivo=val;
+    // Re-renderizar apenas o resumo KPI
+    const linhas=window._exp2bLinhas;
+    const porMotivo={};linhas.forEach(l=>{porMotivo[l.motivo]=(porMotivo[l.motivo]||0)+1;});
+    let khtml='';
+    Object.entries(porMotivo).forEach(([m,c])=>{khtml+=`<div class="stat s-uso"><b>${c}</b><span>${esc(m)}</span></div>`;});
+    khtml+=`<div class="stat"><b>${linhas.length}</b><span>Total linhas</span></div>`;
+    const kEl=document.querySelector('#e2b-preview .kpis');
+    if(kEl)kEl.innerHTML=khtml;
+  }
+}
+function renderExp2BPreview(linhas){
+  if(!linhas.length){$('e2b-preview').innerHTML='<div class="empty">Nenhuma ausência encontrada nesse mês.</div>';return;}
+  const porMotivo={};linhas.forEach(l=>{porMotivo[l.motivo]=(porMotivo[l.motivo]||0)+1;});
+  let html='<div class="kpis">';
+  Object.entries(porMotivo).forEach(([m,c])=>{html+=`<div class="stat s-uso"><b>${c}</b><span>${esc(m)}</span></div>`;});
+  html+=`<div class="stat"><b>${linhas.length}</b><span>Total linhas</span></div></div>`;
+  html+='<div class="actions" style="margin:12px 0"><button class="btn-primary" onclick="baixarExport2B()" style="font-size:15px;padding:12px 20px">📥 Baixar Excel no leiaute 2B</button></div>';
+  html+='<div style="overflow-x:auto;max-height:500px;overflow-y:auto;border:1px solid var(--line);border-radius:8px"><table style="width:100%;border-collapse:collapse;font-size:11px;background:#fff">';
+  html+='<thead style="position:sticky;top:0;background:#faf8f2;z-index:1"><tr style="border-bottom:2px solid var(--line)">';
+  ['Funcionário','Data','Tipo','Observação','Motivo Ausência','Mês','Ano','Status','Tempo','Aus. Dia'].forEach(h=>{html+=`<th style="text-align:left;padding:6px 8px;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);white-space:nowrap">${h}</th>`;});
+  html+='</tr></thead><tbody>';
+  linhas.forEach((l,i)=>{
+    const opts=MOTIVOS_2B.map(m=>`<option ${m===l.motivo?'selected':''}>${m}</option>`).join('');
+    html+=`<tr style="border-bottom:1px solid #eee">
+      <td style="padding:4px 8px;font-weight:500;white-space:nowrap">${esc(l.funcionario)}</td>
+      <td style="padding:4px 8px;white-space:nowrap">${esc(l.data)}</td>
+      <td style="padding:4px 8px">${esc(l.tipo)}</td>
+      <td style="padding:4px 8px;max-width:200px">${esc((l.obs||'').slice(0,60))}</td>
+      <td style="padding:2px 4px"><select onchange="e2bChangeMotivo(${i},this.value)" style="width:100%;padding:3px 5px;border:1px solid var(--line);border-radius:4px;font-size:11px;background:#fff">${opts}</select></td>
+      <td style="padding:4px 8px;text-align:center">${l.mes}</td>
+      <td style="padding:4px 8px;text-align:center">${l.ano}</td>
+      <td style="padding:4px 8px;color:#7a5a1f;font-weight:500">${esc(l.status)}</td>
+      <td style="padding:4px 8px;text-align:right">${esc(l.tempo)}</td>
+      <td style="padding:4px 8px;text-align:right;font-weight:700">${esc(l.ausenciaDia)}</td>
+    </tr>`;
+  });
+  html+='</tbody></table></div>';
+  html+='<p class="hint" style="font-size:11px;margin-top:8px">💡 <b>16 motivos oficiais do 2B</b> aplicados automaticamente por palavra-chave (tipo + observação). Se algum ficar errado, use o <b>dropdown na tabela</b> pra corrigir antes de baixar. Status <b>Em analise</b> em todas as linhas.</p>';
+  $('e2b-preview').innerHTML=html;
+}
+function baixarExport2B(){
+  const linhas=window._exp2bLinhas||[];
+  if(!linhas.length){alert('Sem dados para exportar.');return;}
+  if(typeof XLSX==='undefined'){alert('Biblioteca XLSX não carregou.');return;}
+  const header=['Cod.','Funcionário','Data','Tipo','Observação','Motivos Ausência','Mês Ausência','Ano Ausência','Gestor','Status','Tempo','Motivo Atestado','CID','Ausencia Dia'];
+  const rows=[header];
+  linhas.forEach(l=>{
+    rows.push([l.cod,l.funcionario,l.data,l.tipo,l.obs,l.motivo,l.mes,l.ano,l.gestor,l.status,l.tempo,l.motivoAtest,l.cid,l.ausenciaDia]);
+  });
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:6},{wch:36},{wch:11},{wch:11},{wch:35},{wch:22},{wch:6},{wch:7},{wch:28},{wch:11},{wch:9},{wch:20},{wch:10},{wch:10}];
+  XLSX.utils.book_append_sheet(wb,ws,'Export');
+  const ano=parseInt($('e2b-ano').value),mes=parseInt($('e2b-mes').value);
+  XLSX.writeFile(wb,`ausencias-2b-${String(mes).padStart(2,'0')}-${ano}.xlsx`);
+  toast('✓ Excel gerado');
+}
+$('e2b-expfer')&&$('e2b-expfer').addEventListener('change',previewExp2B);
 
 // ============================================================
 // ===== Performance: Kanban de clientes + Dailies =============
