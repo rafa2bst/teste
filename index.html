@@ -1188,17 +1188,40 @@
     </div>
 
     <div class="form-card">
+      <style>body.metcol-view .wrap{max-width:1600px !important}#view-metcol .form-card{max-width:none}</style>
       <div class="row2">
         <div><label>Colaborador</label><select id="mc-colab" onchange="loadMetasCol()"></select></div>
         <div><label>Ano</label><select id="mc-ano" onchange="onMcAnoChange()"></select></div>
       </div>
 
+      <!-- Metas anuais do colaborador -->
+      <div style="margin-top:14px;background:#f7f5ee;border:1px solid var(--line);border-radius:10px;padding:12px 14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+          <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#7a5a1f;font-weight:700">🎯 Metas anuais do colaborador (referência dos gráficos)</div>
+          <button class="btn-primary" onclick="salvarMetaAlvo()" style="padding:5px 12px;font-size:12px">Salvar metas</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px">
+          <div><label style="font-size:10px;color:var(--ink-soft)">Qtd atend./mês</label><input type="number" step="1" id="ma-qtd" placeholder="ex 400" style="width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:5px;font-size:13px"></div>
+          <div><label style="font-size:10px;color:var(--ink-soft)">TMA (HH:MM:SS)</label><input type="text" id="ma-tma" placeholder="00:10:00" style="width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:5px;font-size:13px;text-align:center"></div>
+          <div><label style="font-size:10px;color:var(--ink-soft)">Média Dia</label><input type="number" step="0.1" id="ma-mdia" placeholder="ex 18" style="width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:5px;font-size:13px"></div>
+          <div><label style="font-size:10px;color:var(--ink-soft)">% Absorção</label><input type="number" step="0.001" id="ma-abs" placeholder="ex 1.00" style="width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:5px;font-size:13px"></div>
+          <div><label style="font-size:10px;color:var(--ink-soft)">% Satisfação</label><input type="number" step="0.001" id="ma-sat" placeholder="ex 0.90" style="width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:5px;font-size:13px"></div>
+          <div><label style="font-size:10px;color:var(--ink-soft)">% Votação</label><input type="number" step="0.001" id="ma-vot" placeholder="ex 0.40" style="width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:5px;font-size:13px"></div>
+        </div>
+        <p class="hint" style="font-size:11px;margin-top:8px;margin-bottom:0">💡 Percentuais como decimal (1.00 = 100%; 0.90 = 90%). Se preencher, aparece linha tracejada laranja no gráfico correspondente.</p>
+      </div>
+
       <div id="mc-kpis" class="kpis" style="margin-top:14px"></div>
-      <div id="mc-tabela" style="margin-top:10px;overflow-x:auto"></div>
+      <div id="mc-tabela" style="margin-top:10px"></div>
       <div class="actions" style="margin-top:12px"><button class="btn-primary" onclick="salvarMetCol()">Salvar meses do colaborador</button></div>
       <div style="margin-top:18px;background:#fbf9f2;border:1px solid var(--line);border-radius:10px;padding:14px">
-        <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft);font-weight:700;margin-bottom:8px">📈 Evolução ao longo do ano</div>
-        <div style="position:relative;height:340px"><canvas id="mc-chart"></canvas></div>
+        <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft);font-weight:700;margin-bottom:10px">📈 Evolução ao longo do ano (real vs meta)</div>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px" id="mc-charts-grid">
+          <div style="background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px"><div style="position:relative;height:220px"><canvas id="mc-chart-qtd"></canvas></div></div>
+          <div style="background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px"><div style="position:relative;height:220px"><canvas id="mc-chart-tma"></canvas></div></div>
+          <div style="background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px"><div style="position:relative;height:220px"><canvas id="mc-chart-mdia"></canvas></div></div>
+          <div style="background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px"><div style="position:relative;height:220px"><canvas id="mc-chart-pct"></canvas></div></div>
+        </div>
       </div>
       <div style="margin-top:20px;border-top:1px dashed #d9b3b3;padding-top:14px">
         <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#a64141;font-weight:700;margin-bottom:6px">⚠ Zona de perigo</div>
@@ -1797,6 +1820,7 @@ function showView(v){
   $('view-aloc').style.display=v==='aloc'?'block':'none';
   $('view-met').style.display=v==='met'?'block':'none';
   $('view-metcol').style.display=v==='metcol'?'block':'none';
+  document.body.classList.toggle('metcol-view',v==='metcol');
   $('view-compano').style.display=v==='compano'?'block':'none';
   $('view-plantel').style.display=v==='plantel'?'block':'none';
   $('view-exp2b').style.display=v==='exp2b'?'block':'none';
@@ -3733,25 +3757,61 @@ async function salvarSetor(){
 async function loadMetasCol(){
   const colab=$('mc-colab').value,ano=parseInt($('mc-ano').value);
   if(!colab||!ano){$('mc-tabela').innerHTML='';return;}
-  if(mcChart){mcChart.destroy();mcChart=null;}
+  destroyMcCharts();
   const{data,error}=await db.from('metas_colaborador').select('*').eq('colaborador',colab).eq('ano',ano);
   if(error){$('mc-tabela').innerHTML='<div class="empty"><b>Sem acesso ou tabela não existe.</b>Rode o SQL.</div>';return;}
   metasColMap={};(data||[]).forEach(m=>{metasColMap[m.mes]={...m};});
   for(let m=1;m<=12;m++)if(!metasColMap[m])metasColMap[m]={colaborador:colab,ano,mes:m,tma:null,qtd_atendimento:null,atendidas_sem_filtro:null,dias_ferias:null,dias_ausencia:null,dias_trabalhados:null,meta_dia_sem_ajuste:null,meta:null,resultado:null,pct_absorcao:null,pct_votacao:null,pct_satisfacao:null,observacao:null};
+  await loadMetaAlvo(colab,ano);
   renderMetCol();
+}
+// ===== Meta Alvo (metas anuais de referência) =====
+let metaAlvoAtual=null;
+function mcTmaSec(v){if(!v)return null;const p=String(v).split(':').map(x=>parseInt(x)||0);if(p.length===3)return p[0]*3600+p[1]*60+p[2];if(p.length===2)return p[0]*60+p[1];return null;}
+function mcSecTma(s){if(s==null||isNaN(s))return '';const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;}
+async function loadMetaAlvo(colab,ano){
+  try{
+    const{data,error}=await db.from('metas_alvo').select('*').eq('colaborador',colab).eq('ano',ano).maybeSingle();
+    if(error&&error.code!=='PGRST116')metaAlvoAtual=null;
+    else metaAlvoAtual=data||{colaborador:colab,ano,meta_qtd_atendimento:null,meta_tma_seg:null,meta_pct_absorcao:null,meta_pct_satisfacao:null,meta_pct_votacao:null,meta_media_dia:null};
+  }catch(e){metaAlvoAtual={colaborador:colab,ano,meta_qtd_atendimento:null,meta_tma_seg:null,meta_pct_absorcao:null,meta_pct_satisfacao:null,meta_pct_votacao:null,meta_media_dia:null};}
+  $('ma-qtd').value=metaAlvoAtual.meta_qtd_atendimento!=null?metaAlvoAtual.meta_qtd_atendimento:'';
+  $('ma-tma').value=metaAlvoAtual.meta_tma_seg!=null?mcSecTma(metaAlvoAtual.meta_tma_seg):'';
+  $('ma-mdia').value=metaAlvoAtual.meta_media_dia!=null?metaAlvoAtual.meta_media_dia:'';
+  $('ma-abs').value=metaAlvoAtual.meta_pct_absorcao!=null?metaAlvoAtual.meta_pct_absorcao:'';
+  $('ma-sat').value=metaAlvoAtual.meta_pct_satisfacao!=null?metaAlvoAtual.meta_pct_satisfacao:'';
+  $('ma-vot').value=metaAlvoAtual.meta_pct_votacao!=null?metaAlvoAtual.meta_pct_votacao:'';
+}
+async function salvarMetaAlvo(){
+  const colab=$('mc-colab').value,ano=parseInt($('mc-ano').value);
+  if(!colab||!ano){alert('Selecione colaborador e ano.');return;}
+  const parse=v=>{if(v===''||v==null)return null;const p=parseFloat(v);return isNaN(p)?null:p;};
+  const upd={colaborador:colab,ano,meta_qtd_atendimento:parse($('ma-qtd').value),meta_tma_seg:mcTmaSec($('ma-tma').value.trim()),meta_media_dia:parse($('ma-mdia').value),meta_pct_absorcao:parse($('ma-abs').value),meta_pct_satisfacao:parse($('ma-sat').value),meta_pct_votacao:parse($('ma-vot').value),atualizado_em:new Date().toISOString()};
+  const{error}=await db.from('metas_alvo').upsert(upd,{onConflict:'colaborador,ano'});
+  if(error){alert('Erro salvando metas: '+error.message);return;}
+  metaAlvoAtual=upd;
+  toast('✓ Metas anuais salvas');
+  renderMetColChart();
 }
 function absorcao(meta,res){if(meta==null||res==null||meta===0)return null;return Math.round((res/meta)*100);}
 function corAbs(pct){if(pct==null)return {bg:'#f4f1ea',tx:'#9c9583'};if(pct>=100)return{bg:'#dfebe0',tx:'#1e5426'};if(pct>=80)return{bg:'#fdf3d9',tx:'#7a5a1f'};return{bg:'#f5dcdc',tx:'#801c1c'};}
-function nCell(m,field,step){
-  const r=metasColMap[m],v=r[field];
-  return`<td style="padding:3px 4px"><input type="number" step="${step||'0.01'}" value="${v!=null?v:''}" oninput="setColNum(${m},'${field}',this.value)" style="width:100%;padding:5px 6px;border:1px solid var(--line);border-radius:5px;font-size:12px;text-align:right"></td>`;
+// Seta de tendência entre mês atual e anterior (higher=true -> ▲ verde é positivo)
+function mcTrend(cur,prev,higher){
+  if(cur==null||prev==null||cur===prev)return '<span style="color:#c6c0ac;font-size:9px">▬</span>';
+  const positivo=higher?cur>prev:cur<prev;
+  return `<span style="color:${positivo?'#1f6f5c':'#a64141'};font-size:10px" title="${cur>prev?'subiu':'caiu'} vs mês anterior">${cur>prev?'▲':'▼'}</span>`;
+}
+function nCell(m,field,step,higher){
+  const r=metasColMap[m],prev=m>1?metasColMap[m-1]:null,v=r[field],pv=prev?prev[field]:null;
+  const trend=higher!==undefined?`<div style="position:absolute;right:2px;top:1px;pointer-events:none">${mcTrend(v==null?null:parseFloat(v),pv==null?null:parseFloat(pv),higher)}</div>`:'';
+  return`<td style="padding:2px 3px;position:relative"><input type="number" step="${step||'0.01'}" value="${v!=null?v:''}" oninput="setColNum(${m},'${field}',this.value)" style="width:100%;padding:5px 6px;border:1px solid var(--line);border-radius:5px;font-size:12px;text-align:right">${trend}</td>`;
 }
 function tCell(m,field,ph){
   const r=metasColMap[m],v=r[field]||'';
-  return`<td style="padding:3px 4px"><input type="text" value="${esc(v)}" oninput="setColTxt(${m},'${field}',this.value)" placeholder="${ph||''}" style="width:100%;padding:5px 6px;border:1px solid var(--line);border-radius:5px;font-size:12px;text-align:center"></td>`;
+  return`<td style="padding:2px 3px"><input type="text" value="${esc(v)}" oninput="setColTxt(${m},'${field}',this.value)" placeholder="${ph||''}" style="width:100%;padding:5px 6px;border:1px solid var(--line);border-radius:5px;font-size:12px;text-align:center"></td>`;
 }
 function renderMetCol(){
-  const rows=[];let sumMeta=0,sumRes=0,mesesPreenchidos=0,sumQtd=0;
+  const rows=[];let sumMeta=0,sumRes=0,mesesPreenchidos=0,sumQtd=0,pctPrev=null;
   for(let m=1;m<=12;m++){
     const r=metasColMap[m];
     const pctStored=r.pct_absorcao;
@@ -3764,21 +3824,22 @@ function renderMetCol(){
     if(preenchido)mesesPreenchidos++;
     const col=corAbs(pct);
     rows.push(`<tr>
-      <td style="padding:6px 8px;font-weight:500;font-size:12px;background:#faf8f2;border-radius:4px 0 0 4px;white-space:nowrap">${MESES[m-1].slice(0,3)}</td>
+      <td style="padding:5px 6px;font-weight:500;font-size:12px;background:#faf8f2;border-radius:4px 0 0 4px;white-space:nowrap">${MESES[m-1].slice(0,3)}</td>
       ${tCell(m,'tma','HH:MM:SS')}
-      ${nCell(m,'qtd_atendimento','1')}
-      ${nCell(m,'atendidas_sem_filtro','1')}
+      ${nCell(m,'qtd_atendimento','1',true)}
+      ${nCell(m,'atendidas_sem_filtro','1',true)}
       ${nCell(m,'dias_ferias','0.1')}
       ${nCell(m,'dias_ausencia','0.1')}
       ${nCell(m,'dias_trabalhados','0.1')}
       ${nCell(m,'meta_dia_sem_ajuste','0.1')}
       ${nCell(m,'meta','0.1')}
-      ${nCell(m,'resultado','0.1')}
-      ${nCell(m,'pct_absorcao','0.001')}
-      ${nCell(m,'pct_votacao','0.001')}
-      ${nCell(m,'pct_satisfacao','0.001')}
-      <td style="padding:6px 8px;background:${col.bg};color:${col.tx};font-weight:700;text-align:center;font-size:12px;border-radius:0 4px 4px 0;white-space:nowrap">${pct!=null?pct+'%':'—'}</td>
+      ${nCell(m,'resultado','0.1',true)}
+      ${nCell(m,'pct_absorcao','0.001',true)}
+      ${nCell(m,'pct_votacao','0.001',true)}
+      ${nCell(m,'pct_satisfacao','0.001',true)}
+      <td style="padding:5px 6px;background:${col.bg};color:${col.tx};font-weight:700;text-align:center;font-size:12px;border-radius:0 4px 4px 0;white-space:nowrap">${pct!=null?pct+'%':'—'} ${mcTrend(pct,pctPrev,true)}</td>
     </tr>`);
+    pctPrev=pct;
   }
   const pctAno=absorcao(sumMeta||null,sumRes||null);
   $('mc-kpis').innerHTML=[
@@ -3789,13 +3850,13 @@ function renderMetCol(){
     ['Absorção anual',pctAno!=null?pctAno+'%':'—',pctAno==null?'':(pctAno>=100?'s-uso':pctAno>=80?'s-manut':'s-desc')]
   ].map(k=>`<div class="stat ${k[2]}"><b>${k[1]}</b><span>${esc(k[0])}</span></div>`).join('');
   const th=(t)=>`<th style="text-align:center;padding:6px 4px;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);white-space:nowrap">${t}</th>`;
-  $('mc-tabela').innerHTML=`<table style="width:100%;border-collapse:separate;border-spacing:0 3px;min-width:1180px;font-size:12px">
+  $('mc-tabela').innerHTML=`<table style="width:100%;border-collapse:separate;border-spacing:0 3px;font-size:12px;table-layout:fixed">
     <thead><tr style="background:#faf8f2">
-      <th style="text-align:left;padding:6px 8px;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);width:5%">Mês</th>
+      <th style="text-align:left;padding:6px 8px;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);width:44px">Mês</th>
       ${th('TMA')}${th('Qtd atend.')}${th('S/ filtro')}${th('Férias')}${th('Ausênc.')}${th('Dias Tr.')}${th('Meta S/Aj')}${th('Meta Dia')}${th('Média Dia')}${th('% Abs.')}${th('% Vot.')}${th('Satisf.')}${th('Absorção')}
     </tr></thead>
     <tbody>${rows.join('')}</tbody></table>
-    <p class="hint" style="font-size:11px;margin-top:6px">💡 <b>% Absorção / Votação / Satisfação</b>: informe como decimal (ex.: 1.097 = 109.7%; 0.992 = 99.2%). A coluna final <b>Absorção</b> mostra o percentual final calculado, ou de <b>Média Dia ÷ Meta Dia</b> se a absorção não foi preenchida.</p>`;
+    <p class="hint" style="font-size:11px;margin-top:6px">💡 <b>% Absorção / Votação / Satisfação</b>: decimal (ex.: 1.097 = 109.7%; 0.992 = 99.2%). Setas <span style="color:#1f6f5c">▲</span>/<span style="color:#a64141">▼</span> comparam com o mês anterior.</p>`;
   clearTimeout(mcChartTimer);mcChartTimer=setTimeout(renderMetColChart,250);
 }
 function setColNum(mes,field,val){
@@ -3828,54 +3889,56 @@ async function apagarTodasMetasCol(){
   toast('✓ Todas as metas de colaboradores foram apagadas');
   await loadMetasCol();
 }
+// ===== Gráficos: 4 mini-charts com linha de meta =====
+let mcCharts={};
+function destroyMcCharts(){for(const k in mcCharts){try{mcCharts[k].destroy();}catch(e){}}mcCharts={};}
+function mcMkChart(canvasId,cfg){const el=$(canvasId);if(!el)return;if(mcCharts[canvasId]){try{mcCharts[canvasId].destroy();}catch(e){}}mcCharts[canvasId]=new Chart(el.getContext('2d'),cfg);}
+function mcColorSerie(data,meta,higher){
+  if(meta==null)return {border:'#1f6f5c',bg:'rgba(31,111,92,0.15)'};
+  const vals=data.filter(v=>v!=null);
+  if(!vals.length)return {border:'#1f6f5c',bg:'rgba(31,111,92,0.15)'};
+  const avg=vals.reduce((a,b)=>a+b,0)/vals.length;
+  const bateu=higher?avg>=meta:avg<=meta;
+  return bateu?{border:'#1f6f5c',bg:'rgba(31,111,92,0.15)'}:{border:'#a64141',bg:'rgba(166,65,65,0.12)'};
+}
 function renderMetColChart(){
-  const ctx=$('mc-chart');if(!ctx||typeof Chart==='undefined')return;
-  const qtdAtend=[],mediaDia=[],metaDia=[],absorcoes=[],satisfacoes=[];
+  if(typeof Chart==='undefined')return;
+  const labels=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const qtd=[],tmas=[],mdia=[],abs=[],sat=[],vot=[];
   for(let m=1;m<=12;m++){
     const r=metasColMap[m];
-    qtdAtend.push(r.qtd_atendimento!=null?parseFloat(r.qtd_atendimento):null);
-    metaDia.push(r.meta!=null?parseFloat(r.meta):null);
-    mediaDia.push(r.resultado!=null?parseFloat(r.resultado):null);
-    const pctStored=r.pct_absorcao;
-    const pctCalc=absorcao(r.meta,r.resultado);
-    const pct=pctStored!=null?Math.round(parseFloat(pctStored)*100):pctCalc;
-    absorcoes.push(pct);
-    satisfacoes.push(r.pct_satisfacao!=null?Math.round(parseFloat(r.pct_satisfacao)*100):null);
+    qtd.push(r.qtd_atendimento!=null?parseFloat(r.qtd_atendimento):null);
+    tmas.push(r.tma?mcTmaSec(r.tma):null);
+    mdia.push(r.resultado!=null?parseFloat(r.resultado):null);
+    abs.push(r.pct_absorcao!=null?Math.round(parseFloat(r.pct_absorcao)*100):(absorcao(r.meta,r.resultado)));
+    sat.push(r.pct_satisfacao!=null?Math.round(parseFloat(r.pct_satisfacao)*100):null);
+    vot.push(r.pct_votacao!=null?Math.round(parseFloat(r.pct_votacao)*100):null);
   }
-  const labels=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-  const cfg={
-    type:'bar',
-    data:{labels,datasets:[
-      {label:'Qtd atend.',data:qtdAtend,backgroundColor:'rgba(59,130,246,0.35)',borderColor:'#3b82f6',borderWidth:1,type:'bar',order:3,yAxisID:'y'},
-      {label:'Meta Dia',data:metaDia,backgroundColor:'rgba(31,111,92,0.25)',borderColor:'#1f6f5c',borderWidth:1,type:'bar',order:3,yAxisID:'y2'},
-      {label:'Média Dia',data:mediaDia,backgroundColor:'rgba(201,126,47,0.35)',borderColor:'#c97e2f',borderWidth:1,type:'bar',order:3,yAxisID:'y2'},
-      {label:'% Absorção',data:absorcoes,borderColor:'#a64141',backgroundColor:'rgba(166,65,65,0.1)',type:'line',yAxisID:'y1',order:1,tension:0.3,pointRadius:5,pointBackgroundColor:'#a64141',borderWidth:2,spanGaps:true},
-      {label:'% Satisfação',data:satisfacoes,borderColor:'#3f8f4a',backgroundColor:'rgba(63,143,74,0.1)',type:'line',yAxisID:'y1',order:1,tension:0.3,pointRadius:5,pointBackgroundColor:'#3f8f4a',borderWidth:2,spanGaps:true}
-    ]},
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      interaction:{mode:'index',intersect:false},
-      plugins:{
-        legend:{position:'bottom',labels:{padding:12,font:{size:11},boxWidth:12}},
-        tooltip:{callbacks:{label:(c)=>{const l=c.dataset.label;if(l.includes('%'))return`${l}: ${c.parsed.y!=null?c.parsed.y+'%':'—'}`;return`${l}: ${c.parsed.y!=null?c.parsed.y:'—'}`;}}}
-      },
-      scales:{
-        y:{beginAtZero:true,position:'left',title:{display:true,text:'Qtd atend. (mês)',font:{size:10}},grid:{color:'rgba(0,0,0,.05)'}},
-        y2:{type:'linear',position:'left',beginAtZero:true,display:false},
-        y1:{type:'linear',position:'right',beginAtZero:true,grid:{drawOnChartArea:false},title:{display:true,text:'%',font:{size:10}},suggestedMax:120,ticks:{callback:v=>v+'%'}}
-      }
-    }
-  };
-  if(mcChart){
-    mcChart.data.datasets[0].data=qtdAtend;
-    mcChart.data.datasets[1].data=metaDia;
-    mcChart.data.datasets[2].data=mediaDia;
-    mcChart.data.datasets[3].data=absorcoes;
-    mcChart.data.datasets[4].data=satisfacoes;
-    mcChart.update('none');
-  }else{
-    mcChart=new Chart(ctx.getContext('2d'),cfg);
-  }
+  const mA=metaAlvoAtual||{};
+  const metaQtd=mA.meta_qtd_atendimento||null;
+  const metaTma=mA.meta_tma_seg||null;
+  const metaMdia=mA.meta_media_dia||null;
+  const metaAbsP=mA.meta_pct_absorcao!=null?Math.round(mA.meta_pct_absorcao*100):null;
+  const metaSatP=mA.meta_pct_satisfacao!=null?Math.round(mA.meta_pct_satisfacao*100):null;
+  const metaVotP=mA.meta_pct_votacao!=null?Math.round(mA.meta_pct_votacao*100):null;
+  const commonOpts=(yFmt)=>({responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'bottom',labels:{padding:6,font:{size:10},boxWidth:12}},title:{display:true,font:{size:12,weight:'bold'},color:'#2c2a24'}},scales:{y:{beginAtZero:false,grid:{color:'rgba(0,0,0,.05)'},ticks:{font:{size:10},callback:yFmt}},x:{ticks:{font:{size:10}},grid:{display:false}}}});
+  const metaLineDS=(val,label)=>val==null?null:{label:`Meta: ${label}`,data:Array(12).fill(val),borderColor:'#d97706',borderDash:[6,4],borderWidth:2,pointRadius:0,fill:false,tension:0};
+  // 1) Qtd Atendimento
+  {const c=mcColorSerie(qtd,metaQtd,true);const ds=[{label:'Qtd atend.',data:qtd,borderColor:c.border,backgroundColor:c.bg,borderWidth:2,pointRadius:4,pointBackgroundColor:c.border,tension:0.3,spanGaps:false,type:'line',fill:true}];const meta=metaLineDS(metaQtd,metaQtd);if(meta)ds.push(meta);const opt=commonOpts();opt.plugins.title.text='Qtd atendimentos';mcMkChart('mc-chart-qtd',{type:'line',data:{labels,datasets:ds},options:opt});}
+  // 2) TMA (menor = melhor, exibir em HH:MM:SS)
+  {const c=mcColorSerie(tmas,metaTma,false);const ds=[{label:'TMA',data:tmas,borderColor:c.border,backgroundColor:c.bg,borderWidth:2,pointRadius:4,pointBackgroundColor:c.border,tension:0.3,spanGaps:false,type:'line',fill:true}];const meta=metaLineDS(metaTma,mcSecTma(metaTma));if(meta)ds.push(meta);const opt=commonOpts(v=>mcSecTma(v));opt.plugins.title.text='TMA (menor = melhor)';opt.plugins.tooltip={callbacks:{label:(c)=>`${c.dataset.label}: ${c.parsed.y!=null?mcSecTma(c.parsed.y):'—'}`}};mcMkChart('mc-chart-tma',{type:'line',data:{labels,datasets:ds},options:opt});}
+  // 3) Média Dia (com Meta Dia da tabela como sombra + meta anual como linha)
+  {const c=mcColorSerie(mdia,metaMdia,true);const ds=[{label:'Média Dia',data:mdia,borderColor:c.border,backgroundColor:c.bg,borderWidth:2,pointRadius:4,pointBackgroundColor:c.border,tension:0.3,spanGaps:false,type:'line',fill:true}];const meta=metaLineDS(metaMdia,metaMdia);if(meta)ds.push(meta);const opt=commonOpts();opt.plugins.title.text='Média Dia';mcMkChart('mc-chart-mdia',{type:'line',data:{labels,datasets:ds},options:opt});}
+  // 4) Percentuais (Absorção, Satisfação, Votação) num só chart pra economizar espaço
+  {const ds=[
+    {label:'% Absorção',data:abs,borderColor:'#a64141',backgroundColor:'rgba(166,65,65,0.08)',borderWidth:2,pointRadius:4,tension:0.3,spanGaps:false,type:'line',fill:false},
+    {label:'% Satisfação',data:sat,borderColor:'#3f8f4a',backgroundColor:'rgba(63,143,74,0.08)',borderWidth:2,pointRadius:4,tension:0.3,spanGaps:false,type:'line',fill:false},
+    {label:'% Votação',data:vot,borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,0.08)',borderWidth:2,pointRadius:4,tension:0.3,spanGaps:false,type:'line',fill:false}
+  ];
+  if(metaAbsP!=null)ds.push({label:`Meta Abs: ${metaAbsP}%`,data:Array(12).fill(metaAbsP),borderColor:'#a64141',borderDash:[4,3],borderWidth:1.5,pointRadius:0,fill:false});
+  if(metaSatP!=null)ds.push({label:`Meta Sat: ${metaSatP}%`,data:Array(12).fill(metaSatP),borderColor:'#3f8f4a',borderDash:[4,3],borderWidth:1.5,pointRadius:0,fill:false});
+  if(metaVotP!=null)ds.push({label:`Meta Vot: ${metaVotP}%`,data:Array(12).fill(metaVotP),borderColor:'#3b82f6',borderDash:[4,3],borderWidth:1.5,pointRadius:0,fill:false});
+  const opt=commonOpts(v=>v+'%');opt.plugins.title.text='% Absorção / Satisfação / Votação';opt.scales.y.beginAtZero=true;opt.scales.y.suggestedMax=120;mcMkChart('mc-chart-pct',{type:'line',data:{labels,datasets:ds},options:opt});}
 }
 // ===== Import de Excel para metas_colaborador/setor =====
 let _mcBlocks=[];
