@@ -3778,15 +3778,16 @@ async function loadMetaAlvo(colab,ano){
   $('ma-qtd').value=metaAlvoAtual.meta_qtd_atendimento!=null?metaAlvoAtual.meta_qtd_atendimento:'';
   $('ma-tma').value=metaAlvoAtual.meta_tma_seg!=null?mcSecTma(metaAlvoAtual.meta_tma_seg):'';
   $('ma-mdia').value=metaAlvoAtual.meta_media_dia!=null?metaAlvoAtual.meta_media_dia:'';
-  $('ma-abs').value=metaAlvoAtual.meta_pct_absorcao!=null?metaAlvoAtual.meta_pct_absorcao:'';
-  $('ma-sat').value=metaAlvoAtual.meta_pct_satisfacao!=null?metaAlvoAtual.meta_pct_satisfacao:'';
-  $('ma-vot').value=metaAlvoAtual.meta_pct_votacao!=null?metaAlvoAtual.meta_pct_votacao:'';
+  $('ma-abs').value=metaAlvoAtual.meta_pct_absorcao!=null?+((metaAlvoAtual.meta_pct_absorcao*100).toFixed(2)):'';
+  $('ma-sat').value=metaAlvoAtual.meta_pct_satisfacao!=null?+((metaAlvoAtual.meta_pct_satisfacao*100).toFixed(2)):'';
+  $('ma-vot').value=metaAlvoAtual.meta_pct_votacao!=null?+((metaAlvoAtual.meta_pct_votacao*100).toFixed(2)):'';
 }
 async function salvarMetaAlvo(){
   const colab=$('mc-colab').value,ano=parseInt($('mc-ano').value);
   if(!colab||!ano){alert('Selecione colaborador e ano.');return;}
   const parse=v=>{if(v===''||v==null)return null;const p=parseFloat(v);return isNaN(p)?null:p;};
-  const upd={colaborador:colab,ano,meta_qtd_atendimento:parse($('ma-qtd').value),meta_tma_seg:mcTmaSec($('ma-tma').value.trim()),meta_media_dia:parse($('ma-mdia').value),meta_pct_absorcao:parse($('ma-abs').value),meta_pct_satisfacao:parse($('ma-sat').value),meta_pct_votacao:parse($('ma-vot').value),atualizado_em:new Date().toISOString()};
+  const parsePct=v=>{if(v===''||v==null)return null;const p=parseFloat(v)/100;return isNaN(p)?null:p;};
+  const upd={colaborador:colab,ano,meta_qtd_atendimento:parse($('ma-qtd').value),meta_tma_seg:mcTmaSec($('ma-tma').value.trim()),meta_media_dia:parse($('ma-mdia').value),meta_pct_absorcao:parsePct($('ma-abs').value),meta_pct_satisfacao:parsePct($('ma-sat').value),meta_pct_votacao:parsePct($('ma-vot').value),atualizado_em:new Date().toISOString()};
   const{error}=await db.from('metas_alvo').upsert(upd,{onConflict:'colaborador,ano'});
   if(error){alert('Erro salvando metas: '+error.message);return;}
   metaAlvoAtual=upd;
@@ -3809,6 +3810,17 @@ function nCell(m,field,step,higher){
 function tCell(m,field,ph){
   const r=metasColMap[m],v=r[field]||'';
   return`<td style="padding:2px 3px"><input type="text" value="${esc(v)}" oninput="setColTxt(${m},'${field}',this.value)" placeholder="${ph||''}" style="width:100%;padding:5px 6px;border:1px solid var(--line);border-radius:5px;font-size:12px;text-align:center"></td>`;
+}
+function pctCell(m,field,higher){
+  const r=metasColMap[m],prev=m>1?metasColMap[m-1]:null,v=r[field],pv=prev?prev[field]:null;
+  const disp=v!=null?String(+((parseFloat(v)*100).toFixed(2))):'';
+  const trend=higher!==undefined?`<div style="position:absolute;right:22px;top:1px;pointer-events:none">${mcTrend(v==null?null:parseFloat(v),pv==null?null:parseFloat(pv),higher)}</div>`:'';
+  return`<td style="padding:2px 3px;position:relative"><input type="number" step="0.1" value="${disp}" oninput="setColPct(${m},'${field}',this.value)" style="width:100%;padding:5px 20px 5px 6px;border:1px solid var(--line);border-radius:5px;font-size:12px;text-align:right"><span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);color:#9c9583;font-size:11px;pointer-events:none">%</span>${trend}</td>`;
+}
+function setColPct(m,field,val){
+  if(val===''||val==null){metasColMap[m][field]=null;}
+  else{const p=parseFloat(val)/100;metasColMap[m][field]=isNaN(p)?null:p;}
+  clearTimeout(mcChartTimer);mcChartTimer=setTimeout(()=>{renderMetCol();},300);
 }
 function renderMetCol(){
   const rows=[];let sumMeta=0,sumRes=0,mesesPreenchidos=0,sumQtd=0,pctPrev=null;
@@ -3834,9 +3846,9 @@ function renderMetCol(){
       ${nCell(m,'meta_dia_sem_ajuste','0.1')}
       ${nCell(m,'meta','0.1')}
       ${nCell(m,'resultado','0.1',true)}
-      ${nCell(m,'pct_absorcao','0.001',true)}
-      ${nCell(m,'pct_votacao','0.001',true)}
-      ${nCell(m,'pct_satisfacao','0.001',true)}
+      ${pctCell(m,'pct_absorcao',true)}
+      ${pctCell(m,'pct_votacao',true)}
+      ${pctCell(m,'pct_satisfacao',true)}
       <td style="padding:5px 6px;background:${col.bg};color:${col.tx};font-weight:700;text-align:center;font-size:12px;border-radius:0 4px 4px 0;white-space:nowrap">${pct!=null?pct+'%':'—'} ${mcTrend(pct,pctPrev,true)}</td>
     </tr>`);
     pctPrev=pct;
