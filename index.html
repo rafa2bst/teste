@@ -1516,7 +1516,7 @@
       </select>
       <button class="btn-edit" onclick="openUs()" style="flex:none">↻ Atualizar</button>
     </div>
-    <p class="hint" style="margin-top:10px">Lista de todos os usuários que se cadastraram. Você pode reenviar e-mail de redefinição de senha, marcar como ativo/inativo e ver quando se cadastrou e o último login.</p>
+    <p class="hint" style="margin-top:10px">Lista de todos os usuários que se cadastraram. Duas opções pra senha: <b>Reset por email</b> (envia link, usuário cria a nova senha) ou <b>Trocar aqui</b> (você define a senha direto, passa manualmente pro usuário). Também dá pra marcar como ativo/inativo, adicionar observação e ver último login.</p>
     <div class="counts" id="us-kpis" style="margin-top:14px"></div>
     <div id="us-lista" style="margin-top:14px"></div>
 
@@ -1590,6 +1590,26 @@
   <!-- MODAL de tarefa (compartilhado) -->
   <div id="task-modal-bg" class="modal-bg" style="display:none">
     <div class="modal-card" id="task-modal" onclick="event.stopPropagation()"></div>
+  </div>
+
+  <!-- MODAL de troca de senha (admin) -->
+  <div id="ts-modal-bg" class="modal-bg" style="display:none" onclick="if(event.target===this)fecharTs()">
+    <div class="modal-card" style="max-width:440px" onclick="event.stopPropagation()">
+      <div style="font-size:18px;font-weight:700;margin-bottom:4px">🔑 Trocar senha do usuário</div>
+      <div style="font-size:13px;color:var(--ink-soft);margin-bottom:16px">Usuário: <b id="ts-email"></b></div>
+      <label style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);font-weight:700">Nova senha (mínimo 6 caracteres)</label>
+      <div style="position:relative;margin-top:4px">
+        <input type="text" id="ts-nova" autocomplete="new-password" placeholder="digite ou clique em Gerar" style="width:100%;padding:9px 90px 9px 12px;border:1px solid var(--line);border-radius:6px;font-size:14px;font-family:ui-monospace,monospace">
+        <button type="button" onclick="tsGerar()" style="position:absolute;right:4px;top:4px;bottom:4px;padding:0 12px;font-size:11px;background:#f4f1ea;border:1px solid var(--line);border-radius:4px;cursor:pointer;font-weight:600">🎲 Gerar</button>
+      </div>
+      <div style="background:#fff3cd;border:1px solid #fbbf24;border-radius:6px;padding:10px 12px;margin-top:14px;font-size:12px;line-height:1.5">
+        ⚠ <b>Anote a senha antes de confirmar.</b> O usuário não recebe email. Você precisa passar a nova senha manualmente pra ele (Slack, WhatsApp, pessoalmente).
+      </div>
+      <div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end">
+        <button class="btn-edit" onclick="fecharTs()">Cancelar</button>
+        <button class="btn-primary" onclick="confirmarTs()">Confirmar troca</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -4874,7 +4894,8 @@ function renderUs(){
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
         <span class="badge ${u.ativo?'b-uso':'b-desc'}">${u.ativo?'Ativo':'Inativo'}</span>
         <div class="item-actions">
-          <button class="btn-edit" onclick="resetSenhaUs('${esc(u.email).replace(/'/g,"\\'")}')">Resetar senha</button>
+          <button class="btn-edit" onclick="resetSenhaUs('${esc(u.email).replace(/'/g,"\\'")}')">📧 Reset por email</button>
+          <button class="btn-edit" onclick="trocarSenhaUs('${esc(u.email).replace(/'/g,"\\'")}')">🔑 Trocar aqui</button>
           ${ehAdmin?'':`<button class="btn-edit" onclick="toggleAtivoUs('${u.id}',${!u.ativo})">${u.ativo?'Desativar':'Ativar'}</button>`}
           <button class="btn-edit" onclick="anotarUs('${u.id}')">Observação</button>
           ${ehAdmin?'':`<button class="btn-del" onclick="excluirUs('${u.id}','${esc(u.email).replace(/'/g,"\\'")}')">Excluir</button>`}
@@ -4888,6 +4909,41 @@ async function resetSenhaUs(email){
   const{error}=await db.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin+window.location.pathname});
   if(error){alert('Erro: '+error.message);return;}
   toast('E-mail de redefinição enviado ✓');
+}
+// ===== Troca direta de senha (admin) via Edge Function =====
+let tsEmailAtual='';
+function trocarSenhaUs(email){
+  tsEmailAtual=email;
+  $('ts-email').textContent=email;
+  $('ts-nova').value='';
+  $('ts-modal-bg').style.display='flex';
+  setTimeout(()=>$('ts-nova').focus(),50);
+}
+function fecharTs(){$('ts-modal-bg').style.display='none';tsEmailAtual='';}
+function tsGerar(){
+  // Gera 12 caracteres alfanumericos legíveis (sem 0/O/1/l pra evitar confusão)
+  const c='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  let s='';for(let i=0;i<12;i++)s+=c[Math.floor(Math.random()*c.length)];
+  $('ts-nova').value=s;
+  $('ts-nova').select();
+}
+async function confirmarTs(){
+  const senha=$('ts-nova').value.trim();
+  if(!senha){alert('Digite a nova senha.');return;}
+  if(senha.length<6){alert('Senha precisa de no mínimo 6 caracteres.');return;}
+  if(!confirm(`Confirmar troca de senha de ${tsEmailAtual}?\n\nNova senha: ${senha}\n\nJá anotou? A senha vai ser trocada imediatamente e o usuário NÃO recebe email.`))return;
+  const btn=document.activeElement;if(btn&&btn.tagName==='BUTTON'){btn.disabled=true;btn.textContent='Trocando...';}
+  try{
+    const{data,error}=await db.functions.invoke('admin-reset-password',{body:{target_email:tsEmailAtual,new_password:senha}});
+    if(error){alert('Erro chamando função: '+(error.message||'desconhecido')+'\n\nA Edge Function "admin-reset-password" está publicada no Supabase?');return;}
+    if(data&&data.error){alert('Erro: '+data.error);return;}
+    toast(`✓ Senha de ${tsEmailAtual} alterada`);
+    fecharTs();
+  }catch(e){
+    alert('Erro inesperado: '+e.message);
+  }finally{
+    if(btn&&btn.tagName==='BUTTON'){btn.disabled=false;btn.textContent='Confirmar troca';}
+  }
 }
 async function toggleAtivoUs(id,novo){
   const u=usuarios.find(x=>x.id===id);
