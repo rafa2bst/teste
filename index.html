@@ -1611,6 +1611,21 @@
       </div>
     </div>
   </div>
+
+  <!-- MODAL de atribuição de treinamentos (onboarding) -->
+  <div id="onb-modal-bg" class="modal-bg" style="display:none" onclick="if(event.target===this)fecharOnbModal()">
+    <div class="modal-card" style="max-width:460px" onclick="event.stopPropagation()">
+      <div style="font-size:18px;font-weight:700;margin-bottom:4px">📋 Atribuir treinamentos</div>
+      <div style="font-size:13px;color:var(--ink-soft);margin-bottom:16px">Selecione um colaborador cadastrado. Todos os treinamentos do catálogo serão atribuídos a ele como <b>Pendente</b>.</div>
+      <label style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);font-weight:700">Colaborador</label>
+      <select id="onb-colab-sel" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:6px;font-size:14px;margin-top:4px;background:#fff"></select>
+      <p class="hint" style="font-size:12px;margin-top:10px" id="onb-modal-hint"></p>
+      <div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end">
+        <button class="btn-edit" onclick="fecharOnbModal()">Cancelar</button>
+        <button class="btn-primary" onclick="confirmarOnb()">Atribuir treinamentos</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -5092,15 +5107,31 @@ function renderOnbDetail(){
 function abrirColabOnb(nome){onbSelectedColab=nome;renderOnb();}
 function voltarOnb(){onbSelectedColab='';renderOnb();}
 async function iniciarOnboarding(){
-  const nome=prompt('Nome completo do colaborador (ex.: Gabriel Silva):');
-  if(!nome||!nome.trim())return;
-  const n=nome.trim();
-  const email=emailFromNome(n);
-  if(!confirm(`Atribuir os ${treinoCatalogo.length} treinamentos a "${n}" (${email})?`))return;
-  const inserts=treinoCatalogo.map(t=>({treinamento_id:t.id,colaborador:n,colaborador_email:email,status:'Pendente'}));
+  if(!equipe||!equipe.length){alert('Nenhum colaborador cadastrado. Cadastre em Cadastros > Equipe primeiro.');return;}
+  if(!treinoCatalogo||!treinoCatalogo.length){alert('Catálogo de treinamentos vazio. Cadastre em Treinamentos primeiro.');return;}
+  const sel=$('onb-colab-sel');
+  const jaAtrib=new Set((treinoAtribs||[]).map(a=>a.colaborador));
+  // Ordena: primeiro os que ainda não têm treinamentos, depois os que já têm
+  const nomes=equipe.map(e=>e.nome_completo||e.nome_curto||'').filter(Boolean).sort();
+  const opts=nomes.map(n=>{const has=jaAtrib.has(n);return `<option value="${esc(n)}" ${has?'disabled':''}>${esc(n)}${has?' (já tem treinamentos)':''}</option>`;}).join('');
+  sel.innerHTML='<option value="">— selecione o colaborador —</option>'+opts;
+  const disponiveis=nomes.filter(n=>!jaAtrib.has(n)).length;
+  $('onb-modal-hint').textContent=`${disponiveis} colaborador${disponiveis===1?'':'es'} disponível${disponiveis===1?'':'is'} · Vai atribuir ${treinoCatalogo.length} treinamentos como Pendente. Quem já tem treinamentos aparece bloqueado (remova antes se quiser reatribuir).`;
+  $('onb-modal-bg').style.display='flex';
+}
+function fecharOnbModal(){$('onb-modal-bg').style.display='none';}
+async function confirmarOnb(){
+  const sel=$('onb-colab-sel');
+  const nome=sel.value;
+  if(!nome){alert('Selecione um colaborador.');return;}
+  const e=equipe.find(x=>(x.nome_completo||x.nome_curto)===nome);
+  const email=(e&&e.email)||emailFromNome(nome);
+  if(!confirm(`Atribuir os ${treinoCatalogo.length} treinamentos a "${nome}" (${email})?`))return;
+  const inserts=treinoCatalogo.map(t=>({treinamento_id:t.id,colaborador:nome,colaborador_email:email,status:'Pendente'}));
   const{error}=await db.from('treinamento_atribuicoes').insert(inserts);
   if(error){alert('Erro: '+error.message);return;}
-  toast(`${inserts.length} treinamentos atribuídos a ${n} ✓`);openOnb();
+  toast(`${inserts.length} treinamentos atribuídos a ${nome} ✓`);
+  fecharOnbModal();openOnb();
 }
 async function removerColabOnb(nome){
   if(!confirm(`Remover TODOS os treinamentos atribuídos a "${nome}"? Esta ação não pode ser desfeita.`))return;
