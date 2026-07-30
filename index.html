@@ -1641,30 +1641,36 @@ function showLogin(){$('login-screen').style.display='flex';$('app').style.displ
 async function showApp(user){
   $('login-screen').style.display='none';$('app').style.display='block';
   $('user-email').textContent=user.email;currentEmail=user.email||'';isAdminUser=isAdmin(user);
+  const isRafael=currentEmail==='rafael.andrade.sa@gmail.com';
   // Registra último login (silenciosamente; ignora erro se a tabela não existir)
   try{await db.from('usuarios').update({ultimo_login:new Date().toISOString()}).eq('email',user.email);}catch(e){}
   try{const{data}=await db.from('equipe').select('*').order('nome_completo');equipe=data||[];}catch(e){}
   setupPresence();
   $('nav').style.display='flex';
-  ['nav-cad','nav-rel','nav-eq','nav-us','nav-aloc','nav-met','nav-perf','nav-dperf','nav-exp2b','nav-fer','nav-fol','nav-ho','nav-ate','nav-aniv','nav-ocor','nav-prob','nav-trein','nav-anom','nav-fat','nav-dash','nav-soladm','nav-feradm','nav-atadm','nav-ocadm','nav-mtadm','nav-tar','nav-rot','nav-onb'].forEach(id=>$(id).style.display=isAdminUser?'':'none');
-  // Metas colaborador + Comparativo anual: EXCLUSIVO do Rafael (nao aparece nem para outros admins)
-  $('nav-metcol').style.display=(currentEmail==='rafael.andrade.sa@gmail.com')?'':'none';
-  $('nav-compano').style.display=(currentEmail==='rafael.andrade.sa@gmail.com')?'':'none';
-  $('nav-plantel').style.display=(currentEmail==='rafael.andrade.sa@gmail.com')?'':'none';
-  $('nav-solf').style.display=isAdminUser?'none':'';
-  $('nav-solfer').style.display=isAdminUser?'none':'';
-  $('nav-solat').style.display=isAdminUser?'none':'';
-  $('nav-solo').style.display=isAdminUser?'none':'';
-  $('nav-solm').style.display=isAdminUser?'none':'';
-  $('nav-meus').style.display=isAdminUser?'none':'';
-  $('nav-mtar').style.display=isAdminUser?'none':'';
-  $('nav-meutr').style.display=isAdminUser?'none':'';
-  $('nav-mho').style.display=isAdminUser?'none':'';
-  $('nav-mcad').style.display=isAdminUser?'none':'';
+  // Admin geral (visível para os 3 admins): cadastros, relatórios, gestão de equipe/patrimônio, dashboards
+  ['nav-cad','nav-rel','nav-eq','nav-us','nav-aloc','nav-met','nav-perf','nav-dperf','nav-exp2b','nav-fer','nav-fol','nav-ho','nav-ate','nav-aniv','nav-ocor','nav-prob','nav-trein','nav-anom','nav-fat','nav-dash','nav-tar','nav-rot','nav-onb'].forEach(id=>$(id).style.display=isAdminUser?'':'none');
+  // Aprovação de pedidos: EXCLUSIVO do Rafael (Maria e Tiago não veem, precisam pedir pra ele aprovar)
+  ['nav-soladm','nav-feradm','nav-atadm','nav-ocadm','nav-mtadm'].forEach(id=>$(id).style.display=isRafael?'':'none');
+  // Metas colaborador + Comparativo anual + Plan. Estratégico: EXCLUSIVO do Rafael
+  $('nav-metcol').style.display=isRafael?'':'none';
+  $('nav-compano').style.display=isRafael?'':'none';
+  $('nav-plantel').style.display=isRafael?'':'none';
+  // Fazer pedidos + Meus dados: escondido do Rafael, mostrado a Maria, Tiago e colabs
+  $('nav-solf').style.display=isRafael?'none':'';
+  $('nav-solfer').style.display=isRafael?'none':'';
+  $('nav-solat').style.display=isRafael?'none':'';
+  $('nav-solo').style.display=isRafael?'none':'';
+  $('nav-solm').style.display=isRafael?'none':'';
+  $('nav-meus').style.display=isRafael?'none':'';
+  $('nav-mtar').style.display=isRafael?'none':'';
+  $('nav-meutr').style.display=isRafael?'none':'';
+  $('nav-mho').style.display=isRafael?'none':'';
+  $('nav-mcad').style.display=isRafael?'none':'';
+  // Equipe hoje (collab): só pra colabs puros, admins usam nav-aloc
   $('nav-mequipehj').style.display=isAdminUser?'none':'';
   hideEmptyGroups();
   if(isAdminUser)await loadAll();
-  if(isAdminUser)updatePendingBadges();
+  if(isRafael)updatePendingBadges();
   showView(isAdminUser?'aloc':'mequipehj');
 }
 
