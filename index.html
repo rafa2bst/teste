@@ -867,6 +867,22 @@
         </div>
         <div><label>Data *</label><input id="sf-data" type="date"></div>
       </div>
+      <div class="row2">
+        <div><label>Horário *</label>
+          <select id="sf-horario" onchange="sfToggleHorario()">
+            <option value="Integral">Integral (dia inteiro)</option>
+            <option value="Parcial">Parcial (meio turno)</option>
+            <option value="Fracionado">Fracionado (horas específicas)</option>
+          </select>
+        </div>
+        <div id="sf-turno-wrap" style="display:none"><label>Turno *</label>
+          <select id="sf-turno"><option value="">— selecione —</option><option>Manhã</option><option>Tarde</option></select>
+        </div>
+      </div>
+      <div class="row2" id="sf-hora-wrap" style="display:none">
+        <div><label>Hora início *</label><input type="time" id="sf-hora-ini"></div>
+        <div><label>Hora fim *</label><input type="time" id="sf-hora-fim"></div>
+      </div>
       <label>Motivo / observação</label>
       <textarea id="sf-motivo" placeholder="Opcional"></textarea>
       <div class="actions"><button class="btn-primary" id="sf-save">Enviar pedido</button></div>
@@ -1473,6 +1489,20 @@
       </div>
       <label>Observação (opcional)</label>
       <input id="aloc-q-obs" placeholder="Ex.: substituindo o Caique">
+      <div style="margin-top:10px;background:#f7f5ee;border:1px solid var(--line);border-radius:8px;padding:10px 12px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;margin:0;cursor:pointer">
+          <input type="checkbox" id="aloc-q-periodo" onchange="alocTogglePeriodo()" style="width:auto"> Aplicar em período de vários dias
+        </label>
+        <div id="aloc-q-periodo-wrap" style="display:none;margin-top:10px">
+          <div class="row2">
+            <div><label>Data início *</label><input type="date" id="aloc-q-ini"></div>
+            <div><label>Data fim *</label><input type="date" id="aloc-q-fim"></div>
+          </div>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;text-transform:none;letter-spacing:0;margin:8px 0 0;cursor:pointer;color:var(--ink-soft)">
+            <input type="checkbox" id="aloc-q-skip-fds" checked style="width:auto"> Pular fins de semana (sábado e domingo)
+          </label>
+        </div>
+      </div>
       <div class="actions"><button class="btn-primary" onclick="quickAlocar()">Alocar</button></div>
     </div>
 
@@ -2568,23 +2598,53 @@ async function openSolf(){
   renderMySolf(data||[]);
 }
 function renderMySolf(rows){
+  const horLabel=s=>{
+    if(!s.horario||s.horario==='Integral')return '';
+    if(s.horario==='Parcial')return ' · Meio-turno'+(s.turno?' ('+esc(s.turno)+')':'');
+    if(s.horario==='Fracionado')return ' · '+esc(s.hora_inicio||'')+'–'+esc(s.hora_fim||'');
+    return '';
+  };
   $('sf-lista').innerHTML=rows.length?rows.map(s=>`
     <div class="row-item" style="cursor:default;align-items:flex-start">
       <div><div class="ri-main">${esc(s.tipo||'')}</div>
-      <div class="ri-sub">${s.data?fmt(s.data):''}${s.motivo?' · '+esc(s.motivo):''}</div></div>
+      <div class="ri-sub">${s.data?fmt(s.data):''}${horLabel(s)}${s.motivo?' · '+esc(s.motivo):''}</div></div>
       <span class="badge ${SOL_BADGE[s.status]||'b-desc'}">${esc(s.status||'')}</span>
     </div>`).join(''):'<div class="empty">Você ainda não fez nenhuma solicitação.</div>';
 }
+function sfToggleHorario(){
+  const h=$('sf-horario').value;
+  $('sf-turno-wrap').style.display=h==='Parcial'?'':'none';
+  $('sf-hora-wrap').style.display=h==='Fracionado'?'':'none';
+}
+function sfCalcFracao(horario,horaIni,horaFim){
+  if(horario==='Integral')return 1;
+  if(horario==='Parcial')return 0.5;
+  if(horario==='Fracionado'&&horaIni&&horaFim){
+    const[hi,mi]=horaIni.split(':').map(Number),[hf,mf]=horaFim.split(':').map(Number);
+    const min=(hf*60+mf)-(hi*60+mi);
+    if(min<=0)return 0;
+    return Math.min(1,Math.max(0,min/480));
+  }
+  return 1;
+}
 async function onSaveSolf(){
   const colaborador=$('sf-colab').value,tipo=$('sf-tipo').value,data=$('sf-data').value;
+  const horario=$('sf-horario').value||'Integral';
+  const turno=horario==='Parcial'?$('sf-turno').value:null;
+  const horaIni=horario==='Fracionado'?$('sf-hora-ini').value:null;
+  const horaFim=horario==='Fracionado'?$('sf-hora-fim').value:null;
   if(!colaborador){alert('Selecione seu nome.');return;}
   if(!tipo){alert('Selecione o tipo de folga.');return;}
   if(!data){alert('Informe a data.');return;}
+  if(horario==='Parcial'&&!turno){alert('Selecione o turno (Manhã ou Tarde).');return;}
+  if(horario==='Fracionado'&&(!horaIni||!horaFim)){alert('Informe hora início e hora fim.');return;}
+  if(horario==='Fracionado'&&horaFim<=horaIni){alert('Hora fim deve ser depois da hora início.');return;}
+  const fracao=sfCalcFracao(horario,horaIni,horaFim);
   $('sf-save').disabled=true;
-  const{error}=await db.from('solicitacoes_folga').insert({solicitante_email:currentEmail,colaborador,tipo,data,motivo:$('sf-motivo').value.trim(),status:'Pendente'});
+  const{error}=await db.from('solicitacoes_folga').insert({solicitante_email:currentEmail,colaborador,tipo,data,motivo:$('sf-motivo').value.trim(),status:'Pendente',horario,turno,hora_inicio:horaIni,hora_fim:horaFim,fracao});
   $('sf-save').disabled=false;
   if(error){alert('Erro: '+error.message);return;}
-  $('sf-tipo').value='';$('sf-data').value='';$('sf-motivo').value='';
+  $('sf-tipo').value='';$('sf-data').value='';$('sf-motivo').value='';$('sf-horario').value='Integral';$('sf-turno').value='';$('sf-hora-ini').value='';$('sf-hora-fim').value='';sfToggleHorario();
   toast('Pedido enviado ✓');openSolf();
 }
 async function openSolAdm(){
@@ -2598,10 +2658,16 @@ function renderSolAdm(){
   $('sa-c-re').textContent=sols.filter(s=>s.status==='Recusada').length;
   const q=$('sa-busca').value.trim().toLowerCase(),fs=$('sa-filtro').value;
   const arr=sols.filter(s=>(!fs||s.status===fs)&&(!q||(s.colaborador||'').toLowerCase().includes(q)));
+  const horLabel=s=>{
+    if(!s.horario||s.horario==='Integral')return '';
+    if(s.horario==='Parcial')return ' · Meio-turno'+(s.turno?' ('+esc(s.turno)+')':'');
+    if(s.horario==='Fracionado')return ' · '+esc(s.hora_inicio||'')+'–'+esc(s.hora_fim||'');
+    return '';
+  };
   $('sa-lista').innerHTML=arr.length?arr.map(s=>`
     <div class="row-item" style="cursor:default;align-items:flex-start">
       <div><div class="ri-main">${esc(s.colaborador)} — ${esc(s.tipo||'')}</div>
-      <div class="ri-sub">${s.data?fmt(s.data):''}${s.motivo?' · '+esc(s.motivo):''}</div>
+      <div class="ri-sub">${s.data?fmt(s.data):''}${horLabel(s)}${s.motivo?' · '+esc(s.motivo):''}</div>
       <div class="ri-sub" style="margin-top:2px;opacity:.7">${esc(s.solicitante_email||'')}</div></div>
       <div style="display:flex;align-items:center;gap:10px">
         <span class="badge ${SOL_BADGE[s.status]||'b-desc'}">${esc(s.status||'')}</span>
@@ -2613,7 +2679,7 @@ async function aceitarSolf(id){
   const s=sols.find(x=>x.id===id);if(!s)return;
   const u=await db.from('solicitacoes_folga').update({status:'Aprovada'}).eq('id',id);
   if(u.error){alert('Erro: '+u.error.message);return;}
-  await db.from('folgas').insert({colaborador:s.colaborador,tipo:s.tipo,data:s.data,emendada:false,motivo_emenda:null,observacao:'Aprovada da solicitação de '+(s.solicitante_email||'')});
+  await db.from('folgas').insert({colaborador:s.colaborador,tipo:s.tipo,data:s.data,emendada:false,motivo_emenda:null,observacao:'Aprovada da solicitação de '+(s.solicitante_email||''),horario:s.horario||'Integral',turno:s.turno||null,hora_inicio:s.hora_inicio||null,hora_fim:s.hora_fim||null,fracao:s.fracao!=null?s.fracao:1});
   await openSolAdm();updatePendingBadges();toast('Aprovada e folga lançada ✓');
 }
 async function recusarSolf(id){
@@ -3547,21 +3613,57 @@ async function loadAlocacoes(){
   metaDoDia=r[2].error?null:r[2].data;
   renderAlocBoard('aloc-board',data,false);
 }
+function alocTogglePeriodo(){
+  const on=$('aloc-q-periodo').checked;
+  $('aloc-q-periodo-wrap').style.display=on?'':'none';
+  if(on){
+    if(!$('aloc-q-ini').value)$('aloc-q-ini').value=$('aloc-data').value;
+    if(!$('aloc-q-fim').value){
+      const d=new Date($('aloc-data').value+'T12:00');d.setDate(d.getDate()+14);
+      $('aloc-q-fim').value=d.toISOString().slice(0,10);
+    }
+  }
+}
 async function quickAlocar(){
   const sel=$('aloc-q-colab'),colab=sel.value,aloc=$('aloc-q-aloc').value,obs=$('aloc-q-obs').value.trim();
   if(!colab){alert('Selecione um colaborador.');return;}
   if(!aloc){alert('Selecione uma alocação.');return;}
   const opt=sel.options[sel.selectedIndex];
   const email=opt.getAttribute('data-email')||emailFromNome(colab);
-  const data=$('aloc-data').value;
-  const rec=alocacoes.find(a=>a.colaborador===colab);
-  const dados={data,colaborador:colab,colaborador_email:email,alocacao:aloc,observacao:obs||null};
-  let error;
-  if(rec){({error}=await db.from('alocacao_diaria').update({alocacao:aloc,observacao:obs||null}).eq('id',rec.id));}
-  else{({error}=await db.from('alocacao_diaria').insert(dados));}
-  if(error){alert('Erro: '+error.message);return;}
+  const isPeriodo=$('aloc-q-periodo').checked;
+  let datas=[];
+  if(isPeriodo){
+    const di=$('aloc-q-ini').value,df=$('aloc-q-fim').value;
+    if(!di||!df){alert('Informe data início e data fim do período.');return;}
+    if(di>df){alert('Data início deve ser antes da data fim.');return;}
+    const skipFds=$('aloc-q-skip-fds').checked;
+    const d1=new Date(di+'T12:00'),d2=new Date(df+'T12:00');
+    for(let d=new Date(d1);d<=d2;d.setDate(d.getDate()+1)){
+      const dow=d.getDay();
+      if(skipFds&&(dow===0||dow===6))continue;
+      datas.push(d.toISOString().slice(0,10));
+    }
+    if(!datas.length){alert('Nenhum dia útil no período.');return;}
+    if(!confirm(`Vai alocar ${colab} em "${aloc}" por ${datas.length} dia${datas.length>1?'s':''} (${fmt(datas[0])} até ${fmt(datas[datas.length-1])}).\n\nSe já existir alocação em algum desses dias, ela será sobrescrita.\n\nConfirma?`))return;
+  }else{
+    datas=[$('aloc-data').value];
+  }
+  // Busca todas as alocações existentes nesses dias pra decidir insert vs update
+  const{data:existentes}=await db.from('alocacao_diaria').select('id,data,colaborador').eq('colaborador',colab).in('data',datas);
+  const existMap={};(existentes||[]).forEach(e=>{existMap[e.data]=e.id;});
+  const inserts=[];const updates=[];
+  datas.forEach(data=>{
+    if(existMap[data])updates.push({id:existMap[data],alocacao:aloc,observacao:obs||null});
+    else inserts.push({data,colaborador:colab,colaborador_email:email,alocacao:aloc,observacao:obs||null});
+  });
+  let err='';
+  if(inserts.length){const r=await db.from('alocacao_diaria').insert(inserts);if(r.error)err=r.error.message;}
+  for(const u of updates){const r=await db.from('alocacao_diaria').update({alocacao:u.alocacao,observacao:u.observacao}).eq('id',u.id);if(r.error){err=r.error.message;break;}}
+  if(err){alert('Erro: '+err);return;}
   $('aloc-q-colab').value='';$('aloc-q-aloc').value='';$('aloc-q-obs').value='';
-  toast('Alocado ✓');await loadAlocacoes();
+  $('aloc-q-periodo').checked=false;alocTogglePeriodo();
+  toast(datas.length>1?`✓ Alocado em ${datas.length} dias`:'Alocado ✓');
+  await loadAlocacoes();
 }
 function navAlocDia(d){
   if(d===0){$('aloc-data').value=new Date().toISOString().slice(0,10);}
@@ -3576,17 +3678,24 @@ function renderAlocBoard(containerId,data,readonly){
   const eqByName={};equipe.forEach(e=>{const k=e.nome_curto||e.nome_completo;eqByName[k]=e;});
   const onlineDot=(nome)=>{const eq=eqByName[nome];const email=eq?eq.email:null;const on=email&&onlineEmails.has(email);return on?'<span title="Online" style="display:inline-block;width:9px;height:9px;background:#22c55e;border-radius:50%;margin-right:6px;box-shadow:0 0 0 2px rgba(34,197,94,.18);flex-shrink:0"></span>':'<span title="Offline" style="display:inline-block;width:9px;height:9px;background:transparent;border:1.5px solid #c8c0b0;border-radius:50%;margin-right:6px;flex-shrink:0"></span>';};
   const ativos=equipe.filter(e=>!e.desligado);
-  const ausAuto={};(autoAusencias||[]).forEach(a=>{if(!ausAuto[a.colaborador])ausAuto[a.colaborador]=a.tipo;});
+  // Separa ausências integrais (fracao>=1) das parciais
+  const ausAuto={},ausParcial={};
+  (autoAusencias||[]).forEach(a=>{
+    const fr=a.fracao==null?1:parseFloat(a.fracao);
+    if(fr>=0.99){if(!ausAuto[a.colaborador])ausAuto[a.colaborador]=a.tipo;}
+    else{if(!ausParcial[a.colaborador])ausParcial[a.colaborador]={tipo:a.tipo,fracao:fr,detalhes:a.detalhes||''};}
+  });
   const efetivas=[];
   ativos.forEach(e=>{
     const nome=e.nome_curto||e.nome_completo;
     const rec=alocacoes.find(a=>a.colaborador===nome);
+    const parcial=ausParcial[nome]||null;
     if(rec&&rec.alocacao){
-      efetivas.push({id:rec.id,colaborador:nome,alocacao:rec.alocacao,observacao:rec.observacao,padrao:false,auto:false});
+      efetivas.push({id:rec.id,colaborador:nome,alocacao:rec.alocacao,observacao:rec.observacao,padrao:false,auto:false,parcial});
     }else if(ausAuto[nome]){
-      efetivas.push({id:null,colaborador:nome,alocacao:ausAuto[nome],observacao:null,padrao:false,auto:true});
+      efetivas.push({id:null,colaborador:nome,alocacao:ausAuto[nome],observacao:null,padrao:false,auto:true,parcial:null});
     }else if(e.alocacao){
-      efetivas.push({id:null,colaborador:nome,alocacao:e.alocacao,observacao:null,padrao:true,auto:false});
+      efetivas.push({id:null,colaborador:nome,alocacao:e.alocacao,observacao:null,padrao:true,auto:false,parcial});
     }
   });
   alocacoes.forEach(a=>{if(a.alocacao&&!efetivas.find(e=>e.colaborador===a.colaborador))efetivas.push({id:a.id,colaborador:a.colaborador,alocacao:a.alocacao,observacao:a.observacao,padrao:false,auto:false});});
@@ -3597,6 +3706,12 @@ function renderAlocBoard(containerId,data,readonly){
   const totalAloc=Object.values(byAloc).flat().length;
   const xBtn=(rec)=>(readonly||!rec.id)?'':`<button onclick="removerAlocacao('${rec.id}')" title="Reverter para padrão" style="background:transparent;border:none;color:#a64141;font-size:16px;cursor:pointer;padding:0 4px;margin-left:6px;line-height:1">×</button>`;
   const nameTag=(rec)=>rec.auto?`<i style="color:#7a4e1f">${esc(rec.colaborador)}</i>`:(rec.padrao?esc(rec.colaborador):`<b>${esc(rec.colaborador)}</b>`);
+  const parcialBadge=(rec)=>{
+    if(!rec.parcial)return '';
+    const p=rec.parcial;
+    const label=p.detalhes||(p.tipo==='Folga'?'Meio-turno de folga':p.tipo);
+    return ` <span title="Ausência parcial: ${esc(label)}" style="background:#fde6c8;color:#7a4e1f;padding:1px 7px;border-radius:8px;font-size:10px;font-weight:600;margin-left:4px;white-space:nowrap">🕒 ${esc(label)}</span>`;
+  };
   let html=`<div style="background:linear-gradient(135deg,#1f6f5c,#175547);color:#fff;border-radius:14px;padding:24px;margin-bottom:18px;box-shadow:0 4px 18px rgba(31,111,92,.25)">
     <div style="font-size:13px;text-transform:uppercase;letter-spacing:.1em;opacity:.85;margin-bottom:4px">${esc(dia)}</div>
     <div style="font-family:var(--display);font-size:28px;font-weight:700;line-height:1.1">Equipe — ${fmt(data)}</div>
@@ -3617,7 +3732,7 @@ function renderAlocBoard(containerId,data,readonly){
     const lista=byAloc[aloc],vazio=lista.length===0;
     html+=`<div style="background:${vazio?'#f4f1ea':'#e6efe9'};border-left:4px solid ${vazio?'#cdc6b8':'#1f6f5c'};padding:14px 16px;border-radius:10px;min-height:90px">
       <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:${vazio?'#9c9583':'#175547'};font-weight:700;margin-bottom:8px">${esc(aloc)} (${lista.length})</div>
-      ${lista.length?lista.map(r=>`<div style="padding:3px 0;font-weight:500;font-size:15px;display:flex;align-items:center">${onlineDot(r.colaborador)}<span style="flex:1">${nameTag(r)}${r.observacao?'<span style="color:var(--ink-soft);font-weight:400;font-size:13px"> — '+esc(r.observacao)+'</span>':''}</span>${xBtn(r)}</div>`).join(''):'<div style="color:var(--ink-soft);font-style:italic;font-size:13px">— ninguém alocado —</div>'}
+      ${lista.length?lista.map(r=>`<div style="padding:3px 0;font-weight:500;font-size:15px;display:flex;align-items:center;flex-wrap:wrap">${onlineDot(r.colaborador)}<span style="flex:1;min-width:0">${nameTag(r)}${parcialBadge(r)}${r.observacao?'<span style="color:var(--ink-soft);font-weight:400;font-size:13px"> — '+esc(r.observacao)+'</span>':''}</span>${xBtn(r)}</div>`).join(''):'<div style="color:var(--ink-soft);font-style:italic;font-size:13px">— ninguém alocado —</div>'}
     </div>`;
   });
   html+='</div>';
@@ -4460,7 +4575,18 @@ async function previewExp2B(){
   // Folgas
   (fol.data||[]).forEach(f=>{
     const motivo=e2bMapMotivo((f.tipo||'')+' '+(f.observacao||''),'folga');
-    linhas.push({cod:'',funcionario:e2bNomeCompleto(f.colaborador),data:e2bFmtData(f.data),tipo:'Integral',obs:f.observacao||'',motivo,mes,ano,gestor:E2B_GESTOR,status:E2B_STATUS,tempo:'',motivoAtest:'',cid:'',ausenciaDia:'1,00'});
+    // Determina Tipo/Tempo/AusDia com base no horario da folga
+    let fTipo='Integral',fAus='1,00',fTempo='';
+    const fFrac=f.fracao!=null?parseFloat(f.fracao):(f.horario==='Parcial'?0.5:(f.horario==='Fracionado'?null:1));
+    if(f.horario==='Parcial'||(fFrac!=null&&Math.abs(fFrac-0.5)<0.01)){
+      fTipo='Parcial';fAus='0,50';
+    }else if(f.horario==='Fracionado'||(fFrac!=null&&fFrac<0.99&&fFrac>0)){
+      fTipo='Fracionada';
+      const frac=fFrac||0.5;
+      fTempo=e2bFmtNum(Math.round(frac*480));
+      fAus=e2bFmtNum(frac);
+    }
+    linhas.push({cod:'',funcionario:e2bNomeCompleto(f.colaborador),data:e2bFmtData(f.data),tipo:fTipo,obs:f.observacao||'',motivo,mes,ano,gestor:E2B_GESTOR,status:E2B_STATUS,tempo:fTempo,motivoAtest:'',cid:'',ausenciaDia:fAus});
   });
   // Férias - expandir cada dia ou 1 linha só
   (fer.data||[]).forEach(f=>{
