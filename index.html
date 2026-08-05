@@ -313,6 +313,7 @@
       <button class="group-label">📈 Relatórios</button>
       <div class="group-items">
         <button id="nav-dash">Relatórios</button>
+        <button id="nav-insatadm">Insatisfeitos</button>
       </div>
     </div>
 
@@ -333,6 +334,7 @@
         <button id="nav-mho">Meus Dias no escritório</button>
         <button id="nav-mequipehj">Equipe hoje</button>
         <button id="nav-mperf">Kanban Performance</button>
+        <button id="nav-meusinsat">Meus insatisfeitos</button>
       </div>
     </div>
 
@@ -1656,6 +1658,85 @@
       </div>
     </div>
   </div>
+
+  <!-- VIEW: INSATISFEITOS (admin) -->
+  <div id="view-insatadm" style="display:none">
+    <style>body.insat-view .wrap{max-width:1500px !important}#view-insatadm .form-card,#view-meusinsat .form-card{max-width:none}</style>
+    <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
+      <h2>Insatisfeitos</h2>
+      <p class="hint">Importe a planilha do SGD, distribui automaticamente pra cada técnico responder, e valide a resposta depois.</p>
+    </div>
+    <div class="form-card">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
+        <input type="file" id="insat-file" accept=".xls,.xlsx" style="display:none" onchange="importarInsat(event)">
+        <button class="btn-primary" onclick="$('insat-file').click()">📥 Importar planilha (.xls / .xlsx)</button>
+        <div style="flex:1"></div>
+        <button class="btn-del" onclick="zerarInsat()" style="font-size:12px;padding:6px 10px;background:#fbf4f4;color:#a64141;border-color:#d9b3b3">🗑 Zerar tudo</button>
+      </div>
+      <div id="ia-kpis" class="kpis"></div>
+      <div class="toolbar" style="margin-top:14px">
+        <div class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="ia-busca" placeholder="Buscar SSC, responsável, motivo..." oninput="renderInsatAdm()"></div>
+        <select id="ia-status" onchange="renderInsatAdm()" style="width:auto"><option value="">Todos status</option><option>Pendente</option><option>Respondido</option><option>Encerrado</option><option>Reaberto</option></select>
+        <select id="ia-resp" onchange="renderInsatAdm()" style="width:auto"><option value="">Todos responsáveis</option></select>
+        <select id="ia-mes" onchange="renderInsatAdm()" style="width:auto"><option value="">Todos os meses</option></select>
+      </div>
+      <div id="ia-tabela" style="margin-top:14px;overflow-x:auto"></div>
+    </div>
+  </div>
+
+  <!-- VIEW: MEUS INSATISFEITOS (colab) -->
+  <div id="view-meusinsat" style="display:none">
+    <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
+      <h2>Meus insatisfeitos</h2>
+      <p class="hint">Analise cada insatisfeito atribuído a você e indique se concorda ou não com o cliente. Depois de responder, o gestor valida.</p>
+    </div>
+    <div class="form-card">
+      <div id="mi-kpis" class="kpis"></div>
+      <div class="toolbar" style="margin-top:14px">
+        <select id="mi-status" onchange="renderMeusInsat()" style="width:auto"><option value="">Todos</option><option>Pendente</option><option>Respondido</option><option>Encerrado</option><option>Reaberto</option></select>
+      </div>
+      <div id="mi-lista" class="list" style="margin-top:12px"></div>
+    </div>
+  </div>
+
+  <!-- MODAL: técnico responde -->
+  <div id="ir-modal-bg" class="modal-bg" style="display:none" onclick="if(event.target===this)fecharRespInsat()">
+    <div class="modal-card" style="max-width:640px" onclick="event.stopPropagation()">
+      <div style="font-size:18px;font-weight:700;margin-bottom:12px">💬 Responder insatisfeito</div>
+      <div id="ir-detalhes" style="background:#f7f5ee;border:1px solid var(--line);border-radius:8px;padding:12px 14px;font-size:13px;margin-bottom:14px"></div>
+      <label style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);font-weight:700">Você concorda com o insatisfeito?</label>
+      <div style="display:flex;gap:14px;margin:8px 0 14px">
+        <label style="display:flex;align-items:center;gap:6px;font-weight:500;cursor:pointer;text-transform:none;letter-spacing:0"><input type="radio" name="ir-conc" value="true" style="width:auto"> Concordo</label>
+        <label style="display:flex;align-items:center;gap:6px;font-weight:500;cursor:pointer;text-transform:none;letter-spacing:0"><input type="radio" name="ir-conc" value="false" style="width:auto"> Discordo</label>
+      </div>
+      <label>Justificativa (contexto do atendimento) *</label>
+      <textarea id="ir-just" rows="4" placeholder="Explique o contexto do atendimento e por que você concorda ou discorda"></textarea>
+      <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
+        <button class="btn-edit" onclick="fecharRespInsat()">Cancelar</button>
+        <button class="btn-primary" onclick="salvarRespInsat()">Enviar resposta</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: gestor valida -->
+  <div id="iv-modal-bg" class="modal-bg" style="display:none" onclick="if(event.target===this)fecharValInsat()">
+    <div class="modal-card" style="max-width:700px" onclick="event.stopPropagation()">
+      <div style="font-size:18px;font-weight:700;margin-bottom:12px">✔ Validar resposta do técnico</div>
+      <div id="iv-detalhes" style="background:#f7f5ee;border:1px solid var(--line);border-radius:8px;padding:12px 14px;font-size:13px;margin-bottom:14px"></div>
+      <div id="iv-resposta" style="background:#eef4ee;border-left:4px solid #1f6f5c;padding:10px 14px;border-radius:0 8px 8px 0;font-size:13px;margin-bottom:14px"></div>
+      <label style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);font-weight:700">Sua decisão</label>
+      <div style="display:flex;gap:14px;margin:8px 0 14px">
+        <label style="display:flex;align-items:center;gap:6px;font-weight:500;cursor:pointer;text-transform:none;letter-spacing:0"><input type="radio" name="iv-dec" value="Confirmado" style="width:auto"> Confirmar (encerra)</label>
+        <label style="display:flex;align-items:center;gap:6px;font-weight:500;cursor:pointer;text-transform:none;letter-spacing:0"><input type="radio" name="iv-dec" value="Reaberto" style="width:auto"> Reabrir (volta pro técnico)</label>
+      </div>
+      <label>Seu comentário (opcional)</label>
+      <textarea id="iv-com" rows="3" placeholder="Adicione contexto pra o histórico"></textarea>
+      <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
+        <button class="btn-edit" onclick="fecharValInsat()">Cancelar</button>
+        <button class="btn-primary" onclick="salvarValInsat()">Salvar decisão</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -1693,7 +1774,7 @@ async function showApp(user){
   setupPresence();
   $('nav').style.display='flex';
   // Admin geral (visível para os 3 admins): cadastros, relatórios, gestão de equipe/patrimônio, dashboards
-  ['nav-cad','nav-rel','nav-eq','nav-us','nav-aloc','nav-met','nav-perf','nav-dperf','nav-exp2b','nav-fer','nav-fol','nav-ho','nav-ate','nav-aniv','nav-ocor','nav-prob','nav-trein','nav-anom','nav-fat','nav-dash','nav-tar','nav-rot','nav-onb'].forEach(id=>$(id).style.display=isAdminUser?'':'none');
+  ['nav-cad','nav-rel','nav-eq','nav-us','nav-aloc','nav-met','nav-perf','nav-dperf','nav-exp2b','nav-fer','nav-fol','nav-ho','nav-ate','nav-aniv','nav-ocor','nav-prob','nav-trein','nav-anom','nav-fat','nav-dash','nav-insatadm','nav-tar','nav-rot','nav-onb'].forEach(id=>$(id).style.display=isAdminUser?'':'none');
   // Aprovação de pedidos: EXCLUSIVO do Rafael (Maria e Tiago não veem, precisam pedir pra ele aprovar)
   ['nav-soladm','nav-feradm','nav-atadm','nav-ocadm','nav-mtadm'].forEach(id=>$(id).style.display=isRafael?'':'none');
   // Metas colaborador + Comparativo anual + Plan. Estratégico: EXCLUSIVO do Rafael
@@ -1711,6 +1792,7 @@ async function showApp(user){
   $('nav-meutr').style.display=isRafael?'none':'';
   $('nav-mho').style.display=isRafael?'none':'';
   $('nav-mcad').style.display=isRafael?'none':'';
+  $('nav-meusinsat').style.display=isRafael?'none':'';
   // Equipe hoje (collab): só pra colabs puros, admins usam nav-aloc
   $('nav-mequipehj').style.display=isAdminUser?'none':'';
   hideEmptyGroups();
@@ -1857,7 +1939,7 @@ async function registrarManutencao(patr){
 
 // ===== Views =====
 function showView(v){
-  const adminViews=['cadastro','relatorios','eq','us','ferias','folgas','ho','aloc','met','metcol','compano','plantel','exp2b','perf','dperf','atestados','aniv','ocor','prob','trein','anom','fat','dash','soladm','feradm','atadm','ocadm','mtadm','tar','rot','onb'];
+  const adminViews=['cadastro','relatorios','eq','us','ferias','folgas','ho','aloc','met','metcol','compano','plantel','exp2b','perf','dperf','atestados','aniv','ocor','prob','trein','anom','fat','dash','insatadm','soladm','feradm','atadm','ocadm','mtadm','tar','rot','onb'];
   if(adminViews.includes(v)&&!isAdminUser)v='solfolga';
   $('view-cadastro').style.display=v==='cadastro'?'block':'none';
   $('view-relatorios').style.display=v==='relatorios'?'block':'none';
@@ -1903,6 +1985,9 @@ function showView(v){
   $('view-meutr').style.display=v==='meutr'?'block':'none';
   $('view-mtar').style.display=v==='mtar'?'block':'none';
   $('view-meus').style.display=v==='meus'?'block':'none';
+  $('view-insatadm').style.display=v==='insatadm'?'block':'none';
+  $('view-meusinsat').style.display=v==='meusinsat'?'block':'none';
+  document.body.classList.toggle('insat-view',v==='insatadm'||v==='meusinsat');
   $('nav-cad').classList.toggle('active',v==='cadastro');
   $('nav-rel').classList.toggle('active',v==='relatorios');
   $('nav-fer').classList.toggle('active',v==='ferias');
@@ -1984,6 +2069,8 @@ function showView(v){
   if(v==='compano')openCompAno();
   if(v==='plantel')openPlantel();
   if(v==='exp2b')openExp2B();
+  if(v==='insatadm')openInsatAdm();
+  if(v==='meusinsat')openMeusInsat();
   if(v==='perf'||v==='mperf')openPerf();
   if(v==='dperf')openDailyPerf();
   if(v==='mequipehj')openMequipehj();
@@ -4502,6 +4589,260 @@ async function zerarTudoPlantel(){
 
 // ===== Exportar Ausências para 2B =====
 $('nav-exp2b').onclick=()=>showView('exp2b');
+$('nav-insatadm').onclick=()=>showView('insatadm');
+$('nav-meusinsat').onclick=()=>showView('meusinsat');
+
+// ===== Insatisfeitos: state + helpers =====
+let insatList=[],meusInsatList=[],insatIdAtual=null;
+const IA_STATUS_COR={Pendente:'s-manut',Respondido:'s-uso',Encerrado:'',Reaberto:'s-desc'};
+function iaFmtDt(iso){if(!iso)return '—';const d=new Date(iso);if(isNaN(d))return '—';return d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});}
+function iaFmtD(iso){if(!iso)return '—';const d=new Date(iso);if(isNaN(d))return '—';return d.toLocaleDateString('pt-BR');}
+function iaExcelDate(v){if(v==null||v==='')return null;if(typeof v==='number'){const ms=Math.round((v-25569)*86400*1000);const d=new Date(ms);return isNaN(d)?null:d.toISOString();}try{const d=new Date(v);return isNaN(d)?null:d.toISOString();}catch(e){return null;}}
+function iaSscFromUrl(url){if(!url)return '';const m=String(url).match(/ssc=(\d+)/i);return m?m[1]:String(url).trim();}
+function iaEmailFromResp(resp){
+  if(!resp)return null;
+  const k=fuzzyKeyMc(resp);
+  for(const e of equipe){
+    if(fuzzyKeyMc(e.nome_completo||'')===k||fuzzyKeyMc(e.nome_curto||'')===k)return e.email||null;
+  }
+  return emailFromNome(resp);
+}
+
+// ===== Import da planilha =====
+async function importarInsat(evt){
+  const file=evt.target.files[0];if(!file)return;
+  if(typeof XLSX==='undefined'){alert('Biblioteca XLSX não carregou.');return;}
+  try{
+    const buf=await file.arrayBuffer();
+    const wb=XLSX.read(buf,{type:'array',cellDates:false});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+    // Encontra a linha de cabecalho (procura por "SSC" na coluna 0)
+    let headerRow=-1;
+    for(let i=0;i<Math.min(rows.length,30);i++){
+      const c0=String(rows[i][0]||'').trim();
+      if(c0==='SSC'){headerRow=i;break;}
+    }
+    if(headerRow<0){alert('Não encontrei o cabeçalho "SSC" na planilha. Verifique se é o relatório correto do SGD.');evt.target.value='';return;}
+    const header=rows[headerRow].map(h=>String(h||'').trim().toLowerCase());
+    const idx={};
+    ['SSC','Data entrada','sistema','Módulo','Tópico','Classificação','Meio Acesso','Responsável','Unidade','Gestor','Data conclusão','Motivo','Deseja Contato','Comentário'].forEach(name=>{
+      const key=name.toLowerCase();
+      const i=header.findIndex(h=>h===key);
+      if(i>=0)idx[name]=i;
+    });
+    if(idx['SSC']===undefined){alert('Cabeçalho da planilha não tem coluna SSC.');evt.target.value='';return;}
+    const registros=[];
+    for(let i=headerRow+1;i<rows.length;i++){
+      const r=rows[i];
+      const sscUrl=String(r[idx['SSC']]||'').trim();
+      if(!sscUrl||!sscUrl.toLowerCase().startsWith('http'))continue;
+      const ssc=iaSscFromUrl(sscUrl);
+      if(!ssc)continue;
+      const resp=String(r[idx['Responsável']]||'').trim();
+      registros.push({
+        ssc,ssc_url:sscUrl,
+        data_entrada:iaExcelDate(r[idx['Data entrada']]),
+        sistema:String(r[idx['sistema']]||'').trim()||null,
+        modulo:String(r[idx['Módulo']]||'').trim()||null,
+        topico:String(r[idx['Tópico']]||'').trim()||null,
+        classificacao:String(r[idx['Classificação']]||'').trim()||null,
+        meio_acesso:String(r[idx['Meio Acesso']]||'').trim()||null,
+        responsavel:resp||null,
+        responsavel_email:iaEmailFromResp(resp),
+        unidade:String(r[idx['Unidade']]||'').trim()||null,
+        gestor:String(r[idx['Gestor']]||'').trim()||null,
+        data_conclusao:iaExcelDate(r[idx['Data conclusão']]),
+        motivo:String(r[idx['Motivo']]||'').trim()||null,
+        deseja_contato:String(r[idx['Deseja Contato']]||'').trim()||null,
+        comentario:String(r[idx['Comentário']]||'').trim()||null
+      });
+    }
+    if(!registros.length){alert('Nenhum registro válido na planilha.');evt.target.value='';return;}
+    // Upsert pelo SSC (evita duplicar em reimport). Mas não sobrescreve respostas já dadas.
+    const{data:existentes}=await db.from('insatisfeitos').select('ssc').in('ssc',registros.map(r=>r.ssc));
+    const jaExistem=new Set((existentes||[]).map(e=>e.ssc));
+    const novos=registros.filter(r=>!jaExistem.has(r.ssc));
+    if(!novos.length){alert(`Nenhum registro novo. Todos os ${registros.length} SSC(s) da planilha já estão cadastrados.`);evt.target.value='';return;}
+    const{error}=await db.from('insatisfeitos').insert(novos);
+    if(error){alert('Erro importando: '+error.message);evt.target.value='';return;}
+    toast(`✓ Importado: ${novos.length} novo(s) · ${jaExistem.size} já existia(m)`);
+    evt.target.value='';
+    await openInsatAdm();
+  }catch(e){alert('Erro lendo planilha: '+e.message);evt.target.value='';}
+}
+
+// ===== Admin: listar / filtrar / renderizar =====
+async function openInsatAdm(){
+  const{data,error}=await db.from('insatisfeitos').select('*').order('data_conclusao',{ascending:false});
+  if(error){$('ia-tabela').innerHTML='<div class="empty"><b>Tabela ainda não existe.</b> Rode o SQL criar_insatisfeitos.sql.</div>';['ia-kpis'].forEach(i=>$(i).innerHTML='');return;}
+  insatList=data||[];
+  // Popula selects de filtro
+  const resps=[...new Set(insatList.map(i=>i.responsavel).filter(Boolean))].sort();
+  $('ia-resp').innerHTML='<option value="">Todos responsáveis</option>'+resps.map(r=>`<option>${esc(r)}</option>`).join('');
+  const meses=[...new Set(insatList.map(i=>i.data_conclusao?i.data_conclusao.slice(0,7):null).filter(Boolean))].sort().reverse();
+  $('ia-mes').innerHTML='<option value="">Todos os meses</option>'+meses.map(m=>{const[y,mm]=m.split('-');return`<option value="${m}">${mm}/${y}</option>`;}).join('');
+  renderInsatAdm();
+}
+function renderInsatAdm(){
+  const q=$('ia-busca').value.trim().toLowerCase(),fs=$('ia-status').value,fr=$('ia-resp').value,fm=$('ia-mes').value;
+  const arr=insatList.filter(i=>{
+    if(fs&&i.status!==fs)return false;
+    if(fr&&i.responsavel!==fr)return false;
+    if(fm&&(!i.data_conclusao||!i.data_conclusao.startsWith(fm)))return false;
+    if(q){const blob=[i.ssc,i.responsavel,i.motivo,i.sistema,i.comentario].filter(Boolean).join(' ').toLowerCase();if(!blob.includes(q))return false;}
+    return true;
+  });
+  const cnt=(s)=>insatList.filter(i=>i.status===s).length;
+  $('ia-kpis').innerHTML=[
+    ['Total',insatList.length,''],
+    ['Pendentes',cnt('Pendente'),'s-manut'],
+    ['Respondidos',cnt('Respondido'),'s-uso'],
+    ['Encerrados',cnt('Encerrado'),''],
+    ['Reabertos',cnt('Reaberto'),'s-desc']
+  ].map(k=>`<div class="stat ${k[2]}"><b>${k[1]}</b><span>${k[0]}</span></div>`).join('');
+  if(!arr.length){$('ia-tabela').innerHTML='<div class="empty">Nenhum insatisfeito para os filtros atuais.</div>';return;}
+  const th=t=>`<th style="text-align:left;padding:8px 6px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);white-space:nowrap">${t}</th>`;
+  const rows=arr.map(i=>{
+    const statusCor=IA_STATUS_COR[i.status]||'';
+    const acao=i.status==='Pendente'?`<span style="font-size:11px;color:var(--ink-soft);font-style:italic">aguardando técnico</span>`:`<button class="btn-edit" onclick="abrirValInsat('${i.id}')" style="font-size:12px;padding:4px 10px">Ver / Validar</button>`;
+    return`<tr style="border-bottom:1px solid #eee">
+      <td style="padding:6px;white-space:nowrap"><a href="${esc(i.ssc_url||'#')}" target="_blank" style="color:#1f6f5c;font-weight:600;text-decoration:underline">${esc(i.ssc)}</a></td>
+      <td style="padding:6px;font-size:12px">${esc(i.sistema||'—')}</td>
+      <td style="padding:6px;font-size:12px">${esc(i.classificacao||'—')}</td>
+      <td style="padding:6px;font-size:12px">${esc(i.meio_acesso||'—')}</td>
+      <td style="padding:6px;font-size:12px;font-weight:500">${esc(i.responsavel||'—')}</td>
+      <td style="padding:6px;font-size:12px;white-space:nowrap">${iaFmtD(i.data_conclusao)}</td>
+      <td style="padding:6px;font-size:12px;max-width:220px">${esc(i.motivo||'—')}</td>
+      <td style="padding:6px;font-size:12px;max-width:180px;color:var(--ink-soft)">${esc(i.comentario&&i.comentario!=='-'?i.comentario:'')}</td>
+      <td style="padding:6px"><span class="stat ${statusCor}" style="padding:2px 8px;font-size:11px;font-weight:700;border-radius:6px;display:inline-block">${esc(i.status||'')}</span></td>
+      <td style="padding:6px;text-align:right">${acao}</td>
+    </tr>`;
+  }).join('');
+  $('ia-tabela').innerHTML=`<table style="width:100%;border-collapse:collapse;background:#fff;font-size:13px;min-width:1200px">
+    <thead style="background:#faf8f2"><tr>${th('SSC')}${th('Sistema')}${th('Classificação')}${th('Meio')}${th('Responsável')}${th('Data conclusão')}${th('Motivo')}${th('Comentário cliente')}${th('Status')}${th('Ação')}</tr></thead>
+    <tbody>${rows}</tbody></table>`;
+}
+
+// ===== Colab: meus insatisfeitos =====
+async function openMeusInsat(){
+  const{data,error}=await db.from('insatisfeitos').select('*').eq('responsavel_email',currentEmail).order('data_conclusao',{ascending:false});
+  if(error){$('mi-lista').innerHTML='<div class="empty"><b>Tabela ainda não existe.</b>Peça ao administrador para rodar o SQL.</div>';return;}
+  meusInsatList=data||[];
+  renderMeusInsat();
+}
+function renderMeusInsat(){
+  const fs=$('mi-status').value;
+  const arr=meusInsatList.filter(i=>!fs||i.status===fs);
+  const cnt=s=>meusInsatList.filter(i=>i.status===s).length;
+  $('mi-kpis').innerHTML=[
+    ['Total',meusInsatList.length,''],
+    ['Pendentes',cnt('Pendente'),'s-manut'],
+    ['Respondidos',cnt('Respondido'),'s-uso'],
+    ['Encerrados',cnt('Encerrado'),''],
+    ['Reabertos',cnt('Reaberto'),'s-desc']
+  ].map(k=>`<div class="stat ${k[2]}"><b>${k[1]}</b><span>${k[0]}</span></div>`).join('');
+  if(!arr.length){$('mi-lista').innerHTML='<div class="empty">Nenhum insatisfeito atribuído a você.</div>';return;}
+  $('mi-lista').innerHTML=arr.map(i=>{
+    const statusCor=IA_STATUS_COR[i.status]||'';
+    const podeResponder=i.status==='Pendente'||i.status==='Reaberto';
+    const respostaBlock=i.resposta_justificativa?`<div style="background:#eef4ee;border-left:3px solid #1f6f5c;padding:8px 12px;margin-top:8px;font-size:12px;border-radius:0 6px 6px 0">
+      <b>Sua resposta:</b> ${i.resposta_concorda?'✓ Concordo':'✗ Discordo'} · <i>"${esc(i.resposta_justificativa)}"</i>
+    </div>`:'';
+    const gestorBlock=i.gestor_validacao?`<div style="background:#fbf0e6;border-left:3px solid #c97e2f;padding:8px 12px;margin-top:6px;font-size:12px;border-radius:0 6px 6px 0">
+      <b>Gestor ${esc(i.gestor_validacao)}${i.validado_por?' ('+esc(i.validado_por)+')':''}</b>${i.gestor_comentario?': "'+esc(i.gestor_comentario)+'"':''}
+    </div>`:'';
+    return`<div class="row-item" style="align-items:flex-start;cursor:default">
+      <div style="flex:1;min-width:0">
+        <div class="ri-main"><a href="${esc(i.ssc_url||'#')}" target="_blank" style="color:#1f6f5c;text-decoration:underline">SSC ${esc(i.ssc)}</a> — ${esc(i.motivo||'—')}</div>
+        <div class="ri-sub">${esc(i.sistema||'')} · ${esc(i.classificacao||'')} · ${esc(i.meio_acesso||'')} · ${iaFmtD(i.data_conclusao)}</div>
+        ${i.comentario&&i.comentario!=='-'?`<div class="ri-sub" style="margin-top:4px;font-style:italic">💬 Cliente: "${esc(i.comentario)}"</div>`:''}
+        ${respostaBlock}
+        ${gestorBlock}
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+        <span class="stat ${statusCor}" style="padding:2px 10px;font-size:11px;font-weight:700;border-radius:6px">${esc(i.status||'')}</span>
+        ${podeResponder?`<button class="btn-primary" onclick="abrirRespInsat('${i.id}')" style="padding:6px 14px;font-size:12px">Responder</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ===== Técnico: responder =====
+function abrirRespInsat(id){
+  const lista=insatIdAtualLista();
+  const i=lista.find(x=>x.id===id);if(!i){alert('Registro não encontrado.');return;}
+  insatIdAtual=id;
+  $('ir-detalhes').innerHTML=`
+    <div><b>SSC:</b> <a href="${esc(i.ssc_url||'#')}" target="_blank" style="color:#1f6f5c;text-decoration:underline">${esc(i.ssc)}</a></div>
+    <div style="margin-top:4px"><b>Data conclusão:</b> ${iaFmtDt(i.data_conclusao)}</div>
+    <div style="margin-top:4px"><b>Sistema:</b> ${esc(i.sistema||'—')} · <b>Classificação:</b> ${esc(i.classificacao||'—')} · <b>Meio:</b> ${esc(i.meio_acesso||'—')}</div>
+    <div style="margin-top:4px"><b>Motivo do insatisfeito:</b> ${esc(i.motivo||'—')}</div>
+    ${i.comentario&&i.comentario!=='-'?`<div style="margin-top:6px;padding:6px 10px;background:#fff;border-radius:6px"><b>💬 Comentário do cliente:</b> <i>"${esc(i.comentario)}"</i></div>`:''}
+  `;
+  // Pré-preenche se já tinha respondido antes (Reaberto)
+  document.querySelectorAll('input[name="ir-conc"]').forEach(r=>{r.checked=(i.resposta_concorda===true&&r.value==='true')||(i.resposta_concorda===false&&r.value==='false');});
+  $('ir-just').value=i.resposta_justificativa||'';
+  $('ir-modal-bg').style.display='flex';
+}
+function insatIdAtualLista(){return meusInsatList.length?meusInsatList:insatList;}
+function fecharRespInsat(){$('ir-modal-bg').style.display='none';insatIdAtual=null;}
+async function salvarRespInsat(){
+  if(!insatIdAtual)return;
+  const concRadio=document.querySelector('input[name="ir-conc"]:checked');
+  if(!concRadio){alert('Escolha Concordo ou Discordo.');return;}
+  const just=$('ir-just').value.trim();
+  if(!just){alert('Escreva uma justificativa.');return;}
+  const upd={resposta_concorda:concRadio.value==='true',resposta_justificativa:just,respondido_em:new Date().toISOString(),respondido_por:currentEmail,status:'Respondido'};
+  const{error}=await db.from('insatisfeitos').update(upd).eq('id',insatIdAtual);
+  if(error){alert('Erro: '+error.message);return;}
+  toast('✓ Resposta enviada');
+  fecharRespInsat();
+  await openMeusInsat();
+}
+
+// ===== Gestor: validar =====
+function abrirValInsat(id){
+  const i=insatList.find(x=>x.id===id);if(!i)return;
+  insatIdAtual=id;
+  $('iv-detalhes').innerHTML=`
+    <div><b>SSC:</b> <a href="${esc(i.ssc_url||'#')}" target="_blank" style="color:#1f6f5c;text-decoration:underline">${esc(i.ssc)}</a> · <b>Responsável:</b> ${esc(i.responsavel||'—')}</div>
+    <div style="margin-top:4px"><b>Data conclusão:</b> ${iaFmtDt(i.data_conclusao)}</div>
+    <div style="margin-top:4px"><b>Motivo:</b> ${esc(i.motivo||'—')}${i.comentario&&i.comentario!=='-'?' · <b>Cliente:</b> <i>"'+esc(i.comentario)+'"</i>':''}</div>
+  `;
+  $('iv-resposta').innerHTML=i.resposta_justificativa?`
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#175547;font-weight:700;margin-bottom:4px">Resposta do técnico ${i.respondido_por?'('+esc(i.respondido_por)+')':''}</div>
+    <div style="font-weight:600;margin-bottom:4px">${i.resposta_concorda?'✓ Concordou com o insatisfeito':'✗ Discordou do insatisfeito'}</div>
+    <div style="font-style:italic">"${esc(i.resposta_justificativa)}"</div>
+    <div style="font-size:11px;color:var(--ink-soft);margin-top:6px">Enviado em ${iaFmtDt(i.respondido_em)}</div>
+  `:'<div class="empty" style="padding:6px;background:transparent">Este técnico ainda não respondeu.</div>';
+  document.querySelectorAll('input[name="iv-dec"]').forEach(r=>{r.checked=(r.value===i.gestor_validacao);});
+  $('iv-com').value=i.gestor_comentario||'';
+  $('iv-modal-bg').style.display='flex';
+}
+function fecharValInsat(){$('iv-modal-bg').style.display='none';insatIdAtual=null;}
+async function salvarValInsat(){
+  if(!insatIdAtual)return;
+  const decRadio=document.querySelector('input[name="iv-dec"]:checked');
+  if(!decRadio){alert('Escolha Confirmar ou Reabrir.');return;}
+  const dec=decRadio.value;
+  const upd={gestor_validacao:dec,gestor_comentario:$('iv-com').value.trim()||null,validado_em:new Date().toISOString(),validado_por:currentEmail,status:dec==='Confirmado'?'Encerrado':'Reaberto'};
+  const{error}=await db.from('insatisfeitos').update(upd).eq('id',insatIdAtual);
+  if(error){alert('Erro: '+error.message);return;}
+  toast(dec==='Confirmado'?'✓ Encerrado':'↺ Reaberto');
+  fecharValInsat();
+  await openInsatAdm();
+}
+async function zerarInsat(){
+  if(!confirm('⚠ Vai apagar TODOS os insatisfeitos (importados + respostas). Confirma?'))return;
+  const t=prompt('Digite APAGAR pra confirmar:');
+  if(t!=='APAGAR'){alert('Cancelado.');return;}
+  const{error}=await db.from('insatisfeitos').delete().neq('id','00000000-0000-0000-0000-000000000000');
+  if(error){alert('Erro: '+error.message);return;}
+  toast('✓ Zerado');await openInsatAdm();
+}
+
+// ===== Insatisfeitos: nav clicks =====
 const E2B_GESTOR='RAFAEL PEREIRA DE ANDRADE';
 const E2B_STATUS='Em analise';
 // 16 motivos oficiais do site 2B (código = índice+1)
