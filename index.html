@@ -1863,7 +1863,7 @@ const SUPA_URL='https://jvfewdukhgmtdieufpaf.supabase.co';
 const SUPA_KEY='sb_publishable_O2rf2zCnJTZ1YE5q4eJeeA_AVdukzUg';
 const db=supabase.createClient(SUPA_URL,SUPA_KEY);
 // APP_VERSION: aparece no canto superior direito. Bump a cada deploy.
-const APP_VERSION='v73';
+const APP_VERSION='v74';
 document.addEventListener('DOMContentLoaded',()=>{
   const set=(id)=>{const el=document.getElementById(id);if(el)el.textContent=APP_VERSION;};
   set('app-version');set('version-fixed');
@@ -5061,11 +5061,19 @@ async function baixarExp2BFonte(){
   const header=['Cod.','Funcionário','Data','Tipo','Observação','Motivos Ausência','Mês Ausência','Ano Ausência','Gestor','Status','Tempo','Motivo Atestado','CID','Ausencia Dia'];
   const rows=[header];
   linhas.forEach(l=>rows.push([l.cod,l.funcionario,l.data,l.tipo,l.obs,l.motivo,l.mes,l.ano,l.gestor,l.status,l.tempo,l.motivoAtest,l.cid,l.ausenciaDia]));
+  // Vazios viram null (célula vazia real, não string vazia)
+  const cleanRows=rows.map(r=>r.map(v=>(v===''||v==null)?null:v));
   const wb=XLSX.utils.book_new();
-  const ws=XLSX.utils.aoa_to_sheet(rows);
+  const ws=XLSX.utils.aoa_to_sheet(cleanRows);
+  // Força todas as células de texto pra tipo 's' (shared string) — evita t="str" que quebra PHPExcel antigo do 2B
+  const ref=XLSX.utils.decode_range(ws['!ref']);
+  for(let R=ref.s.r;R<=ref.e.r;R++)for(let C=ref.s.c;C<=ref.e.c;C++){
+    const addr=XLSX.utils.encode_cell({r:R,c:C});const cell=ws[addr];
+    if(cell&&cell.t==='str')cell.t='s';
+  }
   ws['!cols']=[{wch:6},{wch:36},{wch:11},{wch:11},{wch:35},{wch:22},{wch:6},{wch:7},{wch:28},{wch:11},{wch:9},{wch:20},{wch:10},{wch:10}];
   XLSX.utils.book_append_sheet(wb,ws,'Export');
-  XLSX.writeFile(wb,`${fonte}-2b-${String(mes).padStart(2,'0')}-${ano}.xlsx`);
+  XLSX.writeFile(wb,`${fonte}-2b-${String(mes).padStart(2,'0')}-${ano}.xlsx`,{bookType:'xlsx',bookSST:true});
   toast(`✓ ${linhas.length} lançamento(s) exportado(s)`);
   fecharExp2BFonte();
 }
@@ -5471,12 +5479,18 @@ function baixarExport2B(){
   linhas.forEach(l=>{
     rows.push([l.cod,l.funcionario,l.data,l.tipo,l.obs,l.motivo,l.mes,l.ano,l.gestor,l.status,l.tempo,l.motivoAtest,l.cid,l.ausenciaDia]);
   });
+  const cleanRows=rows.map(r=>r.map(v=>(v===''||v==null)?null:v));
   const wb=XLSX.utils.book_new();
-  const ws=XLSX.utils.aoa_to_sheet(rows);
+  const ws=XLSX.utils.aoa_to_sheet(cleanRows);
+  const ref=XLSX.utils.decode_range(ws['!ref']);
+  for(let R=ref.s.r;R<=ref.e.r;R++)for(let C=ref.s.c;C<=ref.e.c;C++){
+    const addr=XLSX.utils.encode_cell({r:R,c:C});const cell=ws[addr];
+    if(cell&&cell.t==='str')cell.t='s';
+  }
   ws['!cols']=[{wch:6},{wch:36},{wch:11},{wch:11},{wch:35},{wch:22},{wch:6},{wch:7},{wch:28},{wch:11},{wch:9},{wch:20},{wch:10},{wch:10}];
   XLSX.utils.book_append_sheet(wb,ws,'Export');
   const ano=parseInt($('e2b-ano').value),mes=parseInt($('e2b-mes').value);
-  XLSX.writeFile(wb,`ausencias-2b-${String(mes).padStart(2,'0')}-${ano}.xlsx`);
+  XLSX.writeFile(wb,`ausencias-2b-${String(mes).padStart(2,'0')}-${ano}.xlsx`,{bookType:'xlsx',bookSST:true});
   toast('✓ Excel gerado');
 }
 $('e2b-expfer')&&$('e2b-expfer').addEventListener('change',previewExp2B);
