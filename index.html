@@ -1863,7 +1863,7 @@ const SUPA_URL='https://jvfewdukhgmtdieufpaf.supabase.co';
 const SUPA_KEY='sb_publishable_O2rf2zCnJTZ1YE5q4eJeeA_AVdukzUg';
 const db=supabase.createClient(SUPA_URL,SUPA_KEY);
 // APP_VERSION: aparece no canto superior direito. Bump a cada deploy.
-const APP_VERSION='v75';
+const APP_VERSION='v76';
 document.addEventListener('DOMContentLoaded',()=>{
   const set=(id)=>{const el=document.getElementById(id);if(el)el.textContent=APP_VERSION;};
   set('app-version');set('version-fixed');
@@ -2908,7 +2908,10 @@ function renderSolAdm(){
       <div class="ri-sub" style="margin-top:2px;opacity:.7">${esc(s.solicitante_email||'')}</div></div>
       <div style="display:flex;align-items:center;gap:10px">
         <span class="badge ${SOL_BADGE[s.status]||'b-desc'}">${esc(s.status||'')}</span>
-        ${s.status==='Pendente'?`<div class="item-actions"><button class="btn-edit" data-sa-ok="${s.id}">Aceitar</button><button class="btn-del" data-sa-no="${s.id}">Recusar</button></div>`:''}
+        <div class="item-actions">
+          ${s.status==='Pendente'?`<button class="btn-edit" data-sa-ok="${s.id}">Aceitar</button><button class="btn-del" data-sa-no="${s.id}">Recusar</button>`:''}
+          <button class="btn-del" data-sa-del="${s.id}" title="Excluir pontualmente esta solicitação${s.status==='Aprovada'?' e o lançamento de folga que ela gerou':''}">🗑 Excluir</button>
+        </div>
       </div>
     </div>`).join(''):'<div class="empty">Nenhuma solicitação.</div>';
 }
@@ -2999,7 +3002,10 @@ function renderFerAdm(){
         <div><div class="ri-main">${esc(s.colaborador)} — ${esc(ferOpLabel(s.opcao))}</div><div class="ri-sub" style="opacity:.7">${esc(s.solicitante_email||'')}</div></div>
         <span class="badge ${SOL_BADGE[s.status]||'b-desc'}">${esc(s.status||'')}</span>
       </div>${ph}
-      ${pend?`<div class="item-actions" style="margin-top:10px"><button class="btn-edit" data-fa-ok="${s.id}">Aprovar com seleção</button><button class="btn-del" data-fa-no="${s.id}">Recusar</button></div>`:''}
+      <div class="item-actions" style="margin-top:10px">
+        ${pend?`<button class="btn-edit" data-fa-ok="${s.id}">Aprovar com seleção</button><button class="btn-del" data-fa-no="${s.id}">Recusar</button>`:''}
+        <button class="btn-del" data-fa-del="${s.id}" title="Excluir pontualmente este pedido${s.status==='Aprovada'?' e as férias que ele gerou':''}">🗑 Excluir</button>
+      </div>
     </div>`;}).join(''):'<div class="empty">Nenhum pedido de férias.</div>';
 }
 async function aprovarFer(id){
@@ -3073,7 +3079,10 @@ function renderAtAdm(){
       <div class="ri-sub" style="margin-top:2px;opacity:.7">${esc(s.solicitante_email||'')}</div></div>
       <div style="display:flex;align-items:center;gap:10px">
         <span class="badge ${SOL_BADGE[s.status]||'b-desc'}">${esc(s.status||'')}</span>
-        ${s.status==='Pendente'?`<div class="item-actions"><button class="btn-edit" data-aa-ok="${s.id}">Aceitar</button><button class="btn-del" data-aa-no="${s.id}">Recusar</button></div>`:''}
+        <div class="item-actions">
+          ${s.status==='Pendente'?`<button class="btn-edit" data-aa-ok="${s.id}">Aceitar</button><button class="btn-del" data-aa-no="${s.id}">Recusar</button>`:''}
+          <button class="btn-del" data-aa-del="${s.id}" title="Excluir pontualmente esta solicitação${s.status==='Aprovada'?' e o atestado que ela gerou':''}">🗑 Excluir</button>
+        </div>
       </div>
     </div>`;}).join(''):'<div class="empty">Nenhum pedido.</div>';
 }
@@ -3148,7 +3157,10 @@ function renderOcAdm(){
       <div class="ri-sub" style="margin-top:2px;opacity:.7">${esc(s.solicitante_email||'')}</div></div>
       <div style="display:flex;align-items:center;gap:10px">
         <span class="badge ${SOL_BADGE[s.status]||'b-desc'}">${esc(s.status||'')}</span>
-        ${s.status==='Pendente'?`<div class="item-actions"><button class="btn-edit" data-oa-ok="${s.id}">Aceitar</button><button class="btn-del" data-oa-no="${s.id}">Recusar</button></div>`:''}
+        <div class="item-actions">
+          ${s.status==='Pendente'?`<button class="btn-edit" data-oa-ok="${s.id}">Aceitar</button><button class="btn-del" data-oa-no="${s.id}">Recusar</button>`:''}
+          <button class="btn-del" data-oa-del="${s.id}" title="Excluir pontualmente esta solicitação${s.status==='Aprovada'?' e a ocorrência que ela gerou':''}">🗑 Excluir</button>
+        </div>
       </div>
     </div>`;}).join(''):'<div class="empty">Nenhum pedido.</div>';
 }
@@ -6388,13 +6400,13 @@ $('nav-atadm').onclick=()=>showView('atadm');
 $('nav-meus').onclick=()=>showView('meus');
 $('sat-save').onclick=onSaveSolat;
 $('aa-busca').oninput=renderAtAdm;$('aa-filtro').onchange=renderAtAdm;
-$('aa-lista').addEventListener('click',e=>{const ok=e.target.getAttribute('data-aa-ok'),no=e.target.getAttribute('data-aa-no');if(ok)aceitarSolat(ok);if(no)recusarSolat(no);});
+$('aa-lista').addEventListener('click',e=>{const ok=e.target.getAttribute('data-aa-ok'),no=e.target.getAttribute('data-aa-no'),del=e.target.getAttribute('data-aa-del');if(ok)aceitarSolat(ok);if(no)recusarSolat(no);if(del)excluirSolat(del);});
 $('nav-solo').onclick=()=>showView('solo');
 $('nav-ocadm').onclick=()=>showView('ocadm');
 $('so-save').onclick=onSaveSolo;
 $('so-tempo').onchange=updateSoloFracao;
 $('oa-busca').oninput=renderOcAdm;$('oa-filtro').onchange=renderOcAdm;
-$('oa-lista').addEventListener('click',e=>{const ok=e.target.getAttribute('data-oa-ok'),no=e.target.getAttribute('data-oa-no');if(ok)aceitarSolo(ok);if(no)recusarSolo(no);});
+$('oa-lista').addEventListener('click',e=>{const ok=e.target.getAttribute('data-oa-ok'),no=e.target.getAttribute('data-oa-no'),del=e.target.getAttribute('data-oa-del');if(ok)aceitarSolo(ok);if(no)recusarSolo(no);if(del)excluirSolo(del);});
 $('nav-tar').onclick=()=>showView('tar');
 $('nav-mtar').onclick=()=>showView('mtar');
 $('nav-solm').onclick=()=>showView('solm');
@@ -6409,11 +6421,92 @@ $('mt-lista').addEventListener('click',e=>{const up=e.target.getAttribute('data-
 $('fr-opcao').onchange=()=>renderFerPeriodos($('fr-opcao').value);
 $('fr-save').onclick=onSaveFer;
 $('fa-busca').oninput=renderFerAdm;$('fa-filtro').onchange=renderFerAdm;
-$('fa-lista').addEventListener('click',e=>{const ok=e.target.getAttribute('data-fa-ok'),no=e.target.getAttribute('data-fa-no');if(ok)aprovarFer(ok);if(no)recusarFer(no);});
+$('fa-lista').addEventListener('click',e=>{const ok=e.target.getAttribute('data-fa-ok'),no=e.target.getAttribute('data-fa-no'),del=e.target.getAttribute('data-fa-del');if(ok)aprovarFer(ok);if(no)recusarFer(no);if(del)excluirFer(del);});
 $('nav-soladm').onclick=()=>showView('soladm');
 $('sf-save').onclick=onSaveSolf;
 $('sa-busca').oninput=renderSolAdm;$('sa-filtro').onchange=renderSolAdm;
-$('sa-lista').addEventListener('click',e=>{const ok=e.target.getAttribute('data-sa-ok'),no=e.target.getAttribute('data-sa-no');if(ok)aceitarSolf(ok);if(no)recusarSolf(no);});
+$('sa-lista').addEventListener('click',e=>{const ok=e.target.getAttribute('data-sa-ok'),no=e.target.getAttribute('data-sa-no'),del=e.target.getAttribute('data-sa-del');if(ok)aceitarSolf(ok);if(no)recusarSolf(no);if(del)excluirSolf(del);});
+
+// ===== Exclusão pontual de solicitações (apaga também o registro real se estava aprovada) =====
+async function excluirSolf(id){
+  const s=sols.find(x=>x.id===id);if(!s)return;
+  const foiAprovada=s.status==='Aprovada';
+  const label=`${s.colaborador} — ${s.tipo||''} em ${s.data?fmt(s.data):'?'}`;
+  const msg=foiAprovada
+    ? `Excluir "${label}"?\n\n⚠ Isso vai apagar TAMBÉM o lançamento em Folgas (mesmo colaborador + mesma data). Se havia mais de uma folga nesse dia, TODAS serão removidas — depois relance se precisar.`
+    : `Excluir "${label}"?\n\nA solicitação será removida (ainda estava ${s.status||'Pendente'}).`;
+  if(!confirm(msg))return;
+  let apagFolgas=0;
+  if(foiAprovada&&s.colaborador&&s.data){
+    const r=await db.from('folgas').delete().eq('colaborador',s.colaborador).eq('data',s.data).select('id');
+    if(r.error){alert('Erro apagando folga vinculada: '+r.error.message);return;}
+    apagFolgas=(r.data||[]).length;
+  }
+  const{error}=await db.from('solicitacoes_folga').delete().eq('id',id);
+  if(error){alert('Erro apagando solicitação: '+error.message);return;}
+  toast(foiAprovada?`✓ Excluído (solicitação + ${apagFolgas} folga${apagFolgas!==1?'s':''})`:'✓ Solicitação excluída');
+  await openSolAdm();
+}
+async function excluirFer(id){
+  const s=ferReqs.find(x=>x.id===id);if(!s)return;
+  const foiAprovada=s.status==='Aprovada';
+  const label=`${s.colaborador} — férias`;
+  if(!confirm(foiAprovada
+    ? `Excluir "${label}"?\n\n⚠ Isso vai apagar TAMBÉM os registros em Férias desse colaborador que foram gerados por esse pedido. Verifique depois se restou algo inesperado.`
+    : `Excluir "${label}"?`))return;
+  let apagFer=0;
+  if(foiAprovada&&s.colaborador){
+    // Tenta identificar as férias criadas por esta solicitação usando as datas do periodo selecionado
+    const p=s.detalhes&&s.detalhes.periodos&&s.detalhes.periodos[0];
+    const pri=p&&p.prioridades&&p.prioridades[s.opcao||0];
+    if(pri&&pri.inicio&&pri.fim){
+      const r=await db.from('ferias').delete().eq('colaborador',s.colaborador).eq('data_inicio',pri.inicio).eq('data_fim',pri.fim).select('id');
+      if(r.error){alert('Erro apagando férias vinculadas: '+r.error.message);return;}
+      apagFer=(r.data||[]).length;
+    }
+  }
+  const{error}=await db.from('solicitacoes_ferias').delete().eq('id',id);
+  if(error){alert('Erro apagando solicitação: '+error.message);return;}
+  toast(foiAprovada?`✓ Excluído (solicitação + ${apagFer} férias)`:'✓ Solicitação excluída');
+  await openFerAdm();
+}
+async function excluirSolat(id){
+  const s=atSols.find(x=>x.id===id);if(!s)return;
+  const foiAprovada=s.status==='Aprovada';
+  const label=`${s.colaborador} — ${s.tipo||''} em ${s.data?fmt(s.data):'?'}`;
+  if(!confirm(foiAprovada
+    ? `Excluir "${label}"?\n\n⚠ Isso vai apagar TAMBÉM o atestado desse colaborador nessa data.`
+    : `Excluir "${label}"?`))return;
+  let apagAt=0;
+  if(foiAprovada&&s.colaborador&&s.data){
+    const r=await db.from('atestados').delete().eq('colaborador',s.colaborador).eq('data',s.data).select('id');
+    if(r.error){alert('Erro apagando atestado vinculado: '+r.error.message);return;}
+    apagAt=(r.data||[]).length;
+  }
+  const{error}=await db.from('solicitacoes_atestado').delete().eq('id',id);
+  if(error){alert('Erro apagando solicitação: '+error.message);return;}
+  toast(foiAprovada?`✓ Excluído (solicitação + ${apagAt} atestado${apagAt!==1?'s':''})`:'✓ Solicitação excluída');
+  await openAtAdm();
+}
+async function excluirSolo(id){
+  const s=ocSols.find(x=>x.id===id);if(!s)return;
+  const foiAprovada=s.status==='Aprovada';
+  const label=`${s.colaborador} — ocorrência em ${s.data?fmt(s.data):'?'}`;
+  if(!confirm(foiAprovada
+    ? `Excluir "${label}"?\n\n⚠ Isso vai apagar TAMBÉM a ocorrência desse colaborador nessa data.`
+    : `Excluir "${label}"?`))return;
+  let apagOc=0;
+  if(foiAprovada&&s.colaborador&&s.data){
+    // Tenta apagar por tecnico OU colaborador (schema pode variar)
+    const r=await db.from('ocorrencias').delete().or(`tecnico.eq.${s.colaborador},colaborador.eq.${s.colaborador}`).eq('data',s.data).select('id');
+    if(r.error){alert('Erro apagando ocorrência vinculada: '+r.error.message);return;}
+    apagOc=(r.data||[]).length;
+  }
+  const{error}=await db.from('solicitacoes_ocorrencia').delete().eq('id',id);
+  if(error){alert('Erro apagando solicitação: '+error.message);return;}
+  toast(foiAprovada?`✓ Excluído (solicitação + ${apagOc} ocorrência${apagOc!==1?'s':''})`:'✓ Solicitação excluída');
+  await openOcAdm();
+}
 $('btn-logout').onclick=doLogout;
 $('btn-save').onclick=onSave;
 $('btn-cancel').onclick=()=>{clearForm();showView(isAdminUser?'relatorios':'cadastro');};
