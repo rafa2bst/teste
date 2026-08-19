@@ -930,6 +930,8 @@
       <select id="sa-filtro" style="width:auto;min-width:150px">
         <option value="Pendente">Pendentes</option><option value="">Todas</option><option value="Aprovada">Aprovadas</option><option value="Recusada">Recusadas</option>
       </select>
+      <select id="sa-mes" onchange="renderSolAdm()" style="width:auto;min-width:130px"><option value="">Todos os meses</option></select>
+      <button class="btn-edit" onclick="abrirExp2BFonte('folgas')" style="font-size:12px;padding:6px 12px;background:#eef4ee;border-color:#b5d0b6;color:#175547" title="Exporta as folgas já aprovadas para o leiaute do 2B">📥 Exportar 2B</button>
           <button class="btn-del" onclick="zerarTabelaUma('solicitacoes_folga','pedidos de folga',openSolAdm)" style="flex:none;font-size:12px;padding:6px 10px;background:#fbf4f4;color:#a64141;border-color:#d9b3b3" title="Apaga todos os pedidos de folga">🗑 Zerar</button>
     </div>
     <div id="sa-lista" class="list"></div>
@@ -972,6 +974,7 @@
       <select id="fa-filtro" style="width:auto;min-width:150px">
         <option value="Pendente">Pendentes</option><option value="">Todas</option><option value="Aprovada">Aprovadas</option><option value="Recusada">Recusadas</option>
       </select>
+      <select id="fa-mes" onchange="renderFerAdm()" style="width:auto;min-width:130px"><option value="">Todos os meses</option></select>
           <button class="btn-del" onclick="zerarTabelaUma('solicitacoes_ferias','pedidos de férias',openFerAdm)" style="flex:none;font-size:12px;padding:6px 10px;background:#fbf4f4;color:#a64141;border-color:#d9b3b3" title="Apaga todos os pedidos de férias">🗑 Zerar</button>
     </div>
     <div id="fa-lista" class="list"></div>
@@ -1022,6 +1025,8 @@
       <select id="aa-filtro" style="width:auto;min-width:160px">
         <option value="Pendente">Pendentes</option><option value="">Todos</option><option value="Aprovada">Aprovados</option><option value="Recusada">Recusados</option>
       </select>
+      <select id="aa-mes" onchange="renderAtAdm()" style="width:auto;min-width:130px"><option value="">Todos os meses</option></select>
+      <button class="btn-edit" onclick="abrirExp2BFonte('atestados')" style="font-size:12px;padding:6px 12px;background:#eef4ee;border-color:#b5d0b6;color:#175547" title="Exporta os atestados já aprovados para o leiaute do 2B">📥 Exportar 2B</button>
           <button class="btn-del" onclick="zerarTabelaUma('solicitacoes_atestado','pedidos de atestado',openAtAdm)" style="flex:none;font-size:12px;padding:6px 10px;background:#fbf4f4;color:#a64141;border-color:#d9b3b3" title="Apaga todos os pedidos de atestado">🗑 Zerar</button>
     </div>
     <div id="aa-lista" class="list"></div>
@@ -1081,6 +1086,8 @@
       <select id="oa-filtro" style="width:auto;min-width:160px">
         <option value="Pendente">Pendentes</option><option value="">Todas</option><option value="Aprovada">Aprovadas</option><option value="Recusada">Recusadas</option>
       </select>
+      <select id="oa-mes" onchange="renderOcAdm()" style="width:auto;min-width:130px"><option value="">Todos os meses</option></select>
+      <button class="btn-edit" onclick="abrirExp2BFonte('ocorrencias')" style="font-size:12px;padding:6px 12px;background:#eef4ee;border-color:#b5d0b6;color:#175547" title="Exporta as ocorrências já aprovadas para o leiaute do 2B">📥 Exportar 2B</button>
           <button class="btn-del" onclick="zerarTabelaUma('solicitacoes_ocorrencia','pedidos de ocorrência',openOcAdm)" style="flex:none;font-size:12px;padding:6px 10px;background:#fbf4f4;color:#a64141;border-color:#d9b3b3" title="Apaga todos os pedidos de ocorrência">🗑 Zerar</button>
     </div>
     <div id="oa-lista" class="list"></div>
@@ -1128,6 +1135,7 @@
         <option value="Resolvido">Resolvidos</option>
         <option value="Cancelado">Cancelados</option>
       </select>
+      <select id="mt-mes" onchange="renderMtAdm()" style="width:auto;min-width:130px"><option value="">Todos os meses</option></select>
           <button class="btn-del" onclick="zerarTabelaUma('tickets_manutencao','tickets de manutenção',openMtAdm)" style="flex:none;font-size:12px;padding:6px 10px;background:#fbf4f4;color:#a64141;border-color:#d9b3b3" title="Apaga todos os tickets de manutenção">🗑 Zerar</button>
     </div>
     <div id="mt-lista" class="list"></div>
@@ -1855,7 +1863,7 @@ const SUPA_URL='https://jvfewdukhgmtdieufpaf.supabase.co';
 const SUPA_KEY='sb_publishable_O2rf2zCnJTZ1YE5q4eJeeA_AVdukzUg';
 const db=supabase.createClient(SUPA_URL,SUPA_KEY);
 // APP_VERSION: aparece no canto superior direito. Bump a cada deploy.
-const APP_VERSION='v72';
+const APP_VERSION='v73';
 document.addEventListener('DOMContentLoaded',()=>{
   const set=(id)=>{const el=document.getElementById(id);if(el)el.textContent=APP_VERSION;};
   set('app-version');set('version-fixed');
@@ -2872,12 +2880,21 @@ async function openSolAdm(){
   if(error){sols=[];$('sa-lista').innerHTML='<div class="empty"><b>Tabela de solicitações ainda não existe</b>Rode o SQL e recarregue a página.</div>';['sa-c-pe','sa-c-ap','sa-c-re'].forEach(i=>$(i).textContent='0');return;}
   sols=data||[];renderSolAdm();
 }
+// Helper compartilhado: popula um <select> de meses a partir de uma lista
+function popMesFilter(selId,list,keyFn){
+  const el=$(selId);if(!el)return;
+  const meses=[...new Set(list.map(keyFn).filter(Boolean))].sort().reverse();
+  const cur=el.value;
+  el.innerHTML='<option value="">Todos os meses</option>'+meses.map(m=>{const[y,mm]=m.split('-');return`<option value="${m}">${mm}/${y}</option>`;}).join('');
+  el.value=cur;
+}
 function renderSolAdm(){
   $('sa-c-pe').textContent=sols.filter(s=>s.status==='Pendente').length;
   $('sa-c-ap').textContent=sols.filter(s=>s.status==='Aprovada').length;
   $('sa-c-re').textContent=sols.filter(s=>s.status==='Recusada').length;
-  const q=$('sa-busca').value.trim().toLowerCase(),fs=$('sa-filtro').value;
-  const arr=sols.filter(s=>(!fs||s.status===fs)&&(!q||(s.colaborador||'').toLowerCase().includes(q)));
+  popMesFilter('sa-mes',sols,s=>s.data?s.data.slice(0,7):null);
+  const q=$('sa-busca').value.trim().toLowerCase(),fs=$('sa-filtro').value,fm=$('sa-mes').value;
+  const arr=sols.filter(s=>(!fs||s.status===fs)&&(!fm||(s.data||'').startsWith(fm))&&(!q||(s.colaborador||'').toLowerCase().includes(q)));
   const horLabel=s=>{
     if(!s.horario||s.horario==='Integral')return '';
     if(s.horario==='Parcial')return ' · Meio-turno'+(s.turno?' ('+esc(s.turno)+')':'');
@@ -2970,8 +2987,10 @@ function renderFerAdm(){
   $('fa-c-pe').textContent=ferReqs.filter(s=>s.status==='Pendente').length;
   $('fa-c-ap').textContent=ferReqs.filter(s=>s.status==='Aprovada').length;
   $('fa-c-re').textContent=ferReqs.filter(s=>s.status==='Recusada').length;
-  const q=$('fa-busca').value.trim().toLowerCase(),fs=$('fa-filtro').value;
-  const arr=ferReqs.filter(s=>(!fs||s.status===fs)&&(!q||(s.colaborador||'').toLowerCase().includes(q)));
+  const extFerMes=s=>{const p=s.detalhes&&s.detalhes.periodos&&s.detalhes.periodos[0];const ini=p&&p.prioridades&&p.prioridades[0]&&p.prioridades[0].inicio;return ini?ini.slice(0,7):(s.criado_em?s.criado_em.slice(0,7):null);};
+  popMesFilter('fa-mes',ferReqs,extFerMes);
+  const q=$('fa-busca').value.trim().toLowerCase(),fs=$('fa-filtro').value,fm=$('fa-mes').value;
+  const arr=ferReqs.filter(s=>(!fs||s.status===fs)&&(!fm||(extFerMes(s)||'')===fm)&&(!q||(s.colaborador||'').toLowerCase().includes(q)));
   $('fa-lista').innerHTML=arr.length?arr.map(s=>{
     const periodos=(s.detalhes&&s.detalhes.periodos)||[],pend=s.status==='Pendente';
     const ph=periodos.map((pp,pi)=>`<div class="fa-period"><b style="font-size:13px">${esc(pp.label)}</b>${pp.prioridades.map((pr,idx)=>`<label class="fa-opt">${pend?`<input type="radio" name="fap-${s.id}-${pi}" value="${idx}" ${idx===0?'checked':''} style="width:auto">`:'•'} P${pr.prioridade}: ${fmt(pr.inicio)} → ${fmt(pr.fim)}</label>`).join('')}</div>`).join('');
@@ -3042,8 +3061,9 @@ function renderAtAdm(){
   $('aa-c-pe').textContent=atSols.filter(s=>s.status==='Pendente').length;
   $('aa-c-ap').textContent=atSols.filter(s=>s.status==='Aprovada').length;
   $('aa-c-re').textContent=atSols.filter(s=>s.status==='Recusada').length;
-  const q=$('aa-busca').value.trim().toLowerCase(),fs=$('aa-filtro').value;
-  const arr=atSols.filter(s=>(!fs||s.status===fs)&&(!q||(s.colaborador||'').toLowerCase().includes(q)));
+  popMesFilter('aa-mes',atSols,s=>s.data?s.data.slice(0,7):null);
+  const q=$('aa-busca').value.trim().toLowerCase(),fs=$('aa-filtro').value,fm=$('aa-mes').value;
+  const arr=atSols.filter(s=>(!fs||s.status===fs)&&(!fm||(s.data||'').startsWith(fm))&&(!q||(s.colaborador||'').toLowerCase().includes(q)));
   $('aa-lista').innerHTML=arr.length?arr.map(s=>{
     const det=[s.data?fmt(s.data):'',s.horario?'às '+esc(s.horario):''].filter(Boolean).join(' ');
     return`<div class="row-item" style="cursor:default;align-items:flex-start">
@@ -3116,8 +3136,9 @@ function renderOcAdm(){
   $('oa-c-pe').textContent=ocSols.filter(s=>s.status==='Pendente').length;
   $('oa-c-ap').textContent=ocSols.filter(s=>s.status==='Aprovada').length;
   $('oa-c-re').textContent=ocSols.filter(s=>s.status==='Recusada').length;
-  const q=$('oa-busca').value.trim().toLowerCase(),fs=$('oa-filtro').value;
-  const arr=ocSols.filter(s=>(!fs||s.status===fs)&&(!q||(s.colaborador||'').toLowerCase().includes(q)));
+  popMesFilter('oa-mes',ocSols,s=>s.data?s.data.slice(0,7):null);
+  const q=$('oa-busca').value.trim().toLowerCase(),fs=$('oa-filtro').value,fm=$('oa-mes').value;
+  const arr=ocSols.filter(s=>(!fs||s.status===fs)&&(!fm||(s.data||'').startsWith(fm))&&(!q||(s.colaborador||'').toLowerCase().includes(q)));
   $('oa-lista').innerHTML=arr.length?arr.map(s=>{
     const det=[s.data?fmt(s.data):'',s.tempo||'',(s.fracao?'('+esc(s.fracao)+' min)':'')].filter(Boolean).join(' · ');
     return`<div class="row-item" style="cursor:default;align-items:flex-start">
@@ -3234,8 +3255,9 @@ function renderMtAdm(){
   $('mt-c-an').textContent=tickets.filter(t=>['Iniciado','Em andamento','Fazendo testes','Aguardando peças','Aguardando colaborador'].includes(t.status)).length;
   $('mt-c-re').textContent=tickets.filter(t=>t.status==='Finalizado'||t.status==='Resolvido').length;
   $('mt-c-ca').textContent=tickets.filter(t=>t.status==='Cancelado').length;
-  const q=$('mt-busca').value.trim().toLowerCase(),fs=$('mt-filtro').value;
-  const arr=tickets.filter(t=>(!fs||(fs==='Aberto'?t.status==='Aberto':fs==='Em andamento'?['Iniciado','Em andamento','Fazendo testes','Aguardando peças','Aguardando colaborador'].includes(t.status):fs==='Resolvido'?['Resolvido','Finalizado'].includes(t.status):t.status===fs))&&(!q||((t.colaborador||'')+' '+(t.patrimonio||'')).toLowerCase().includes(q)));
+  popMesFilter('mt-mes',tickets,t=>t.criado_em?t.criado_em.slice(0,7):null);
+  const q=$('mt-busca').value.trim().toLowerCase(),fs=$('mt-filtro').value,fm=$('mt-mes').value;
+  const arr=tickets.filter(t=>(!fs||(fs==='Aberto'?t.status==='Aberto':fs==='Em andamento'?['Iniciado','Em andamento','Fazendo testes','Aguardando peças','Aguardando colaborador'].includes(t.status):fs==='Resolvido'?['Resolvido','Finalizado'].includes(t.status):t.status===fs))&&(!fm||((t.criado_em||'').slice(0,7)===fm))&&(!q||((t.colaborador||'')+' '+(t.patrimonio||'')).toLowerCase().includes(q)));
   $('mt-lista').innerHTML=arr.length?arr.map(t=>{
     const aberto=statusEmAberto(t.status);
     return`<div class="row-item" style="cursor:default;flex-direction:column;align-items:stretch">
