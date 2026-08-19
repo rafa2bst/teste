@@ -217,8 +217,9 @@
 </div>
 
 <!-- ===== APP ===== -->
+<div id="version-fixed" style="position:fixed;top:10px;right:10px;background:#1f6f5c;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:6px;letter-spacing:.04em;font-family:ui-monospace,monospace;z-index:99;box-shadow:0 2px 6px rgba(0,0,0,.15)">v?</div>
 <div id="app" class="wrap" style="display:none">
-  <div class="session-bar">Logado como <b id="user-email"></b><button class="btn-logout" id="btn-logout">Sair</button></div>
+  <div class="session-bar"><span id="app-version" title="Versão do site carregada no seu navegador" style="background:#1f6f5c;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:6px;letter-spacing:.04em;font-family:ui-monospace,monospace">v?</span>Logado como <b id="user-email"></b><button class="btn-logout" id="btn-logout">Sair</button></div>
   <header class="top">
     <div style="display:flex;align-items:center;gap:14px">
       <button class="hamburger" id="hamb-btn" aria-label="Abrir menu">☰</button>
@@ -1853,6 +1854,20 @@
 const SUPA_URL='https://jvfewdukhgmtdieufpaf.supabase.co';
 const SUPA_KEY='sb_publishable_O2rf2zCnJTZ1YE5q4eJeeA_AVdukzUg';
 const db=supabase.createClient(SUPA_URL,SUPA_KEY);
+// APP_VERSION: aparece no canto superior direito. Bump a cada deploy.
+const APP_VERSION='v72';
+document.addEventListener('DOMContentLoaded',()=>{
+  const set=(id)=>{const el=document.getElementById(id);if(el)el.textContent=APP_VERSION;};
+  set('app-version');set('version-fixed');
+  // Se a URL pediu uma versão diferente (?v=NN), pisca em laranja avisando pra dar Ctrl+F5
+  try{
+    const urlV=new URLSearchParams(location.search).get('v');
+    if(urlV&&('v'+urlV)!==APP_VERSION&&urlV!==APP_VERSION.replace('v','')){
+      const warn=(id)=>{const el=document.getElementById(id);if(el){el.style.background='#c97e2f';el.title=`⚠ Você pediu v${urlV} mas o navegador carregou ${APP_VERSION}. Aperte Ctrl+F5 pra atualizar.`;el.textContent=APP_VERSION+' ⚠';}};
+      warn('app-version');warn('version-fixed');
+    }
+  }catch(e){}
+});
 const ADMIN_EMAILS=['rafael.andrade.sa@gmail.com','maria.nascimento@2bst.com.br','tiago.barbosa@2bst.com.br'];
 const isAdmin=u=>!!u&&ADMIN_EMAILS.includes((u.email||'').toLowerCase());
 
@@ -1874,6 +1889,7 @@ async function checkAuth(){const{data:{session}}=await db.auth.getSession();sess
 function showLogin(){$('login-screen').style.display='flex';$('app').style.display='none';}
 async function showApp(user){
   $('login-screen').style.display='none';$('app').style.display='block';
+  const vf=document.getElementById('version-fixed');if(vf)vf.style.display='none';
   $('user-email').textContent=user.email;currentEmail=user.email||'';isAdminUser=isAdmin(user);
   const isRafael=currentEmail==='rafael.andrade.sa@gmail.com';
   // Registra último login (silenciosamente; ignora erro se a tabela não existir)
