@@ -338,6 +338,16 @@
       </div>
     </div>
 
+    <div class="nav-group" data-group="fin">
+      <button class="group-label">💰 Financeiro</button>
+      <div class="group-items">
+        <button id="nav-fin-novo">Novo lançamento</button>
+        <button id="nav-fin-pagar">Contas a pagar</button>
+        <button id="nav-fin-receber">Contas a receber</button>
+        <button id="nav-fin-cons">Consolidado</button>
+      </div>
+    </div>
+
     <div class="nav-group" data-group="solic">
       <button class="group-label">✋ Solicitar</button>
       <div class="group-items">
@@ -493,7 +503,10 @@
   <!-- VIEW: FOLGAS (somente admin) -->
   <div id="view-folgas" style="display:none">
     <div class="form-card">
-      <h2 id="fo-title">Lançar folga</h2>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <h2 id="fo-title" style="margin:0">Lançar folga</h2>
+        <button class="btn-edit" onclick="abrirExp2BFonte('folgas')" style="font-size:12px;padding:6px 12px;background:#eef4ee;border-color:#b5d0b6;color:#175547">📥 Exportar 2B</button>
+      </div>
       <p class="hint">Apenas colaboradores da Área Técnica.</p>
       <label>Colaborador (Área Técnica) *</label>
       <select id="fo-colab"><option value="">— selecione —</option></select>
@@ -555,7 +568,10 @@
   <!-- VIEW: ATESTADOS (somente admin — dado de saúde) -->
   <div id="view-atestados" style="display:none">
     <div class="form-card">
-      <h2 id="at-title">Lançar atestado</h2>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <h2 id="at-title" style="margin:0">Lançar atestado</h2>
+        <button class="btn-edit" onclick="abrirExp2BFonte('atestados')" style="font-size:12px;padding:6px 12px;background:#eef4ee;border-color:#b5d0b6;color:#175547">📥 Exportar 2B</button>
+      </div>
       <p class="hint">Apenas colaboradores da Área Técnica. Informação de saúde — visível só para o admin.</p>
       <label>Colaborador (Área Técnica) *</label>
       <select id="at-colab"><option value="">— selecione —</option></select>
@@ -661,7 +677,10 @@
   <!-- VIEW: OCORRÊNCIAS -->
   <div id="view-ocor" style="display:none">
     <div class="form-card">
-      <h2 id="oc-title">Registrar ocorrência</h2>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <h2 id="oc-title" style="margin:0">Registrar ocorrência</h2>
+        <button class="btn-edit" onclick="abrirExp2BFonte('ocorrencias')" style="font-size:12px;padding:6px 12px;background:#eef4ee;border-color:#b5d0b6;color:#175547">📥 Exportar 2B (abonos)</button>
+      </div>
       <p class="hint">Ocorrências do setor da Área Técnica.</p>
       <label>Técnico (Área Técnica) *</label>
       <select id="oc-tecnico"><option value="">— selecione —</option></select>
@@ -1659,6 +1678,22 @@
     </div>
   </div>
 
+  <!-- MODAL: exportar 1 fonte para 2B (folgas/atestados/ocorrências) -->
+  <div id="e2b1-modal-bg" class="modal-bg" style="display:none" onclick="if(event.target===this)fecharExp2BFonte()">
+    <div class="modal-card" style="max-width:440px" onclick="event.stopPropagation()">
+      <div id="e2b1-titulo" style="font-size:18px;font-weight:700;margin-bottom:8px">Exportar → 2B</div>
+      <p class="hint" style="margin-bottom:14px">Gera o Excel no leiaute 2B (14 colunas) só com os lançamentos dessa aba no mês selecionado. Status "Em analise" em todas as linhas.</p>
+      <div class="row2">
+        <div><label>Mês</label><select id="e2b1-mes"></select></div>
+        <div><label>Ano</label><select id="e2b1-ano"></select></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end">
+        <button class="btn-edit" onclick="fecharExp2BFonte()">Cancelar</button>
+        <button class="btn-primary" onclick="baixarExp2BFonte()">📥 Baixar Excel</button>
+      </div>
+    </div>
+  </div>
+
   <!-- VIEW: INSATISFEITOS (admin) -->
   <div id="view-insatadm" style="display:none">
     <style>body.insat-view .wrap{max-width:1500px !important}#view-insatadm .form-card,#view-meusinsat .form-card{max-width:none}</style>
@@ -1696,6 +1731,79 @@
         <select id="mi-status" onchange="renderMeusInsat()" style="width:auto"><option value="">Todos</option><option>Pendente</option><option>Respondido</option><option>Encerrado</option><option>Reaberto</option></select>
       </div>
       <div id="mi-lista" class="list" style="margin-top:12px"></div>
+    </div>
+  </div>
+
+  <!-- VIEW: FINANCEIRO — Novo lançamento -->
+  <div id="view-fin-novo" style="display:none">
+    <style>body.fin-view .wrap{max-width:1300px !important}#view-fin-pagar .form-card,#view-fin-receber .form-card,#view-fin-cons .form-card{max-width:none}</style>
+    <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
+      <h2>Novo lançamento</h2>
+      <p class="hint">Registre uma despesa que outra pessoa precisa te pagar. Vai aparecer como "contas a pagar" pra ela e "contas a receber" pra você. Ao salvar, o formulário limpa sozinho pro próximo lançamento.</p>
+    </div>
+    <div class="form-card">
+      <div class="row2">
+        <div><label>Para *</label>
+          <select id="fn-para"><option value="">— selecione —</option></select>
+        </div>
+        <div><label>Valor (R$) *</label><input type="number" id="fn-valor" step="0.01" min="0.01" placeholder="0,00"></div>
+      </div>
+      <div class="row2">
+        <div><label>Data *</label><input type="date" id="fn-data"></div>
+        <div><label>Categoria</label>
+          <select id="fn-cat"><option value="">— sem categoria —</option><option>Mercado</option><option>Aluguel</option><option>Contas</option><option>Restaurante</option><option>Presente</option><option>Serviço</option><option>Transporte</option><option>Outros</option></select>
+        </div>
+      </div>
+      <label>Descrição *</label>
+      <input type="text" id="fn-desc" placeholder="Ex.: Compra do mercado, aluguel do mês, jantar restaurante">
+      <label>Observação</label>
+      <textarea id="fn-obs" rows="2" placeholder="Opcional"></textarea>
+      <div class="actions"><button class="btn-primary" onclick="salvarFinLanc()">Salvar lançamento</button></div>
+    </div>
+  </div>
+
+  <!-- VIEW: FINANCEIRO — Contas a pagar (o que outros lançaram pra mim) -->
+  <div id="view-fin-pagar" style="display:none">
+    <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
+      <h2>Contas a pagar</h2>
+      <p class="hint">Despesas que outras pessoas lançaram pra você pagar.</p>
+    </div>
+    <div class="form-card">
+      <div id="fp-kpis" class="kpis"></div>
+      <div class="toolbar" style="margin-top:14px">
+        <select id="fp-status" onchange="renderFinPagar()" style="width:auto"><option value="Pendente">Só pendentes</option><option value="Pago">Só pagas</option><option value="">Todas</option></select>
+        <select id="fp-mes" onchange="renderFinPagar()" style="width:auto"><option value="">Todos os meses</option></select>
+        <select id="fp-de" onchange="renderFinPagar()" style="width:auto"><option value="">Todas as pessoas</option></select>
+      </div>
+      <div id="fp-lista" class="list" style="margin-top:12px"></div>
+    </div>
+  </div>
+
+  <!-- VIEW: FINANCEIRO — Contas a receber (o que eu lancei pra outros) -->
+  <div id="view-fin-receber" style="display:none">
+    <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
+      <h2>Contas a receber</h2>
+      <p class="hint">Despesas que você lançou pra outras pessoas pagarem.</p>
+    </div>
+    <div class="form-card">
+      <div id="fr-kpis" class="kpis"></div>
+      <div class="toolbar" style="margin-top:14px">
+        <select id="fr-status" onchange="renderFinReceber()" style="width:auto"><option value="Pendente">Só pendentes</option><option value="Pago">Só pagas</option><option value="">Todas</option></select>
+        <select id="fr-mes" onchange="renderFinReceber()" style="width:auto"><option value="">Todos os meses</option></select>
+        <select id="fr-para-f" onchange="renderFinReceber()" style="width:auto"><option value="">Todas as pessoas</option></select>
+      </div>
+      <div id="fr-lista" class="list" style="margin-top:12px"></div>
+    </div>
+  </div>
+
+  <!-- VIEW: FINANCEIRO — Consolidado -->
+  <div id="view-fin-cons" style="display:none">
+    <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
+      <h2>Consolidado</h2>
+      <p class="hint">Quanto você deve pra cada pessoa e quanto cada pessoa deve pra você. Baseado só nos lançamentos <b>pendentes</b>.</p>
+    </div>
+    <div class="form-card">
+      <div id="fc-conteudo"></div>
     </div>
   </div>
 
@@ -1987,6 +2095,11 @@ function showView(v){
   $('view-meus').style.display=v==='meus'?'block':'none';
   $('view-insatadm').style.display=v==='insatadm'?'block':'none';
   $('view-meusinsat').style.display=v==='meusinsat'?'block':'none';
+  $('view-fin-novo').style.display=v==='fin-novo'?'block':'none';
+  $('view-fin-pagar').style.display=v==='fin-pagar'?'block':'none';
+  $('view-fin-receber').style.display=v==='fin-receber'?'block':'none';
+  $('view-fin-cons').style.display=v==='fin-cons'?'block':'none';
+  document.body.classList.toggle('fin-view',v==='fin-pagar'||v==='fin-receber'||v==='fin-cons');
   document.body.classList.toggle('insat-view',v==='insatadm'||v==='meusinsat');
   $('nav-cad').classList.toggle('active',v==='cadastro');
   $('nav-rel').classList.toggle('active',v==='relatorios');
@@ -2071,6 +2184,10 @@ function showView(v){
   if(v==='exp2b')openExp2B();
   if(v==='insatadm')openInsatAdm();
   if(v==='meusinsat')openMeusInsat();
+  if(v==='fin-novo')openFinNovo();
+  if(v==='fin-pagar')openFinPagar();
+  if(v==='fin-receber')openFinReceber();
+  if(v==='fin-cons')openFinCons();
   if(v==='perf'||v==='mperf')openPerf();
   if(v==='dperf')openDailyPerf();
   if(v==='mequipehj')openMequipehj();
@@ -4843,6 +4960,305 @@ async function zerarInsat(){
 }
 
 // ===== Insatisfeitos: nav clicks =====
+$('nav-fin-novo').onclick=()=>showView('fin-novo');
+$('nav-fin-pagar').onclick=()=>showView('fin-pagar');
+$('nav-fin-receber').onclick=()=>showView('fin-receber');
+$('nav-fin-cons').onclick=()=>showView('fin-cons');
+
+// ===== Export 2B por fonte individual (Folgas / Atestados / Ocorrencias) =====
+let expOneFonte=null;
+const EXP1_LABELS={folgas:'Folgas',atestados:'Atestados',ocorrencias:'Ocorrências / Abonos'};
+function abrirExp2BFonte(fonte){
+  expOneFonte=fonte;
+  $('e2b1-titulo').textContent='Exportar '+EXP1_LABELS[fonte]+' → 2B';
+  const hoje=new Date();
+  const anos=[];for(let a=hoje.getFullYear()-1;a<=hoje.getFullYear()+1;a++)anos.push(a);
+  $('e2b1-ano').innerHTML=anos.map(a=>`<option ${a===hoje.getFullYear()?'selected':''}>${a}</option>`).join('');
+  $('e2b1-mes').innerHTML=MESES.map((m,i)=>`<option value="${i+1}" ${(i+1)===hoje.getMonth()+1?'selected':''}>${m}</option>`).join('');
+  $('e2b1-modal-bg').style.display='flex';
+}
+function fecharExp2BFonte(){$('e2b1-modal-bg').style.display='none';expOneFonte=null;}
+async function baixarExp2BFonte(){
+  const fonte=expOneFonte;if(!fonte){alert('Fonte não definida.');return;}
+  if(typeof XLSX==='undefined'){alert('Biblioteca XLSX não carregou.');return;}
+  const ano=parseInt($('e2b1-ano').value),mes=parseInt($('e2b1-mes').value);
+  const dataIni=`${ano}-${String(mes).padStart(2,'0')}-01`;
+  const ultDia=new Date(ano,mes,0).getDate();
+  const dataFim=`${ano}-${String(mes).padStart(2,'0')}-${String(ultDia).padStart(2,'0')}`;
+  let resp;
+  if(fonte==='folgas')resp=await db.from('folgas').select('*').gte('data',dataIni).lte('data',dataFim);
+  else if(fonte==='atestados')resp=await db.from('atestados').select('*').gte('data',dataIni).lte('data',dataFim);
+  else if(fonte==='ocorrencias')resp=await db.from('ocorrencias').select('*').gte('data',dataIni).lte('data',dataFim);
+  if(resp.error){alert('Erro consultando: '+resp.error.message);return;}
+  const regs=resp.data||[];
+  const linhas=[];
+  if(fonte==='folgas'){
+    regs.forEach(f=>{
+      const motivo=e2bMapMotivo((f.tipo||'')+' '+(f.observacao||''),'folga');
+      let fTipo='Integral',fAus='1,00',fTempo='';
+      const fFrac=f.fracao!=null?parseFloat(f.fracao):(f.horario==='Parcial'?0.5:(f.horario==='Fracionado'?null:1));
+      if(f.horario==='Parcial'||(fFrac!=null&&Math.abs(fFrac-0.5)<0.01)){fTipo='Parcial';fAus='0,50';}
+      else if(f.horario==='Fracionado'||(fFrac!=null&&fFrac<0.99&&fFrac>0)){fTipo='Fracionada';const frac=fFrac||0.5;fTempo=e2bFmtNum(Math.round(frac*480));fAus=e2bFmtNum(frac);}
+      linhas.push({cod:'',funcionario:e2bNomeCompleto(f.colaborador),data:e2bFmtData(f.data),tipo:fTipo,obs:f.observacao||'',motivo,mes,ano,gestor:E2B_GESTOR,status:E2B_STATUS,tempo:fTempo,motivoAtest:'',cid:'',ausenciaDia:fAus});
+    });
+  }else if(fonte==='atestados'){
+    regs.forEach(a=>{
+      const motivo=e2bMapMotivo((a.tipo||'')+' '+(a.motivo||'')+' '+(a.observacao||''),'atestado');
+      linhas.push({cod:'',funcionario:e2bNomeCompleto(a.colaborador),data:e2bFmtData(a.data),tipo:'Integral',obs:a.observacao||'',motivo,mes,ano,gestor:E2B_GESTOR,status:E2B_STATUS,tempo:'',motivoAtest:a.motivo||'',cid:a.cid||'',ausenciaDia:'1,00'});
+    });
+  }else if(fonte==='ocorrencias'){
+    regs.forEach(o=>{
+      let fracao=o.fracao!=null?parseFloat(o.fracao):null;
+      if(fracao==null||isNaN(fracao)||fracao===0)fracao=1;
+      let tipo='Integral',ausDia='1,00',tempo='';
+      if(fracao>=0.99){tipo='Integral';ausDia='1,00';}
+      else if(Math.abs(fracao-0.5)<0.01){tipo='Parcial';ausDia='0,50';}
+      else{tipo='Fracionada';const tempoMin=Math.round(fracao*480);tempo=e2bFmtNum(tempoMin);ausDia=e2bFmtNum(fracao);}
+      const motivo=e2bMapMotivo((o.motivo||o.tipo||'')+' '+(o.observacao||''),'ocorrencia');
+      linhas.push({cod:'',funcionario:e2bNomeCompleto(o.tecnico||o.colaborador),data:e2bFmtData(o.data),tipo,obs:o.observacao||o.motivo||o.tipo||'',motivo,mes,ano,gestor:E2B_GESTOR,status:E2B_STATUS,tempo,motivoAtest:'',cid:'',ausenciaDia:ausDia});
+    });
+  }
+  if(!linhas.length){alert(`Nenhum lançamento de ${EXP1_LABELS[fonte]} encontrado em ${String(mes).padStart(2,'0')}/${ano}.`);return;}
+  linhas.sort((a,b)=>{const[da,ma,ya]=a.data.split('/'),[db_,mb,yb]=b.data.split('/');const cmp=`${yb}${mb}${db_}`.localeCompare(`${ya}${ma}${da}`);return cmp||a.funcionario.localeCompare(b.funcionario);});
+  const header=['Cod.','Funcionário','Data','Tipo','Observação','Motivos Ausência','Mês Ausência','Ano Ausência','Gestor','Status','Tempo','Motivo Atestado','CID','Ausencia Dia'];
+  const rows=[header];
+  linhas.forEach(l=>rows.push([l.cod,l.funcionario,l.data,l.tipo,l.obs,l.motivo,l.mes,l.ano,l.gestor,l.status,l.tempo,l.motivoAtest,l.cid,l.ausenciaDia]));
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:6},{wch:36},{wch:11},{wch:11},{wch:35},{wch:22},{wch:6},{wch:7},{wch:28},{wch:11},{wch:9},{wch:20},{wch:10},{wch:10}];
+  XLSX.utils.book_append_sheet(wb,ws,'Export');
+  XLSX.writeFile(wb,`${fonte}-2b-${String(mes).padStart(2,'0')}-${ano}.xlsx`);
+  toast(`✓ ${linhas.length} lançamento(s) exportado(s)`);
+  fecharExp2BFonte();
+}
+
+// ===== Financeiro: contas a pagar / receber / consolidado =====
+let finLancs=[],finPartners=[];
+function finFmtBRL(n){if(n==null||isNaN(n))return 'R$ 0,00';return 'R$ '+Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function finFmtD(iso){if(!iso)return '—';const[y,m,d]=iso.split('T')[0].split('-');return `${d}/${m}/${y}`;}
+function finNomeCurto(email){if(!email)return '';const local=email.split('@')[0];return local.split(/[._-]/).filter(Boolean).map(p=>p.charAt(0).toUpperCase()+p.slice(1)).join(' ');}
+function finNomeDe(lanc){return lanc.lancador_nome||finNomeCurto(lanc.lancador_email);}
+function finNomePara(lanc){return lanc.para_nome||finNomeCurto(lanc.para_email);}
+
+async function loadFinPartners(){
+  const{data}=await db.from('usuarios').select('email,ativo').neq('email',currentEmail);
+  finPartners=(data||[]).filter(u=>u.ativo!==false).map(u=>({email:u.email,nome:finNomeCurto(u.email)}));
+  finPartners.sort((a,b)=>a.nome.localeCompare(b.nome));
+}
+async function loadFinLancs(){
+  const{data,error}=await db.from('financeiro_lancamentos').select('*').or(`lancador_email.eq.${currentEmail},para_email.eq.${currentEmail}`).order('data',{ascending:false});
+  if(error){finLancs=[];return error;}
+  finLancs=data||[];
+  return null;
+}
+
+// ===== Novo lançamento =====
+async function openFinNovo(){
+  await loadFinPartners();
+  const sel=$('fn-para');
+  sel.innerHTML='<option value="">— selecione —</option>'+finPartners.map(p=>`<option value="${esc(p.email)}" data-nome="${esc(p.nome)}">${esc(p.nome)} (${esc(p.email)})</option>`).join('');
+  if(!$('fn-data').value)$('fn-data').value=new Date().toISOString().slice(0,10);
+}
+function resetFinForm(){
+  $('fn-para').value='';$('fn-valor').value='';$('fn-desc').value='';$('fn-obs').value='';$('fn-cat').value='';
+  $('fn-data').value=new Date().toISOString().slice(0,10);
+}
+async function salvarFinLanc(){
+  const sel=$('fn-para'),para=sel.value;
+  const valor=parseFloat($('fn-valor').value);
+  const data=$('fn-data').value;
+  const desc=$('fn-desc').value.trim();
+  if(!para){alert('Selecione a pessoa que vai pagar.');return;}
+  if(!valor||isNaN(valor)||valor<=0){alert('Informe um valor maior que zero.');return;}
+  if(!data){alert('Informe a data.');return;}
+  if(!desc){alert('Descreva o lançamento.');return;}
+  const opt=sel.options[sel.selectedIndex];
+  const paraNome=opt.getAttribute('data-nome')||finNomeCurto(para);
+  const{error}=await db.from('financeiro_lancamentos').insert({
+    lancador_email:currentEmail,
+    lancador_nome:finNomeCurto(currentEmail),
+    para_email:para,
+    para_nome:paraNome,
+    valor,
+    descricao:desc,
+    data,
+    categoria:$('fn-cat').value||null,
+    observacao:$('fn-obs').value.trim()||null,
+    status:'Pendente'
+  });
+  if(error){alert('Erro: '+error.message);return;}
+  toast(`✓ ${finFmtBRL(valor)} lançado pra ${paraNome}`);
+  resetFinForm();
+}
+
+// ===== Contas a pagar (que outros lançaram pra mim) =====
+async function openFinPagar(){
+  const err=await loadFinLancs();
+  if(err){$('fp-lista').innerHTML='<div class="empty"><b>Tabela ainda não existe.</b> Peça pra rodar o SQL criar_financeiro.sql.</div>';return;}
+  const meus=finLancs.filter(l=>l.para_email===currentEmail);
+  // Popula filtros
+  const meses=[...new Set(meus.map(l=>l.data.slice(0,7)))].sort().reverse();
+  $('fp-mes').innerHTML='<option value="">Todos os meses</option>'+meses.map(m=>{const[y,mm]=m.split('-');return`<option value="${m}">${mm}/${y}</option>`;}).join('');
+  const pessoas=[...new Set(meus.map(l=>finNomeDe(l)))].sort();
+  $('fp-de').innerHTML='<option value="">Todas as pessoas</option>'+pessoas.map(p=>`<option>${esc(p)}</option>`).join('');
+  renderFinPagar();
+}
+function renderFinPagar(){
+  const arr=finLancs.filter(l=>l.para_email===currentEmail);
+  const fs=$('fp-status').value,fm=$('fp-mes').value,fd=$('fp-de').value;
+  const fil=arr.filter(l=>(!fs||l.status===fs)&&(!fm||l.data.startsWith(fm))&&(!fd||finNomeDe(l)===fd));
+  const totalPend=arr.filter(l=>l.status==='Pendente').reduce((s,l)=>s+parseFloat(l.valor),0);
+  const totalPago=arr.filter(l=>l.status==='Pago').reduce((s,l)=>s+parseFloat(l.valor),0);
+  $('fp-kpis').innerHTML=`
+    <div class="stat s-manut"><b>${finFmtBRL(totalPend)}</b><span>Pendente total</span></div>
+    <div class="stat s-uso"><b>${finFmtBRL(totalPago)}</b><span>Já pago</span></div>
+    <div class="stat"><b>${arr.length}</b><span>Lançamentos</span></div>`;
+  if(!fil.length){$('fp-lista').innerHTML='<div class="empty">Nenhum lançamento pra pagar no filtro atual.</div>';return;}
+  $('fp-lista').innerHTML=fil.map(l=>{
+    const cor=l.status==='Pago'?'s-uso':'s-manut';
+    const btn=l.status==='Pendente'?`<button class="btn-primary" onclick="marcarPagoFin('${l.id}')" style="font-size:12px;padding:6px 12px">Marcar como pago</button>`:`<button class="btn-edit" onclick="reverterPagoFin('${l.id}')" style="font-size:12px;padding:6px 12px">Reabrir</button>`;
+    return`<div class="row-item" style="cursor:default;align-items:flex-start">
+      <div style="flex:1;min-width:0">
+        <div class="ri-main">${esc(l.descricao||'—')} <span style="color:var(--ink-soft);font-weight:400;font-size:13px">de ${esc(finNomeDe(l))}</span></div>
+        <div class="ri-sub">${finFmtD(l.data)}${l.categoria?' · '+esc(l.categoria):''}${l.observacao?' · '+esc(l.observacao):''}</div>
+        ${l.pago_em?`<div class="ri-sub" style="color:#1f6f5c">✓ Pago em ${finFmtD(l.pago_em)}</div>`:''}
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex-shrink:0">
+        <div style="text-align:right"><div style="font-size:18px;font-weight:700;font-family:var(--display)">${finFmtBRL(l.valor)}</div><span class="stat ${cor}" style="display:inline-block;padding:1px 8px;font-size:10px;font-weight:700;border-radius:6px;margin-top:2px">${esc(l.status)}</span></div>
+        ${btn}
+      </div>
+    </div>`;
+  }).join('');
+}
+async function marcarPagoFin(id){
+  const l=finLancs.find(x=>x.id===id);if(!l)return;
+  if(!confirm(`Marcar "${l.descricao}" (${finFmtBRL(l.valor)}) como pago?`))return;
+  const{error}=await db.from('financeiro_lancamentos').update({status:'Pago',pago_em:new Date().toISOString()}).eq('id',id);
+  if(error){alert('Erro: '+error.message);return;}
+  toast('✓ Marcado como pago');
+  await openFinPagar();
+}
+async function reverterPagoFin(id){
+  if(!confirm('Voltar pra Pendente?'))return;
+  const{error}=await db.from('financeiro_lancamentos').update({status:'Pendente',pago_em:null}).eq('id',id);
+  if(error){alert('Erro: '+error.message);return;}
+  toast('↺ Voltou pra Pendente');
+  await openFinPagar();
+}
+
+// ===== Contas a receber (que eu lancei pra outros) =====
+async function openFinReceber(){
+  const err=await loadFinLancs();
+  if(err){$('fr-lista').innerHTML='<div class="empty"><b>Tabela ainda não existe.</b> Peça pra rodar o SQL criar_financeiro.sql.</div>';return;}
+  const meus=finLancs.filter(l=>l.lancador_email===currentEmail);
+  const meses=[...new Set(meus.map(l=>l.data.slice(0,7)))].sort().reverse();
+  $('fr-mes').innerHTML='<option value="">Todos os meses</option>'+meses.map(m=>{const[y,mm]=m.split('-');return`<option value="${m}">${mm}/${y}</option>`;}).join('');
+  const pessoas=[...new Set(meus.map(l=>finNomePara(l)))].sort();
+  $('fr-para-f').innerHTML='<option value="">Todas as pessoas</option>'+pessoas.map(p=>`<option>${esc(p)}</option>`).join('');
+  renderFinReceber();
+}
+function renderFinReceber(){
+  const arr=finLancs.filter(l=>l.lancador_email===currentEmail);
+  const fs=$('fr-status').value,fm=$('fr-mes').value,fp=$('fr-para-f').value;
+  const fil=arr.filter(l=>(!fs||l.status===fs)&&(!fm||l.data.startsWith(fm))&&(!fp||finNomePara(l)===fp));
+  const totalPend=arr.filter(l=>l.status==='Pendente').reduce((s,l)=>s+parseFloat(l.valor),0);
+  const totalPago=arr.filter(l=>l.status==='Pago').reduce((s,l)=>s+parseFloat(l.valor),0);
+  $('fr-kpis').innerHTML=`
+    <div class="stat s-manut"><b>${finFmtBRL(totalPend)}</b><span>A receber</span></div>
+    <div class="stat s-uso"><b>${finFmtBRL(totalPago)}</b><span>Já recebido</span></div>
+    <div class="stat"><b>${arr.length}</b><span>Lançamentos</span></div>`;
+  if(!fil.length){$('fr-lista').innerHTML='<div class="empty">Nenhum lançamento no filtro atual.</div>';return;}
+  $('fr-lista').innerHTML=fil.map(l=>{
+    const cor=l.status==='Pago'?'s-uso':'s-manut';
+    return`<div class="row-item" style="cursor:default;align-items:flex-start">
+      <div style="flex:1;min-width:0">
+        <div class="ri-main">${esc(l.descricao||'—')} <span style="color:var(--ink-soft);font-weight:400;font-size:13px">→ ${esc(finNomePara(l))}</span></div>
+        <div class="ri-sub">${finFmtD(l.data)}${l.categoria?' · '+esc(l.categoria):''}${l.observacao?' · '+esc(l.observacao):''}</div>
+        ${l.pago_em?`<div class="ri-sub" style="color:#1f6f5c">✓ Recebido em ${finFmtD(l.pago_em)}</div>`:''}
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex-shrink:0">
+        <div style="text-align:right"><div style="font-size:18px;font-weight:700;font-family:var(--display)">${finFmtBRL(l.valor)}</div><span class="stat ${cor}" style="display:inline-block;padding:1px 8px;font-size:10px;font-weight:700;border-radius:6px;margin-top:2px">${esc(l.status)}</span></div>
+        <button class="btn-del" onclick="apagarFinLanc('${l.id}')" style="font-size:12px;padding:6px 10px">Apagar</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+async function apagarFinLanc(id){
+  const l=finLancs.find(x=>x.id===id);if(!l)return;
+  if(!confirm(`Apagar "${l.descricao}" (${finFmtBRL(l.valor)})? Isso remove pra os dois lados.`))return;
+  const{error}=await db.from('financeiro_lancamentos').delete().eq('id',id);
+  if(error){alert('Erro: '+error.message);return;}
+  toast('✓ Apagado');
+  await openFinReceber();
+}
+
+// ===== Consolidado =====
+async function openFinCons(){
+  const err=await loadFinLancs();
+  if(err){$('fc-conteudo').innerHTML='<div class="empty"><b>Tabela ainda não existe.</b> Peça pra rodar o SQL criar_financeiro.sql.</div>';return;}
+  renderFinCons();
+}
+function renderFinCons(){
+  // Agrupa por "outra pessoa" (parceiro)
+  const parceiros={};
+  finLancs.forEach(l=>{
+    const outroEmail=l.lancador_email===currentEmail?l.para_email:l.lancador_email;
+    const outroNome=l.lancador_email===currentEmail?finNomePara(l):finNomeDe(l);
+    if(!parceiros[outroEmail])parceiros[outroEmail]={nome:outroNome,email:outroEmail,euDevo:0,euDevoPago:0,eleDeve:0,eleDeveRec:0,lancs:[]};
+    parceiros[outroEmail].lancs.push(l);
+    // Eu devo = outro lançou pra mim
+    if(l.para_email===currentEmail){
+      if(l.status==='Pendente')parceiros[outroEmail].euDevo+=parseFloat(l.valor);
+      else parceiros[outroEmail].euDevoPago+=parseFloat(l.valor);
+    }else{
+      // Eu lancei pra outro
+      if(l.status==='Pendente')parceiros[outroEmail].eleDeve+=parseFloat(l.valor);
+      else parceiros[outroEmail].eleDeveRec+=parseFloat(l.valor);
+    }
+  });
+  const lista=Object.values(parceiros).sort((a,b)=>Math.abs(b.eleDeve-b.euDevo)-Math.abs(a.eleDeve-a.euDevo));
+  if(!lista.length){$('fc-conteudo').innerHTML='<div class="empty">Nenhum lançamento ainda. Crie um em "Novo lançamento".</div>';return;}
+  const meuNome=finNomeCurto(currentEmail);
+  let totalEuDevo=0,totalEleDeve=0;
+  const cards=lista.map(p=>{
+    const saldo=p.eleDeve-p.euDevo;
+    totalEuDevo+=p.euDevo;totalEleDeve+=p.eleDeve;
+    let saldoBox='';
+    if(Math.abs(saldo)<0.01){
+      saldoBox=`<div style="background:#f4f1ea;border-radius:8px;padding:12px 16px;text-align:center;font-weight:600;color:#5a5548">✓ Contas quitadas entre vocês</div>`;
+    }else if(saldo>0){
+      saldoBox=`<div style="background:#dfebe0;border:1px solid #b5d0b6;border-radius:8px;padding:14px 16px;text-align:center"><div style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:#175547;font-weight:700;margin-bottom:4px">Saldo líquido</div><div style="font-family:var(--display);font-size:26px;font-weight:700;color:#175547">${finFmtBRL(saldo)}</div><div style="font-size:13px;color:#175547;margin-top:2px"><b>${esc(p.nome)}</b> deve pra você</div></div>`;
+    }else{
+      saldoBox=`<div style="background:#f5dcdc;border:1px solid #d9b3b3;border-radius:8px;padding:14px 16px;text-align:center"><div style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:#801c1c;font-weight:700;margin-bottom:4px">Saldo líquido</div><div style="font-family:var(--display);font-size:26px;font-weight:700;color:#801c1c">${finFmtBRL(Math.abs(saldo))}</div><div style="font-size:13px;color:#801c1c;margin-top:2px">Você deve pra <b>${esc(p.nome)}</b></div></div>`;
+    }
+    return`<div style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:14px">
+      <div style="font-family:var(--display);font-size:20px;font-weight:700;margin-bottom:14px">👤 ${esc(p.nome)} <span style="font-size:12px;font-weight:400;color:var(--ink-soft)">${esc(p.email)}</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+        <div style="background:#fbf0e6;border-left:3px solid #c97e2f;padding:10px 14px;border-radius:0 8px 8px 0">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#7a4e1f;font-weight:700">Você deve pra ${esc(p.nome)}</div>
+          <div style="font-family:var(--display);font-size:22px;font-weight:700;color:#7a4e1f">${finFmtBRL(p.euDevo)}</div>
+          <div style="font-size:11px;color:#7a4e1f;opacity:.8">${p.euDevoPago>0?'Já pago: '+finFmtBRL(p.euDevoPago):''}</div>
+        </div>
+        <div style="background:#eef4ee;border-left:3px solid #1f6f5c;padding:10px 14px;border-radius:0 8px 8px 0">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#175547;font-weight:700">${esc(p.nome)} deve pra você</div>
+          <div style="font-family:var(--display);font-size:22px;font-weight:700;color:#175547">${finFmtBRL(p.eleDeve)}</div>
+          <div style="font-size:11px;color:#175547;opacity:.8">${p.eleDeveRec>0?'Já recebido: '+finFmtBRL(p.eleDeveRec):''}</div>
+        </div>
+      </div>
+      ${saldoBox}
+    </div>`;
+  }).join('');
+  const totalSaldo=totalEleDeve-totalEuDevo;
+  let resumo='';
+  if(Math.abs(totalSaldo)<0.01){
+    resumo=`<div style="background:#f4f1ea;border-radius:10px;padding:16px 20px;text-align:center;font-weight:600;color:#5a5548;margin-bottom:20px">✓ Você está no zero geral</div>`;
+  }else if(totalSaldo>0){
+    resumo=`<div style="background:linear-gradient(135deg,#1f6f5c,#175547);color:#fff;border-radius:12px;padding:20px 24px;margin-bottom:20px;box-shadow:0 4px 18px rgba(31,111,92,.25)"><div style="font-size:13px;text-transform:uppercase;letter-spacing:.1em;opacity:.85;margin-bottom:4px">Relatório final — saldo geral</div><div style="font-family:var(--display);font-size:32px;font-weight:700;line-height:1.1">${finFmtBRL(totalSaldo)}</div><div style="font-size:14px;opacity:.95;margin-top:6px">Você tem <b>${finFmtBRL(totalSaldo)}</b> a receber no total</div></div>`;
+  }else{
+    resumo=`<div style="background:linear-gradient(135deg,#a64141,#801c1c);color:#fff;border-radius:12px;padding:20px 24px;margin-bottom:20px;box-shadow:0 4px 18px rgba(166,65,65,.25)"><div style="font-size:13px;text-transform:uppercase;letter-spacing:.1em;opacity:.85;margin-bottom:4px">Relatório final — saldo geral</div><div style="font-family:var(--display);font-size:32px;font-weight:700;line-height:1.1">${finFmtBRL(Math.abs(totalSaldo))}</div><div style="font-size:14px;opacity:.95;margin-top:6px">Você deve <b>${finFmtBRL(Math.abs(totalSaldo))}</b> no total</div></div>`;
+  }
+  $('fc-conteudo').innerHTML=resumo+cards+`<p class="hint" style="font-size:12px">💡 O <b>saldo líquido</b> considera só os lançamentos <b>Pendentes</b>. Os já Pagos ficam registrados como histórico mas não entram no cálculo do saldo.</p>`;
+}
 const E2B_GESTOR='RAFAEL PEREIRA DE ANDRADE';
 const E2B_STATUS='Em analise';
 // 16 motivos oficiais do site 2B (código = índice+1)
