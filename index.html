@@ -1863,7 +1863,7 @@ const SUPA_URL='https://jvfewdukhgmtdieufpaf.supabase.co';
 const SUPA_KEY='sb_publishable_O2rf2zCnJTZ1YE5q4eJeeA_AVdukzUg';
 const db=supabase.createClient(SUPA_URL,SUPA_KEY);
 // APP_VERSION: aparece no canto superior direito. Bump a cada deploy.
-const APP_VERSION='v74';
+const APP_VERSION='v75';
 document.addEventListener('DOMContentLoaded',()=>{
   const set=(id)=>{const el=document.getElementById(id);if(el)el.textContent=APP_VERSION;};
   set('app-version');set('version-fixed');
@@ -5349,8 +5349,68 @@ async function openExp2B(){
   selM.innerHTML=MESES.map((m,i)=>`<option value="${i+1}" ${(i+1)==curM?'selected':''}>${m}</option>`).join('');
   await previewExp2B();
 }
+// Lista canonica de nomes EXATAMENTE como estao cadastrados no 2B RH.
+// Ao adicionar/remover pessoas do time, ajuste esta lista.
+// A funcao e2bNomeCompleto compara o nome cru contra esta lista por sobreposicao
+// de tokens (funciona mesmo pra logins grudados tipo "CAIQUEGUERRA22" e
+// nomes curtos tipo "Paulo Nascimento", "Gerson Junior").
+const NOMES_CANONICOS_2B=[
+  'ALISSON PEREIRA SANTANA',
+  'CAIQUE GUERRA SANTANA',
+  'CARLA VIVIANE DE MENDONCA FRANCO',
+  'DOUGLAS AMARAL NERY',
+  'GABRIEL OLIVEIRA LEONIDAS',
+  'GERSON SAO BOAVENTURA DOS ANJOS JUNIOR',
+  'GUSTAVO WOJTYSIAK DOS SANTOS',
+  'JEFFERSON SANTOS PERRONE',
+  'LEANDRO DOS SANTOS BATISTA',
+  'MAICON FRANCA DE OLIVEIRA',
+  'MARIA DAIANE DE SOUZA NASCIMENTO',
+  'PAULO CESAR NASCIMENTO DOS SANTOS',
+  'PEDRO HENRIQUE PASSOS OLIVEIRA',
+  'ROBERTA SANTIAGO FERRARI',
+  'THIAGO SILVA DE JESUS',
+  'TIAGO DOS SANTOS BARBOSA',
+  'VINICIUS FRANCA BRAGA TOSTA'
+];
+const _STOP_2B=new Set(['de','da','do','das','dos','e']);
+function _normStr2B(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();}
+function _lcs2B(a,b){let m=0;for(let i=0;i<a.length;i++)for(let j=0;j<b.length;j++){let k=0;while(i+k<a.length&&j+k<b.length&&a[i+k]===b[j+k])k++;if(k>m)m=k;}return m;}
+function e2bResolverCanonico(nomeRaw){
+  const src=_normStr2B(nomeRaw);
+  if(!src)return null;
+  const srcTokens=src.split(' ').filter(t=>t.length>0&&!_STOP_2B.has(t));
+  const srcJoin=srcTokens.join('');
+  // Estrategia A: sobreposicao de tokens (token exato vale 2 pts, substring vale 1)
+  let bestScore=0,bestCan=null;
+  for(const can of NOMES_CANONICOS_2B){
+    const canTokens=_normStr2B(can).split(' ').filter(t=>t.length>0&&!_STOP_2B.has(t));
+    let score=0;
+    for(const ct of canTokens){
+      if(srcTokens.includes(ct))score+=2;
+      else if(ct.length>=4&&srcJoin.includes(ct))score+=1;
+    }
+    if(score>=2&&score>bestScore){bestScore=score;bestCan=can;}
+  }
+  if(bestCan)return bestCan;
+  // Estrategia B: nome grudado (LCS) — pra logins tipo CAIQUEGUERRA22 se A falhar
+  if(srcJoin.length>=8){
+    let bestSub=0,bestCan2=null;
+    for(const can of NOMES_CANONICOS_2B){
+      const cjoin=_normStr2B(can).split(' ').filter(t=>!_STOP_2B.has(t)).join('');
+      const lcs=_lcs2B(srcJoin,cjoin);
+      if(lcs>=8&&lcs>bestSub){bestSub=lcs;bestCan2=can;}
+    }
+    if(bestCan2)return bestCan2;
+  }
+  return null;
+}
 function e2bNomeCompleto(nomeRaw){
   if(!nomeRaw)return '';
+  // 1) Tenta lista canonica hardcoded (fonte da verdade pro 2B)
+  const canonico=e2bResolverCanonico(nomeRaw);
+  if(canonico)return canonico;
+  // 2) Fallback: lookup na equipe (pra colabs que ainda nao foram adicionados no canonico)
   const k=fuzzyKeyMc(nomeRaw);
   for(const e of equipe){
     const en=e.nome_completo||'',ec=e.nome_curto||'';
