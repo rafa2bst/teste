@@ -1863,7 +1863,7 @@ const SUPA_URL='https://jvfewdukhgmtdieufpaf.supabase.co';
 const SUPA_KEY='sb_publishable_O2rf2zCnJTZ1YE5q4eJeeA_AVdukzUg';
 const db=supabase.createClient(SUPA_URL,SUPA_KEY);
 // APP_VERSION: aparece no canto superior direito. Bump a cada deploy.
-const APP_VERSION='v76';
+const APP_VERSION='v77';
 document.addEventListener('DOMContentLoaded',()=>{
   const set=(id)=>{const el=document.getElementById(id);if(el)el.textContent=APP_VERSION;};
   set('app-version');set('version-fixed');
@@ -5070,9 +5070,9 @@ async function baixarExp2BFonte(){
   }
   if(!linhas.length){alert(`Nenhum lançamento de ${EXP1_LABELS[fonte]} encontrado em ${String(mes).padStart(2,'0')}/${ano}.`);return;}
   linhas.sort((a,b)=>{const[da,ma,ya]=a.data.split('/'),[db_,mb,yb]=b.data.split('/');const cmp=`${yb}${mb}${db_}`.localeCompare(`${ya}${ma}${da}`);return cmp||a.funcionario.localeCompare(b.funcionario);});
-  const header=['Cod.','Funcionário','Data','Tipo','Observação','Motivos Ausência','Mês Ausência','Ano Ausência','Gestor','Status','Tempo','Motivo Atestado','CID','Ausencia Dia'];
+  const header=['Cod.','Funcionário','Data','Tipo','Observação','Motivos Ausência','Gestor','Status','Tempo','Motivo Atestado','CID','Ausencia Dia'];
   const rows=[header];
-  linhas.forEach(l=>rows.push([l.cod,l.funcionario,l.data,l.tipo,l.obs,l.motivo,l.mes,l.ano,l.gestor,l.status,l.tempo,l.motivoAtest,l.cid,l.ausenciaDia]));
+  linhas.forEach(l=>rows.push([l.cod,l.funcionario,l.data,l.tipo,l.obs,l.motivo,l.gestor,l.status,l.tempo,l.motivoAtest,l.cid,l.ausenciaDia]));
   // Vazios viram null (célula vazia real, não string vazia)
   const cleanRows=rows.map(r=>r.map(v=>(v===''||v==null)?null:v));
   const wb=XLSX.utils.book_new();
@@ -5083,7 +5083,7 @@ async function baixarExp2BFonte(){
     const addr=XLSX.utils.encode_cell({r:R,c:C});const cell=ws[addr];
     if(cell&&cell.t==='str')cell.t='s';
   }
-  ws['!cols']=[{wch:6},{wch:36},{wch:11},{wch:11},{wch:35},{wch:22},{wch:6},{wch:7},{wch:28},{wch:11},{wch:9},{wch:20},{wch:10},{wch:10}];
+  ws['!cols']=[{wch:6},{wch:36},{wch:11},{wch:11},{wch:35},{wch:22},{wch:28},{wch:11},{wch:9},{wch:20},{wch:10},{wch:10}];
   XLSX.utils.book_append_sheet(wb,ws,'Export');
   XLSX.writeFile(wb,`${fonte}-2b-${String(mes).padStart(2,'0')}-${ano}.xlsx`,{bookType:'xlsx',bookSST:true});
   toast(`✓ ${linhas.length} lançamento(s) exportado(s)`);
@@ -5546,10 +5546,10 @@ function baixarExport2B(){
   const linhas=window._exp2bLinhas||[];
   if(!linhas.length){alert('Sem dados para exportar.');return;}
   if(typeof XLSX==='undefined'){alert('Biblioteca XLSX não carregou.');return;}
-  const header=['Cod.','Funcionário','Data','Tipo','Observação','Motivos Ausência','Mês Ausência','Ano Ausência','Gestor','Status','Tempo','Motivo Atestado','CID','Ausencia Dia'];
+  const header=['Cod.','Funcionário','Data','Tipo','Observação','Motivos Ausência','Gestor','Status','Tempo','Motivo Atestado','CID','Ausencia Dia'];
   const rows=[header];
   linhas.forEach(l=>{
-    rows.push([l.cod,l.funcionario,l.data,l.tipo,l.obs,l.motivo,l.mes,l.ano,l.gestor,l.status,l.tempo,l.motivoAtest,l.cid,l.ausenciaDia]);
+    rows.push([l.cod,l.funcionario,l.data,l.tipo,l.obs,l.motivo,l.gestor,l.status,l.tempo,l.motivoAtest,l.cid,l.ausenciaDia]);
   });
   const cleanRows=rows.map(r=>r.map(v=>(v===''||v==null)?null:v));
   const wb=XLSX.utils.book_new();
@@ -5559,7 +5559,7 @@ function baixarExport2B(){
     const addr=XLSX.utils.encode_cell({r:R,c:C});const cell=ws[addr];
     if(cell&&cell.t==='str')cell.t='s';
   }
-  ws['!cols']=[{wch:6},{wch:36},{wch:11},{wch:11},{wch:35},{wch:22},{wch:6},{wch:7},{wch:28},{wch:11},{wch:9},{wch:20},{wch:10},{wch:10}];
+  ws['!cols']=[{wch:6},{wch:36},{wch:11},{wch:11},{wch:35},{wch:22},{wch:28},{wch:11},{wch:9},{wch:20},{wch:10},{wch:10}];
   XLSX.utils.book_append_sheet(wb,ws,'Export');
   const ano=parseInt($('e2b-ano').value),mes=parseInt($('e2b-mes').value);
   XLSX.writeFile(wb,`ausencias-2b-${String(mes).padStart(2,'0')}-${ano}.xlsx`,{bookType:'xlsx',bookSST:true});
