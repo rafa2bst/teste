@@ -1892,7 +1892,7 @@ const SUPA_URL='https://jvfewdukhgmtdieufpaf.supabase.co';
 const SUPA_KEY='sb_publishable_O2rf2zCnJTZ1YE5q4eJeeA_AVdukzUg';
 const db=supabase.createClient(SUPA_URL,SUPA_KEY);
 // APP_VERSION: aparece no canto superior direito. Bump a cada deploy.
-const APP_VERSION='v82';
+const APP_VERSION='v83';
 document.addEventListener('DOMContentLoaded',()=>{
   const set=(id)=>{const el=document.getElementById(id);if(el)el.textContent=APP_VERSION;};
   set('app-version');set('version-fixed');
@@ -4823,7 +4823,26 @@ async function renderAusMes(){
   const matriz={}; // matriz[colabKey][dia] = {label, cor, borda}
   const colabKey=e=>fuzzyKeyMc(e.nome_completo||e.nome_curto||'');
   ativos.forEach(e=>{matriz[colabKey(e)]={};});
-  const findEquipe=nome=>{const k=fuzzyKeyMc(nome||'');return ativos.find(e=>colabKey(e)===k);};
+  const findEquipe=nome=>{
+    if(!nome)return null;
+    const k=fuzzyKeyMc(nome);
+    // 1) Fuzzy key contra nome_completo OU nome_curto (não só um)
+    let match=ativos.find(e=>fuzzyKeyMc(e.nome_completo||'')===k||fuzzyKeyMc(e.nome_curto||'')===k);
+    if(match)return match;
+    // 2) Sobreposição de tokens — pega apelidos/logins/nomes-curtos que não bateriam no fuzzy
+    const src=_normStr2B(nome);
+    const srcT=src.split(' ').filter(t=>t.length>0&&!_STOP_2B.has(t));
+    const srcJ=srcT.join('');
+    let best=0,bestE=null;
+    for(const e of ativos){
+      const tgt=e.nome_completo||e.nome_curto||'';
+      const tT=_normStr2B(tgt).split(' ').filter(t=>t.length>0&&!_STOP_2B.has(t));
+      let sc=0;
+      for(const tt of tT){if(srcT.includes(tt))sc+=2;else if(tt.length>=4&&srcJ.includes(tt))sc+=1;}
+      if(sc>=2&&sc>best){best=sc;bestE=e;}
+    }
+    return bestE;
+  };
   // Folgas
   amDados.folgas.forEach(f=>{
     const e=findEquipe(f.colaborador);if(!e)return;
