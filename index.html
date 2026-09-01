@@ -241,6 +241,7 @@
         <button id="nav-compano">Comparativo anual</button>
         <button id="nav-plantel">Plan. Estratégico Telefone</button>
         <button id="nav-exp2b">Exportar Ausências → 2B</button>
+        <button id="nav-ausmes">Calendário de Ausências</button>
       </div>
     </div>
 
@@ -1374,6 +1375,29 @@
     </div>
   </div>
 
+  <!-- VIEW: CALENDÁRIO DE AUSÊNCIAS (matriz dia x colaborador) -->
+  <div id="view-ausmes" style="display:none">
+    <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
+      <h2>Calendário de Ausências</h2>
+      <p class="hint">Visão mensal em matriz: <b>linhas = dias</b> · <b>colunas = colaboradores</b>. Cada célula mostra a ausência do dia (Férias, Folga, Atestado, Ocorrência). Sábado e domingo aparecem em cinza.</p>
+    </div>
+    <div class="form-card">
+      <div class="row2">
+        <div><label>Mês</label><select id="am-mes" onchange="renderAusMes()"></select></div>
+        <div><label>Ano</label><select id="am-ano" onchange="renderAusMes()"></select></div>
+      </div>
+      <div id="am-legenda" style="display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:11px;color:var(--ink-soft)">
+        <span><span style="display:inline-block;width:14px;height:14px;background:#c9dcf5;border:1px solid #a3bfe0;vertical-align:middle;margin-right:4px"></span>Férias</span>
+        <span><span style="display:inline-block;width:14px;height:14px;background:#dfebe0;border:1px solid #b5d0b6;vertical-align:middle;margin-right:4px"></span>Folga</span>
+        <span><span style="display:inline-block;width:14px;height:14px;background:#f5d9d9;border:1px solid #d9b3b3;vertical-align:middle;margin-right:4px"></span>Atestado / Consulta</span>
+        <span><span style="display:inline-block;width:14px;height:14px;background:#fbf0d9;border:1px solid #e3ceaa;vertical-align:middle;margin-right:4px"></span>Ocorrência</span>
+        <span><span style="display:inline-block;width:14px;height:14px;background:#e5e5e5;border:1px solid #ccc;vertical-align:middle;margin-right:4px"></span>Fim de semana</span>
+      </div>
+      <div id="am-kpis" class="kpis" style="margin-top:12px"></div>
+      <div id="am-tabela" style="margin-top:14px;overflow:auto;max-height:70vh;border:1px solid var(--line);border-radius:8px"></div>
+    </div>
+  </div>
+
   <!-- VIEW: KANBAN PERFORMANCE -->
   <div id="view-perf" style="display:none">
     <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
@@ -1863,7 +1887,7 @@ const SUPA_URL='https://jvfewdukhgmtdieufpaf.supabase.co';
 const SUPA_KEY='sb_publishable_O2rf2zCnJTZ1YE5q4eJeeA_AVdukzUg';
 const db=supabase.createClient(SUPA_URL,SUPA_KEY);
 // APP_VERSION: aparece no canto superior direito. Bump a cada deploy.
-const APP_VERSION='v79';
+const APP_VERSION='v81';
 document.addEventListener('DOMContentLoaded',()=>{
   const set=(id)=>{const el=document.getElementById(id);if(el)el.textContent=APP_VERSION;};
   set('app-version');set('version-fixed');
@@ -1906,7 +1930,7 @@ async function showApp(user){
   setupPresence();
   $('nav').style.display='flex';
   // Admin geral (visível para os 3 admins): cadastros, relatórios, gestão de equipe/patrimônio, dashboards
-  ['nav-cad','nav-rel','nav-eq','nav-us','nav-aloc','nav-met','nav-perf','nav-dperf','nav-exp2b','nav-fer','nav-fol','nav-ho','nav-ate','nav-aniv','nav-ocor','nav-prob','nav-trein','nav-anom','nav-fat','nav-dash','nav-insatadm','nav-tar','nav-rot','nav-onb'].forEach(id=>$(id).style.display=isAdminUser?'':'none');
+  ['nav-cad','nav-rel','nav-eq','nav-us','nav-aloc','nav-met','nav-perf','nav-dperf','nav-exp2b','nav-ausmes','nav-fer','nav-fol','nav-ho','nav-ate','nav-aniv','nav-ocor','nav-prob','nav-trein','nav-anom','nav-fat','nav-dash','nav-insatadm','nav-tar','nav-rot','nav-onb'].forEach(id=>$(id).style.display=isAdminUser?'':'none');
   // Aprovação de pedidos: EXCLUSIVO do Rafael (Maria e Tiago não veem, precisam pedir pra ele aprovar)
   ['nav-soladm','nav-feradm','nav-atadm','nav-ocadm','nav-mtadm'].forEach(id=>$(id).style.display=isRafael?'':'none');
   // Metas colaborador + Comparativo anual + Plan. Estratégico: EXCLUSIVO do Rafael
@@ -2071,7 +2095,7 @@ async function registrarManutencao(patr){
 
 // ===== Views =====
 function showView(v){
-  const adminViews=['cadastro','relatorios','eq','us','ferias','folgas','ho','aloc','met','metcol','compano','plantel','exp2b','perf','dperf','atestados','aniv','ocor','prob','trein','anom','fat','dash','insatadm','soladm','feradm','atadm','ocadm','mtadm','tar','rot','onb'];
+  const adminViews=['cadastro','relatorios','eq','us','ferias','folgas','ho','aloc','met','metcol','compano','plantel','exp2b','ausmes','perf','dperf','atestados','aniv','ocor','prob','trein','anom','fat','dash','insatadm','soladm','feradm','atadm','ocadm','mtadm','tar','rot','onb'];
   if(adminViews.includes(v)&&!isAdminUser)v='solfolga';
   $('view-cadastro').style.display=v==='cadastro'?'block':'none';
   $('view-relatorios').style.display=v==='relatorios'?'block':'none';
@@ -2109,7 +2133,8 @@ function showView(v){
   $('view-compano').style.display=v==='compano'?'block':'none';
   $('view-plantel').style.display=v==='plantel'?'block':'none';
   $('view-exp2b').style.display=v==='exp2b'?'block':'none';
-  document.body.classList.toggle('compano-view',v==='compano'||v==='plantel'||v==='exp2b');
+  $('view-ausmes').style.display=v==='ausmes'?'block':'none';
+  document.body.classList.toggle('compano-view',v==='compano'||v==='plantel'||v==='exp2b'||v==='ausmes');
   $('view-perf').style.display=(v==='perf'||v==='mperf')?'block':'none';
   $('view-dperf').style.display=v==='dperf'?'block':'none';
   $('view-mequipehj').style.display=v==='mequipehj'?'block':'none';
@@ -2206,6 +2231,7 @@ function showView(v){
   if(v==='compano')openCompAno();
   if(v==='plantel')openPlantel();
   if(v==='exp2b')openExp2B();
+  if(v==='ausmes')openAusMes();
   if(v==='insatadm')openInsatAdm();
   if(v==='meusinsat')openMeusInsat();
   if(v==='fin-novo')openFinNovo();
@@ -4756,6 +4782,133 @@ async function zerarTudoPlantel(){
 
 // ===== Exportar Ausências para 2B =====
 $('nav-exp2b').onclick=()=>showView('exp2b');
+$('nav-ausmes').onclick=()=>showView('ausmes');
+
+// ===== Calendário de Ausências (matriz dia x colaborador) =====
+let amDados={folgas:[],ferias:[],atestados:[],ocorrencias:[]};
+const AM_DIAS_SEMANA=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+async function openAusMes(){
+  const hoje=new Date();
+  const anos=[];for(let a=hoje.getFullYear()-1;a<=hoje.getFullYear()+1;a++)anos.push(a);
+  const selA=$('am-ano'),curA=selA.value||hoje.getFullYear();
+  selA.innerHTML=anos.map(a=>`<option ${a==curA?'selected':''}>${a}</option>`).join('');
+  const selM=$('am-mes'),curM=selM.value||(hoje.getMonth()+1);
+  selM.innerHTML=MESES.map((m,i)=>`<option value="${i+1}" ${(i+1)==curM?'selected':''}>${m}</option>`).join('');
+  await renderAusMes();
+}
+
+async function renderAusMes(){
+  const ano=parseInt($('am-ano').value),mes=parseInt($('am-mes').value);
+  if(!ano||!mes)return;
+  const dataIni=`${ano}-${String(mes).padStart(2,'0')}-01`;
+  const ultDia=new Date(ano,mes,0).getDate();
+  const dataFim=`${ano}-${String(mes).padStart(2,'0')}-${String(ultDia).padStart(2,'0')}`;
+  $('am-tabela').innerHTML='<div style="padding:20px;text-align:center;color:var(--ink-soft)">Carregando...</div>';
+  const [fol,fer,ate,oc]=await Promise.all([
+    db.from('folgas').select('*').gte('data',dataIni).lte('data',dataFim),
+    db.from('ferias').select('*').lte('data_inicio',dataFim).gte('data_fim',dataIni),
+    db.from('atestados').select('*').gte('data',dataIni).lte('data',dataFim),
+    db.from('ocorrencias').select('*').gte('data',dataIni).lte('data',dataFim)
+  ]);
+  amDados.folgas=fol.data||[];amDados.ferias=fer.data||[];amDados.atestados=ate.data||[];amDados.ocorrencias=oc.data||[];
+  // Monta matriz: por colab, por dia = {tipo, label, cor}
+  const ativos=equipe.filter(e=>!e.desligado).sort((a,b)=>(a.nome_curto||a.nome_completo||'').localeCompare(b.nome_curto||b.nome_completo||''));
+  const matriz={}; // matriz[colabKey][dia] = {label, cor, borda}
+  const colabKey=e=>fuzzyKeyMc(e.nome_completo||e.nome_curto||'');
+  ativos.forEach(e=>{matriz[colabKey(e)]={};});
+  const findEquipe=nome=>{const k=fuzzyKeyMc(nome||'');return ativos.find(e=>colabKey(e)===k);};
+  // Folgas
+  amDados.folgas.forEach(f=>{
+    const e=findEquipe(f.colaborador);if(!e)return;
+    const d=parseInt(f.data.split('-')[2]);
+    let lbl='Folga';
+    if(f.tipo)lbl=(/aniv/i.test(f.tipo)?'Folga Aniv':(/abono/i.test(f.tipo)?'Abono':(/banco|bh/i.test(f.tipo)?'Folga BH':f.tipo)));
+    if(f.horario==='Parcial')lbl+=' ('+(f.turno||'meio-turno')+')';
+    else if(f.horario==='Fracionado')lbl+=' '+(f.hora_inicio||'')+'–'+(f.hora_fim||'');
+    matriz[colabKey(e)][d]={label:lbl,bg:'#dfebe0',bd:'#b5d0b6',tx:'#175547',titulo:'Folga · '+(f.observacao||f.tipo||'')};
+  });
+  // Férias — expande cada dia dentro do periodo E dentro do mês
+  amDados.ferias.forEach(f=>{
+    const e=findEquipe(f.colaborador);if(!e)return;
+    const dI=new Date(Math.max(new Date(f.data_inicio+'T12:00').getTime(),new Date(dataIni+'T12:00').getTime()));
+    const dF=new Date(Math.min(new Date(f.data_fim+'T12:00').getTime(),new Date(dataFim+'T12:00').getTime()));
+    for(let d=new Date(dI);d<=dF;d.setDate(d.getDate()+1)){
+      matriz[colabKey(e)][d.getDate()]={label:'Férias',bg:'#c9dcf5',bd:'#a3bfe0',tx:'#1a3d6b',titulo:'Férias '+e2bFmtData(f.data_inicio)+' a '+e2bFmtData(f.data_fim)};
+    }
+  });
+  // Atestados
+  amDados.atestados.forEach(a=>{
+    const e=findEquipe(a.colaborador);if(!e)return;
+    const d=parseInt(a.data.split('-')[2]);
+    const lbl=/consulta|dentista|medic/i.test(a.tipo||'')?'Consulta':'Atestado';
+    matriz[colabKey(e)][d]={label:lbl,bg:'#f5d9d9',bd:'#d9b3b3',tx:'#801c1c',titulo:lbl+(a.motivo?' · '+a.motivo:'')+(a.cid?' · CID '+a.cid:'')};
+    // Se tem data_fim, marcar dias intermediarios
+    if(a.data_fim&&a.data_fim!==a.data){
+      const dIni=new Date(a.data+'T12:00'),dEnd=new Date(a.data_fim+'T12:00');
+      for(let dt=new Date(dIni);dt<=dEnd;dt.setDate(dt.getDate()+1)){
+        if(dt.getMonth()+1===mes&&dt.getFullYear()===ano)matriz[colabKey(e)][dt.getDate()]={label:lbl,bg:'#f5d9d9',bd:'#d9b3b3',tx:'#801c1c',titulo:'Atestado até '+e2bFmtData(a.data_fim)};
+      }
+    }
+  });
+  // Ocorrências
+  amDados.ocorrencias.forEach(o=>{
+    const e=findEquipe(o.tecnico||o.colaborador);if(!e)return;
+    const d=parseInt(o.data.split('-')[2]);
+    let lbl=o.motivo||o.tipo||'Ocorrência';
+    // Encurta labels longas
+    if(lbl.length>18)lbl=lbl.slice(0,17)+'…';
+    if(o.fracao!=null&&parseFloat(o.fracao)<0.99){const min=Math.round(parseFloat(o.fracao)*480);lbl+=' ('+min+'min)';}
+    matriz[colabKey(e)][d]={label:lbl,bg:'#fbf0d9',bd:'#e3ceaa',tx:'#7a5a1f',titulo:(o.motivo||o.tipo||'Ocorrência')+(o.observacao?' · '+o.observacao:'')};
+  });
+  // Monta tabela HTML
+  const nomesCurtos=n=>{const p=(n||'').split(' ');return p.length>1?p[0]+' '+p[1].slice(0,3)+'.':(n||'');};
+  let html='<table style="width:auto;border-collapse:separate;border-spacing:0;font-size:11px;background:#fff;min-width:100%">';
+  // Cabeçalho: colabs
+  html+='<thead><tr style="background:#faf8f2;position:sticky;top:0;z-index:2">';
+  html+='<th style="padding:6px 8px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);border-bottom:2px solid var(--line);border-right:1px solid var(--line);position:sticky;left:0;background:#faf8f2;z-index:3;min-width:110px">Data</th>';
+  ativos.forEach(e=>{
+    const nc=nomesCurtos(e.nome_curto||e.nome_completo);
+    html+=`<th title="${esc(e.nome_completo||e.nome_curto||'')}" style="padding:6px 4px;font-size:10.5px;font-weight:600;color:#2c2a24;text-transform:none;letter-spacing:0;border-bottom:2px solid var(--line);border-right:1px solid #eee;min-width:82px;max-width:82px">${esc(nc)}</th>`;
+  });
+  html+='</tr></thead><tbody>';
+  // Linhas por dia
+  const totalPorTipo={folga:0,ferias:0,atestado:0,ocorrencia:0};
+  for(let d=1;d<=ultDia;d++){
+    const dt=new Date(ano,mes-1,d);
+    const dow=dt.getDay();
+    const isWknd=(dow===0||dow===6);
+    const dowLabel=AM_DIAS_SEMANA[dow];
+    const dtStr=String(d).padStart(2,'0')+'/'+String(mes).padStart(2,'0')+'/'+ano;
+    html+=`<tr>`;
+    html+=`<td style="padding:5px 8px;font-size:11px;font-weight:600;background:${isWknd?'#e5e5e5':'#faf8f2'};color:${isWknd?'#666':'#2c2a24'};border-bottom:1px solid #eee;border-right:1px solid var(--line);position:sticky;left:0;z-index:1;white-space:nowrap">${esc(dtStr)} · ${dowLabel}</td>`;
+    ativos.forEach(e=>{
+      const cel=matriz[colabKey(e)][d];
+      if(isWknd){
+        html+=`<td style="background:#e5e5e5;border-bottom:1px solid #eee;border-right:1px solid #eee"></td>`;
+      }else if(cel){
+        if(cel.bg==='#c9dcf5')totalPorTipo.ferias++;
+        else if(cel.bg==='#dfebe0')totalPorTipo.folga++;
+        else if(cel.bg==='#f5d9d9')totalPorTipo.atestado++;
+        else if(cel.bg==='#fbf0d9')totalPorTipo.ocorrencia++;
+        html+=`<td title="${esc(cel.titulo||cel.label)}" style="padding:4px 5px;text-align:center;background:${cel.bg};color:${cel.tx};border:1px solid ${cel.bd};font-weight:600;font-size:10.5px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(cel.label)}</td>`;
+      }else{
+        html+=`<td style="background:#fff;border-bottom:1px solid #f0f0f0;border-right:1px solid #f0f0f0"></td>`;
+      }
+    });
+    html+='</tr>';
+  }
+  html+='</tbody></table>';
+  $('am-tabela').innerHTML=html;
+  $('am-kpis').innerHTML=[
+    ['Colaboradores',ativos.length,''],
+    ['Dias no mês',ultDia,''],
+    ['Férias (dias-pessoa)',totalPorTipo.ferias,'s-uso'],
+    ['Folgas',totalPorTipo.folga,'s-uso'],
+    ['Atestados / Consultas',totalPorTipo.atestado,'s-desc'],
+    ['Ocorrências',totalPorTipo.ocorrencia,'s-manut']
+  ].map(k=>`<div class="stat ${k[2]}"><b>${k[1]}</b><span>${esc(k[0])}</span></div>`).join('');
+}
 $('nav-insatadm').onclick=()=>showView('insatadm');
 $('nav-meusinsat').onclick=()=>showView('meusinsat');
 
@@ -5070,9 +5223,9 @@ async function baixarExp2BFonte(){
   }
   if(!linhas.length){alert(`Nenhum lançamento de ${EXP1_LABELS[fonte]} encontrado em ${String(mes).padStart(2,'0')}/${ano}.`);return;}
   linhas.sort((a,b)=>{const[da,ma,ya]=a.data.split('/'),[db_,mb,yb]=b.data.split('/');const cmp=`${yb}${mb}${db_}`.localeCompare(`${ya}${ma}${da}`);return cmp||a.funcionario.localeCompare(b.funcionario);});
-  const header=['Cod.','Funcionário','Data','Tipo','Observação','Motivos Ausência','Mês Ausência','Ano Ausência','Gestor','Status','Tempo','Motivo Atestado','CID','Ausencia Dia'];
+  const header=['Funcionário','Data','Tipo','Observação','Motivos Ausência','Status','Tempo','Motivo Atestado','CID'];
   const rows=[header];
-  linhas.forEach(l=>rows.push([l.cod,l.funcionario,l.data,l.tipo,l.obs,l.motivo,Number(mes),Number(ano),l.gestor,l.status,l.tempo,l.motivoAtest,l.cid,l.ausenciaDia]));
+  linhas.forEach(l=>rows.push([l.funcionario,l.data,l.tipo,l.obs,l.motivo,l.status,l.tempo,l.motivoAtest,l.cid]));
   // Vazios viram null (célula vazia real, não string vazia)
   const cleanRows=rows.map(r=>r.map(v=>(v===''||v==null)?null:v));
   const wb=XLSX.utils.book_new();
@@ -5083,7 +5236,7 @@ async function baixarExp2BFonte(){
     const addr=XLSX.utils.encode_cell({r:R,c:C});const cell=ws[addr];
     if(cell&&cell.t==='str')cell.t='s';
   }
-  ws['!cols']=[{wch:6},{wch:36},{wch:11},{wch:11},{wch:35},{wch:22},{wch:6},{wch:7},{wch:28},{wch:11},{wch:9},{wch:20},{wch:10},{wch:10}];
+  ws['!cols']=[{wch:36},{wch:11},{wch:11},{wch:35},{wch:22},{wch:11},{wch:9},{wch:20},{wch:10}];
   XLSX.utils.book_append_sheet(wb,ws,'Export');
   XLSX.writeFile(wb,`${fonte}-2b-${String(mes).padStart(2,'0')}-${ano}.xlsx`,{bookType:'xlsx',bookSST:true});
   toast(`✓ ${linhas.length} lançamento(s) exportado(s)`);
@@ -5546,10 +5699,10 @@ function baixarExport2B(){
   const linhas=window._exp2bLinhas||[];
   if(!linhas.length){alert('Sem dados para exportar.');return;}
   if(typeof XLSX==='undefined'){alert('Biblioteca XLSX não carregou.');return;}
-  const header=['Cod.','Funcionário','Data','Tipo','Observação','Motivos Ausência','Mês Ausência','Ano Ausência','Gestor','Status','Tempo','Motivo Atestado','CID','Ausencia Dia'];
+  const header=['Funcionário','Data','Tipo','Observação','Motivos Ausência','Status','Tempo','Motivo Atestado','CID'];
   const rows=[header];
   linhas.forEach(l=>{
-    rows.push([l.cod,l.funcionario,l.data,l.tipo,l.obs,l.motivo,Number(l.mes),Number(l.ano),l.gestor,l.status,l.tempo,l.motivoAtest,l.cid,l.ausenciaDia]);
+    rows.push([l.funcionario,l.data,l.tipo,l.obs,l.motivo,l.status,l.tempo,l.motivoAtest,l.cid]);
   });
   const cleanRows=rows.map(r=>r.map(v=>(v===''||v==null)?null:v));
   const wb=XLSX.utils.book_new();
@@ -5559,7 +5712,7 @@ function baixarExport2B(){
     const addr=XLSX.utils.encode_cell({r:R,c:C});const cell=ws[addr];
     if(cell&&cell.t==='str')cell.t='s';
   }
-  ws['!cols']=[{wch:6},{wch:36},{wch:11},{wch:11},{wch:35},{wch:22},{wch:6},{wch:7},{wch:28},{wch:11},{wch:9},{wch:20},{wch:10},{wch:10}];
+  ws['!cols']=[{wch:36},{wch:11},{wch:11},{wch:35},{wch:22},{wch:11},{wch:9},{wch:20},{wch:10}];
   XLSX.utils.book_append_sheet(wb,ws,'Export');
   const ano=parseInt($('e2b-ano').value),mes=parseInt($('e2b-mes').value);
   XLSX.writeFile(wb,`ausencias-2b-${String(mes).padStart(2,'0')}-${ano}.xlsx`,{bookType:'xlsx',bookSST:true});
