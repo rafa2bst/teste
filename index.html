@@ -1377,6 +1377,11 @@
 
   <!-- VIEW: CALENDÁRIO DE AUSÊNCIAS (matriz dia x colaborador) -->
   <div id="view-ausmes" style="display:none">
+    <style>
+      body.ausmes-view .wrap{max-width:none !important;width:calc(100vw - 20px);padding:0 10px !important;margin:0 auto}
+      body.ausmes-view #view-ausmes .form-card{max-width:none}
+      body.ausmes-view #am-tabela{max-height:calc(100vh - 250px) !important}
+    </style>
     <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
       <h2>Calendário de Ausências</h2>
       <p class="hint">Visão mensal em matriz: <b>linhas = dias</b> · <b>colunas = colaboradores</b>. Cada célula mostra a ausência do dia (Férias, Folga, Atestado, Ocorrência). Sábado e domingo aparecem em cinza.</p>
@@ -1887,7 +1892,7 @@ const SUPA_URL='https://jvfewdukhgmtdieufpaf.supabase.co';
 const SUPA_KEY='sb_publishable_O2rf2zCnJTZ1YE5q4eJeeA_AVdukzUg';
 const db=supabase.createClient(SUPA_URL,SUPA_KEY);
 // APP_VERSION: aparece no canto superior direito. Bump a cada deploy.
-const APP_VERSION='v81';
+const APP_VERSION='v82';
 document.addEventListener('DOMContentLoaded',()=>{
   const set=(id)=>{const el=document.getElementById(id);if(el)el.textContent=APP_VERSION;};
   set('app-version');set('version-fixed');
@@ -2134,7 +2139,8 @@ function showView(v){
   $('view-plantel').style.display=v==='plantel'?'block':'none';
   $('view-exp2b').style.display=v==='exp2b'?'block':'none';
   $('view-ausmes').style.display=v==='ausmes'?'block':'none';
-  document.body.classList.toggle('compano-view',v==='compano'||v==='plantel'||v==='exp2b'||v==='ausmes');
+  document.body.classList.toggle('compano-view',v==='compano'||v==='plantel'||v==='exp2b');
+  document.body.classList.toggle('ausmes-view',v==='ausmes');
   $('view-perf').style.display=(v==='perf'||v==='mperf')?'block':'none';
   $('view-dperf').style.display=v==='dperf'?'block':'none';
   $('view-mequipehj').style.display=v==='mequipehj'?'block':'none';
