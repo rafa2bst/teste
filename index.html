@@ -1451,6 +1451,24 @@
     </div>
   </div>
 
+  <!-- MODAL: editar nota em célula do calendário -->
+  <div id="am-edit-bg" class="modal-bg" style="display:none" onclick="if(event.target===this)fecharEditAm()">
+    <div class="modal-card" style="max-width:460px" onclick="event.stopPropagation()">
+      <div style="font-size:17px;font-weight:600;margin-bottom:8px">✏️ Editar célula do calendário</div>
+      <div id="am-edit-info" style="background:#f7f5ee;border:1px solid var(--line);border-radius:6px;padding:10px 12px;font-size:12px;margin-bottom:12px;color:#5a5548"></div>
+      <label style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);font-weight:700">Texto da célula</label>
+      <input type="text" id="am-edit-nota" placeholder='Ex.: "Consulta 15 às 18hrs"' style="margin-top:4px;font-size:14px">
+      <p class="hint" style="font-size:11px;margin-top:6px">O texto digitado substitui o padrão da célula (Consulta, Férias, Folga, etc). A cor continua a mesma do tipo de ausência. Deixe vazio pra voltar ao padrão automático.</p>
+      <div style="display:flex;justify-content:space-between;gap:8px;margin-top:14px">
+        <button class="btn-del" onclick="apagarNotaAm()" id="am-edit-del" style="font-size:12px">↺ Voltar ao padrão</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn-edit" onclick="fecharEditAm()">Cancelar</button>
+          <button class="btn-primary" onclick="salvarNotaAm()">Salvar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- VIEW: KANBAN PERFORMANCE -->
   <div id="view-perf" style="display:none">
     <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
@@ -1940,7 +1958,7 @@ const SUPA_URL='https://jvfewdukhgmtdieufpaf.supabase.co';
 const SUPA_KEY='sb_publishable_O2rf2zCnJTZ1YE5q4eJeeA_AVdukzUg';
 const db=supabase.createClient(SUPA_URL,SUPA_KEY);
 // APP_VERSION: aparece no canto superior direito. Bump a cada deploy.
-const APP_VERSION='v85';
+const APP_VERSION='v87';
 document.addEventListener('DOMContentLoaded',()=>{
   const set=(id)=>{const el=document.getElementById(id);if(el)el.textContent=APP_VERSION;};
   set('app-version');set('version-fixed');
@@ -4983,13 +5001,15 @@ async function renderAusMes(){
   const ultDia=new Date(ano,mes,0).getDate();
   const dataFim=`${ano}-${String(mes).padStart(2,'0')}-${String(ultDia).padStart(2,'0')}`;
   $('am-tabela').innerHTML='<div style="padding:20px;text-align:center;color:var(--ink-soft)">Carregando...</div>';
-  const [fol,fer,ate,oc]=await Promise.all([
+  const [fol,fer,ate,oc,notas]=await Promise.all([
     db.from('folgas').select('*').gte('data',dataIni).lte('data',dataFim),
     db.from('ferias').select('*').lte('data_inicio',dataFim).gte('data_fim',dataIni),
     db.from('atestados').select('*').gte('data',dataIni).lte('data',dataFim),
-    db.from('ocorrencias').select('*').gte('data',dataIni).lte('data',dataFim)
+    db.from('ocorrencias').select('*').gte('data',dataIni).lte('data',dataFim),
+    db.from('calendario_notas').select('*').gte('data',dataIni).lte('data',dataFim)
   ]);
   amDados.folgas=fol.data||[];amDados.ferias=fer.data||[];amDados.atestados=ate.data||[];amDados.ocorrencias=oc.data||[];
+  const notasList=notas.error?[]:(notas.data||[]);
   // Monta matriz: por colab, por dia = {tipo, label, cor}
   const ativos=equipe.filter(e=>!e.desligado).sort((a,b)=>(a.nome_curto||a.nome_completo||'').localeCompare(b.nome_curto||b.nome_completo||''));
   const matriz={}; // matriz[colabKey][dia] = {label, cor, borda}
@@ -5038,8 +5058,13 @@ async function renderAusMes(){
   amDados.atestados.forEach(a=>{
     const e=findEquipe(a.colaborador);if(!e)return;
     const d=parseInt(a.data.split('-')[2]);
-    const lbl=/consulta|dentista|medic/i.test(a.tipo||'')?'Consulta':'Atestado';
-    matriz[colabKey(e)][d]={label:lbl,bg:'#f5d9d9',bd:'#d9b3b3',tx:'#801c1c',titulo:lbl+(a.motivo?' · '+a.motivo:'')+(a.cid?' · CID '+a.cid:'')};
+    let lbl=/consulta|dentista|medic/i.test(a.tipo||'')?'Consulta':'Atestado';
+    // Se for Consulta e observação tiver "Horário: HH:MM", junta na label
+    if(lbl==='Consulta'){
+      const m=(a.observacao||'').match(/hor[aá]rio:\s*(\d{1,2}[:h]\d{2})/i);
+      if(m)lbl='Consulta '+m[1].replace('h',':');
+    }
+    matriz[colabKey(e)][d]={label:lbl,bg:'#f5d9d9',bd:'#d9b3b3',tx:'#801c1c',titulo:lbl+(a.motivo?' · '+a.motivo:'')+(a.cid?' · CID '+a.cid:'')+(a.observacao?' · '+a.observacao:'')};
     // Se tem data_fim, marcar dias intermediarios
     if(a.data_fim&&a.data_fim!==a.data){
       const dIni=new Date(a.data+'T12:00'),dEnd=new Date(a.data_fim+'T12:00');
@@ -5057,6 +5082,14 @@ async function renderAusMes(){
     if(lbl.length>18)lbl=lbl.slice(0,17)+'…';
     if(o.fracao!=null&&parseFloat(o.fracao)<0.99){const min=Math.round(parseFloat(o.fracao)*480);lbl+=' ('+min+'min)';}
     matriz[colabKey(e)][d]={label:lbl,bg:'#fbf0d9',bd:'#e3ceaa',tx:'#7a5a1f',titulo:(o.motivo||o.tipo||'Ocorrência')+(o.observacao?' · '+o.observacao:'')};
+  });
+  // Notas customizadas (por colaborador + data). Ficam num mapa a parte pra compor com a ausência.
+  const notasIdx={};
+  notasList.forEach(n=>{
+    const e=findEquipe(n.colaborador);if(!e)return;
+    const d=parseInt(n.data.split('-')[2]);
+    notasIdx[colabKey(e)]=notasIdx[colabKey(e)]||{};
+    notasIdx[colabKey(e)][d]=n.nota;
   });
   // Monta tabela HTML
   const nomesCurtos=n=>{const p=(n||'').split(' ');return p.length>1?p[0]+' '+p[1].slice(0,3)+'.':(n||'');};
@@ -5081,16 +5114,30 @@ async function renderAusMes(){
     html+=`<td style="padding:5px 8px;font-size:11px;font-weight:600;background:${isWknd?'#e5e5e5':'#faf8f2'};color:${isWknd?'#666':'#2c2a24'};border-bottom:1px solid #eee;border-right:1px solid var(--line);position:sticky;left:0;z-index:1;white-space:nowrap">${esc(dtStr)} · ${dowLabel}</td>`;
     ativos.forEach(e=>{
       const cel=matriz[colabKey(e)][d];
+      const nota=(notasIdx[colabKey(e)]||{})[d];
+      const dataISO=`${ano}-${String(mes).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const colabNome=e.nome_completo||e.nome_curto||'';
+      const dataAttr=` data-am-c="${esc(colabNome)}" data-am-d="${dataISO}" data-am-n="${esc(nomesCurtos(e.nome_curto||e.nome_completo))}"`;
       if(isWknd){
-        html+=`<td style="background:#e5e5e5;border-bottom:1px solid #eee;border-right:1px solid #eee"></td>`;
+        // Sábado/domingo: se tem nota, mostra ela; senão cinza vazio
+        if(nota){
+          html+=`<td${dataAttr} title="${esc(nota)} · Fim de semana" style="padding:4px 5px;text-align:center;background:#d5d5d5;color:#333;border:1px solid #b5b5b5;font-weight:500;font-size:10.5px;line-height:1.2;cursor:pointer">${esc(nota)}</td>`;
+        }else{
+          html+=`<td${dataAttr} style="background:#e5e5e5;border-bottom:1px solid #eee;border-right:1px solid #eee;cursor:pointer" title="Clique pra adicionar texto"></td>`;
+        }
       }else if(cel){
         if(cel.bg==='#c9dcf5')totalPorTipo.ferias++;
         else if(cel.bg==='#dfebe0')totalPorTipo.folga++;
         else if(cel.bg==='#f5d9d9')totalPorTipo.atestado++;
         else if(cel.bg==='#fbf0d9')totalPorTipo.ocorrencia++;
-        html+=`<td title="${esc(cel.titulo||cel.label)}" style="padding:4px 5px;text-align:center;background:${cel.bg};color:${cel.tx};border:1px solid ${cel.bd};font-weight:600;font-size:10.5px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(cel.label)}</td>`;
+        // Nota substitui a label padrão; se não tem nota, usa a label calculada
+        const txt=nota||cel.label;
+        const tit=nota?nota+' (era: '+cel.label+')':(cel.titulo||cel.label);
+        html+=`<td${dataAttr} title="${esc(tit)}" style="padding:4px 5px;text-align:center;background:${cel.bg};color:${cel.tx};border:1px solid ${cel.bd};font-weight:600;font-size:10.5px;line-height:1.2;cursor:pointer;white-space:normal">${esc(txt)}</td>`;
+      }else if(nota){
+        html+=`<td${dataAttr} title="${esc(nota)}" style="padding:4px 5px;text-align:center;background:#f5f3ec;color:#5a5548;border:1px solid #d3d1c7;font-weight:500;font-size:10.5px;line-height:1.2;cursor:pointer">${esc(nota)}</td>`;
       }else{
-        html+=`<td style="background:#fff;border-bottom:1px solid #f0f0f0;border-right:1px solid #f0f0f0"></td>`;
+        html+=`<td${dataAttr} style="background:#fff;border-bottom:1px solid #f0f0f0;border-right:1px solid #f0f0f0;cursor:pointer" title="Clique pra adicionar texto"></td>`;
       }
     });
     html+='</tr>';
@@ -5105,6 +5152,54 @@ async function renderAusMes(){
     ['Atestados / Consultas',totalPorTipo.atestado,'s-desc'],
     ['Ocorrências',totalPorTipo.ocorrencia,'s-manut']
   ].map(k=>`<div class="stat ${k[2]}"><b>${k[1]}</b><span>${esc(k[0])}</span></div>`).join('');
+  // Wire click listener em cada célula (após montar tabela)
+  const tbl=$('am-tabela');
+  tbl.querySelectorAll('td[data-am-c]').forEach(td=>{
+    td.onclick=()=>abrirEditAm(td.dataset.amC,td.dataset.amD,td.dataset.amN);
+  });
+}
+
+// ===== Edição de nota em célula do calendário =====
+let amEditCtx={colab:null,data:null};
+async function abrirEditAm(colab,dataISO,nomeCurto){
+  amEditCtx={colab,data:dataISO};
+  const [y,m,d]=dataISO.split('-');
+  const dt=new Date(dataISO+'T12:00');
+  const dow=AM_DIAS_SEMANA[dt.getDay()];
+  $('am-edit-info').innerHTML=`<b>${esc(nomeCurto||colab)}</b> · ${d}/${m}/${y} · ${dow}<br><span style="font-size:11px;color:var(--ink-soft)">Colaborador: ${esc(colab)}</span>`;
+  // Busca nota atual
+  const{data:atual}=await db.from('calendario_notas').select('nota').eq('colaborador',colab).eq('data',dataISO).maybeSingle();
+  // Se já tem nota, mostra ela pra editar. Senão, pré-preenche com a label padrão da célula
+  // (assim ela pode partir da "Consulta 17:00" e alterar pra "Consulta 15 às 18hrs")
+  let valorInicial=(atual&&atual.nota)||'';
+  if(!valorInicial){
+    // Tenta pegar o texto atual da célula (o TD renderizado)
+    const td=$('am-tabela').querySelector(`td[data-am-c="${colab.replace(/"/g,'\\"')}"][data-am-d="${dataISO}"]`);
+    if(td)valorInicial=(td.textContent||'').trim();
+  }
+  $('am-edit-nota').value=valorInicial;
+  $('am-edit-del').style.display=(atual&&atual.nota)?'':'none';
+  $('am-edit-bg').style.display='flex';
+  setTimeout(()=>{const el=$('am-edit-nota');el.focus();el.select();},50);
+}
+function fecharEditAm(){$('am-edit-bg').style.display='none';amEditCtx={colab:null,data:null};}
+async function salvarNotaAm(){
+  const {colab,data}=amEditCtx;if(!colab||!data)return;
+  const nota=$('am-edit-nota').value.trim();
+  if(!nota){await apagarNotaAm();return;}
+  const{error}=await db.from('calendario_notas').upsert({colaborador:colab,data,nota,atualizado_em:new Date().toISOString(),atualizado_por:currentEmail},{onConflict:'colaborador,data'});
+  if(error){alert('Erro: '+error.message);return;}
+  toast('✓ Nota salva');
+  fecharEditAm();
+  await renderAusMes();
+}
+async function apagarNotaAm(){
+  const {colab,data}=amEditCtx;if(!colab||!data)return;
+  const{error}=await db.from('calendario_notas').delete().eq('colaborador',colab).eq('data',data);
+  if(error){alert('Erro: '+error.message);return;}
+  toast('✓ Nota apagada');
+  fecharEditAm();
+  await renderAusMes();
 }
 $('nav-insatadm').onclick=()=>showView('insatadm');
 $('nav-meusinsat').onclick=()=>showView('meusinsat');
