@@ -242,6 +242,7 @@
         <button id="nav-plantel">Plan. Estratégico Telefone</button>
         <button id="nav-exp2b">Exportar Ausências → 2B</button>
         <button id="nav-ausmes">Calendário de Ausências</button>
+        <button id="nav-mie">Metas &amp; Índice de Eficiência</button>
       </div>
     </div>
 
@@ -1403,6 +1404,53 @@
     </div>
   </div>
 
+  <!-- VIEW: METAS & ÍNDICE DE EFICIÊNCIA -->
+  <div id="view-mie" style="display:none">
+    <style>
+      body.mie-view .wrap{max-width:none !important;width:calc(100vw - 20px);padding:0 10px !important;margin:0 auto}
+      body.mie-view #view-mie .form-card{max-width:none}
+      table.mie{width:100%;border-collapse:separate;border-spacing:0;font-size:12px;background:#fff}
+      table.mie th{padding:6px 4px;font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);background:#faf8f2;border-bottom:2px solid var(--line);border-right:1px solid #eee;text-align:center;min-width:64px}
+      table.mie th.rot{position:sticky;left:0;z-index:2;background:#faf8f2;text-align:left;min-width:230px;padding:6px 10px}
+      table.mie th.sub{position:sticky;left:230px;z-index:2;background:#faf8f2;min-width:150px;text-align:left;padding:6px 10px;border-right:2px solid var(--line)}
+      table.mie td{padding:2px;font-size:12px;border-bottom:1px solid #f0f0f0;border-right:1px solid #f5f5f5;text-align:right}
+      table.mie td.rot{position:sticky;left:0;background:#fff;font-weight:600;color:#2c2a24;text-align:left;padding:6px 10px;z-index:1}
+      table.mie td.sub{position:sticky;left:230px;background:#fff;color:#555;text-align:left;padding:6px 10px;border-right:2px solid var(--line);z-index:1}
+      table.mie tr.grupo td.rot,table.mie tr.grupo td.sub{background:#f7f5ee;font-weight:700;text-transform:uppercase;font-size:11px;letter-spacing:.04em;color:#175547}
+      table.mie tr.total td{background:#eef4ee;font-weight:600;border-top:1px solid #b5d0b6}
+      table.mie tr.total td.rot,table.mie tr.total td.sub{background:#dfebe0;color:#175547}
+      table.mie input{width:100%;border:0;background:transparent;text-align:right;padding:5px 4px;font-size:12px;color:#2c2a24;border-radius:4px}
+      table.mie input:hover{background:#fbf8ee}
+      table.mie input:focus{background:#fff;outline:2px solid #b5d0b6;outline-offset:-1px}
+      table.mie td.calc{color:#175547;font-weight:600;font-family:var(--display);padding:5px 6px}
+      table.mie td.dash{color:#bbb;font-style:italic}
+      .mie-tabs{display:flex;gap:4px;margin-bottom:14px}
+      .mie-tabs button{background:transparent;border:1px solid var(--line);border-bottom:none;padding:8px 16px;font-weight:500;cursor:pointer;border-radius:8px 8px 0 0;font-size:13px}
+      .mie-tabs button.on{background:#1f6f5c;color:#fff;border-color:#1f6f5c}
+      .mie-section{margin-bottom:22px;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff}
+      .mie-section-head{background:#175547;color:#fff;padding:10px 14px;font-family:var(--display);font-size:14px;font-weight:700;letter-spacing:.03em;display:flex;justify-content:space-between;align-items:center}
+      .mie-meta-input{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.15);padding:4px 10px;border-radius:6px;font-size:12px}
+      .mie-meta-input input{width:65px;padding:3px 6px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.9);color:#175547;font-weight:600;text-align:right;border-radius:4px}
+      .mie-scroll{overflow:auto;max-height:calc(100vh - 400px)}
+    </style>
+    <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
+      <h2>Metas &amp; Índice de Eficiência</h2>
+      <p class="hint">Controle mensal das metas e realizados por equipe. Preencha as células brancas — as verdes são calculadas automaticamente. Salva sozinho ao sair do campo.</p>
+    </div>
+    <div class="form-card">
+      <div class="row2" style="margin-bottom:14px">
+        <div><label>Ano</label><select id="mie-ano" onchange="renderMie()"></select></div>
+        <div></div>
+      </div>
+      <div class="mie-tabs">
+        <button id="mie-t-pcr" class="on" onclick="mieSetEq('PCR')">Equipe PCR</button>
+        <button id="mie-t-web" onclick="mieSetEq('TecWeb')">Téc Web</button>
+        <button id="mie-t-exp" onclick="mieSetEq('ExpConv')">Exp-Conv</button>
+      </div>
+      <div id="mie-conteudo"></div>
+    </div>
+  </div>
+
   <!-- VIEW: KANBAN PERFORMANCE -->
   <div id="view-perf" style="display:none">
     <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
@@ -1892,7 +1940,7 @@ const SUPA_URL='https://jvfewdukhgmtdieufpaf.supabase.co';
 const SUPA_KEY='sb_publishable_O2rf2zCnJTZ1YE5q4eJeeA_AVdukzUg';
 const db=supabase.createClient(SUPA_URL,SUPA_KEY);
 // APP_VERSION: aparece no canto superior direito. Bump a cada deploy.
-const APP_VERSION='v83';
+const APP_VERSION='v85';
 document.addEventListener('DOMContentLoaded',()=>{
   const set=(id)=>{const el=document.getElementById(id);if(el)el.textContent=APP_VERSION;};
   set('app-version');set('version-fixed');
@@ -1935,13 +1983,14 @@ async function showApp(user){
   setupPresence();
   $('nav').style.display='flex';
   // Admin geral (visível para os 3 admins): cadastros, relatórios, gestão de equipe/patrimônio, dashboards
-  ['nav-cad','nav-rel','nav-eq','nav-us','nav-aloc','nav-met','nav-perf','nav-dperf','nav-exp2b','nav-ausmes','nav-fer','nav-fol','nav-ho','nav-ate','nav-aniv','nav-ocor','nav-prob','nav-trein','nav-anom','nav-fat','nav-dash','nav-insatadm','nav-tar','nav-rot','nav-onb'].forEach(id=>$(id).style.display=isAdminUser?'':'none');
+  ['nav-cad','nav-rel','nav-eq','nav-us','nav-aloc','nav-met','nav-perf','nav-dperf','nav-exp2b','nav-ausmes','nav-mie','nav-fer','nav-fol','nav-ho','nav-ate','nav-aniv','nav-ocor','nav-prob','nav-trein','nav-anom','nav-fat','nav-dash','nav-insatadm','nav-tar','nav-rot','nav-onb'].forEach(id=>$(id).style.display=isAdminUser?'':'none');
   // Aprovação de pedidos: EXCLUSIVO do Rafael (Maria e Tiago não veem, precisam pedir pra ele aprovar)
   ['nav-soladm','nav-feradm','nav-atadm','nav-ocadm','nav-mtadm'].forEach(id=>$(id).style.display=isRafael?'':'none');
   // Metas colaborador + Comparativo anual + Plan. Estratégico: EXCLUSIVO do Rafael
   $('nav-metcol').style.display=isRafael?'':'none';
   $('nav-compano').style.display=isRafael?'':'none';
   $('nav-plantel').style.display=isRafael?'':'none';
+  $('nav-mie').style.display=isRafael?'':'none';
   // Fazer pedidos + Meus dados: escondido do Rafael, mostrado a Maria, Tiago e colabs
   $('nav-solf').style.display=isRafael?'none':'';
   $('nav-solfer').style.display=isRafael?'none':'';
@@ -2100,7 +2149,7 @@ async function registrarManutencao(patr){
 
 // ===== Views =====
 function showView(v){
-  const adminViews=['cadastro','relatorios','eq','us','ferias','folgas','ho','aloc','met','metcol','compano','plantel','exp2b','ausmes','perf','dperf','atestados','aniv','ocor','prob','trein','anom','fat','dash','insatadm','soladm','feradm','atadm','ocadm','mtadm','tar','rot','onb'];
+  const adminViews=['cadastro','relatorios','eq','us','ferias','folgas','ho','aloc','met','metcol','compano','plantel','exp2b','ausmes','mie','perf','dperf','atestados','aniv','ocor','prob','trein','anom','fat','dash','insatadm','soladm','feradm','atadm','ocadm','mtadm','tar','rot','onb'];
   if(adminViews.includes(v)&&!isAdminUser)v='solfolga';
   $('view-cadastro').style.display=v==='cadastro'?'block':'none';
   $('view-relatorios').style.display=v==='relatorios'?'block':'none';
@@ -2139,8 +2188,10 @@ function showView(v){
   $('view-plantel').style.display=v==='plantel'?'block':'none';
   $('view-exp2b').style.display=v==='exp2b'?'block':'none';
   $('view-ausmes').style.display=v==='ausmes'?'block':'none';
+  $('view-mie').style.display=v==='mie'?'block':'none';
   document.body.classList.toggle('compano-view',v==='compano'||v==='plantel'||v==='exp2b');
   document.body.classList.toggle('ausmes-view',v==='ausmes');
+  document.body.classList.toggle('mie-view',v==='mie');
   $('view-perf').style.display=(v==='perf'||v==='mperf')?'block':'none';
   $('view-dperf').style.display=v==='dperf'?'block':'none';
   $('view-mequipehj').style.display=v==='mequipehj'?'block':'none';
@@ -2238,6 +2289,7 @@ function showView(v){
   if(v==='plantel')openPlantel();
   if(v==='exp2b')openExp2B();
   if(v==='ausmes')openAusMes();
+  if(v==='mie')openMie();
   if(v==='insatadm')openInsatAdm();
   if(v==='meusinsat')openMeusInsat();
   if(v==='fin-novo')openFinNovo();
@@ -4789,6 +4841,126 @@ async function zerarTudoPlantel(){
 // ===== Exportar Ausências para 2B =====
 $('nav-exp2b').onclick=()=>showView('exp2b');
 $('nav-ausmes').onclick=()=>showView('ausmes');
+$('nav-mie').onclick=()=>showView('mie');
+
+// ===== Metas & Índice de Eficiência =====
+let mieDados={},mieEq='PCR';
+const MIE_MESES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const MIE_DEFAULT_METAS={
+  'satisfacao|_|meta':96,
+  'resposta|performance|meta':87,
+  'resposta|conjunto_dados|meta':80,
+  'resposta|relatorios|meta':76
+};
+const MIE_SUBS_LABEL={performance:'Performance',conjunto_dados:'Conjunto de Dados',relatorios:'Relatórios'};
+
+function mieKey(ano,eq,bl,sb,me,ms){return `${ano}|${eq}|${bl}|${sb}|${me}|${ms}`;}
+function mieGet(ano,eq,bl,sb,me,ms){const v=mieDados[mieKey(ano,eq,bl,sb,me,ms)];return v==null?null:parseFloat(v);}
+function mieFmtN(v){if(v==null||isNaN(v))return '';return Number(v).toLocaleString('pt-BR');}
+function mieFmtPct(v){if(v==null||isNaN(v))return '—';return v.toFixed(2).replace('.',',')+'%';}
+function mieDashOrPct(v){return v==null?'<span class="dash">—</span>':mieFmtPct(v);}
+
+async function openMie(){
+  const hoje=new Date();
+  const anos=[];for(let a=hoje.getFullYear()-2;a<=hoje.getFullYear()+2;a++)anos.push(a);
+  const selA=$('mie-ano'),curA=selA.value||2026;
+  selA.innerHTML=anos.map(a=>`<option ${a==curA?'selected':''}>${a}</option>`).join('');
+  await renderMie();
+}
+
+async function renderMie(){
+  const ano=parseInt($('mie-ano').value);
+  // Carrega tudo da equipe atual
+  const{data,error}=await db.from('metas_indices').select('*').eq('ano',ano).eq('equipe',mieEq);
+  if(error){$('mie-conteudo').innerHTML='<div class="empty"><b>Tabela ainda não existe.</b> Rode o SQL criar_metas_indices.sql.</div>';return;}
+  mieDados={};
+  (data||[]).forEach(r=>{mieDados[mieKey(r.ano,r.equipe,r.bloco,r.sub_bloco,r.metrica,r.mes)]=r.valor;});
+  // Aplica defaults nas metas caso não estejam salvas
+  for(const [suf,def] of Object.entries(MIE_DEFAULT_METAS)){
+    const [bl,sb,me]=suf.split('|');
+    const k=mieKey(ano,mieEq,bl,sb,me,0);
+    if(mieDados[k]==null)mieDados[k]=def;
+  }
+  ['mie-t-pcr','mie-t-web','mie-t-exp'].forEach(id=>$(id).classList.remove('on'));
+  $({PCR:'mie-t-pcr',TecWeb:'mie-t-web',ExpConv:'mie-t-exp'}[mieEq]).classList.add('on');
+  if(mieEq!=='PCR'){$('mie-conteudo').innerHTML='<div class="empty" style="padding:40px"><b>Em construção.</b> A aba <b>'+esc(mieEq)+'</b> vai seguir o mesmo padrão da PCR. Me avisa quando quiser que eu monte com as métricas específicas dessa equipe.</div>';return;}
+  $('mie-conteudo').innerHTML=mieRenderPCR(ano);
+}
+
+function mieSetEq(eq){mieEq=eq;renderMie();}
+
+function mieInp(ano,eq,bl,sb,me,ms,tipo){
+  const k=mieKey(ano,eq,bl,sb,me,ms);
+  const v=mieDados[k];
+  const step=tipo==='pct'?'0.01':'1';
+  return `<input type="number" step="${step}" data-mk="${k}" value="${v!=null?v:''}" onblur="mieSalvar(this)" onkeydown="if(event.key==='Enter')this.blur()">`;
+}
+
+function mieRenderPCR(ano){
+  const subs=['performance','conjunto_dados','relatorios'];
+  const meses=[1,2,3,4,5,6,7,8,9,10,11,12];
+  const th=`<thead><tr><th class="rot">Grupo</th><th class="sub">Métrica</th>${meses.map(m=>`<th>${MIE_MESES[m-1]}/${String(ano).slice(-2)}</th>`).join('')}</tr></thead>`;
+  // === PRODUTIVIDADE ===
+  let prodRows='';
+  subs.forEach((sb,idx)=>{
+    if(idx>0)prodRows+='<tr class="grupo"><td colspan="14" style="height:2px;padding:0;background:var(--line);border:0"></td></tr>';
+    prodRows+=`<tr class="grupo"><td class="rot" colspan="2">${esc(MIE_SUBS_LABEL[sb])}</td>${meses.map(_=>'<td></td>').join('')}</tr>`;
+    prodRows+=`<tr><td class="rot"></td><td class="sub">Quantas SSC entraram</td>${meses.map(m=>`<td>${mieInp(ano,mieEq,'produtividade',sb,'entraram',m,'num')}</td>`).join('')}</tr>`;
+    prodRows+=`<tr><td class="rot"></td><td class="sub">SSC Respondidas</td>${meses.map(m=>`<td>${mieInp(ano,mieEq,'produtividade',sb,'respondidas',m,'num')}</td>`).join('')}</tr>`;
+    prodRows+=`<tr><td class="rot"></td><td class="sub">Absorção</td>${meses.map(m=>{const e=mieGet(ano,mieEq,'produtividade',sb,'entraram',m),r=mieGet(ano,mieEq,'produtividade',sb,'respondidas',m);const v=(e&&e>0)?(r||0)/e*100:null;return `<td class="calc">${mieDashOrPct(v)}</td>`;}).join('')}</tr>`;
+  });
+  // Consolidado PCR
+  prodRows+=`<tr class="total"><td class="rot" colspan="2">SSC ENTRANTES (TOTAL PCR)</td>${meses.map(m=>{const s=subs.reduce((a,sb)=>a+(mieGet(ano,mieEq,'produtividade',sb,'entraram',m)||0),0);return `<td class="calc">${s?mieFmtN(s):'<span class="dash">—</span>'}</td>`;}).join('')}</tr>`;
+  prodRows+=`<tr class="total"><td class="rot" colspan="2">SSC Respondidas (TOTAL PCR)</td>${meses.map(m=>{const s=subs.reduce((a,sb)=>a+(mieGet(ano,mieEq,'produtividade',sb,'respondidas',m)||0),0);return `<td class="calc">${s?mieFmtN(s):'<span class="dash">—</span>'}</td>`;}).join('')}</tr>`;
+  prodRows+=`<tr class="total"><td class="rot" colspan="2">Absorção PCR</td>${meses.map(m=>{const se=subs.reduce((a,sb)=>a+(mieGet(ano,mieEq,'produtividade',sb,'entraram',m)||0),0);const sr=subs.reduce((a,sb)=>a+(mieGet(ano,mieEq,'produtividade',sb,'respondidas',m)||0),0);const v=se>0?sr/se*100:null;return `<td class="calc">${mieDashOrPct(v)}</td>`;}).join('')}</tr>`;
+  // === SATISFAÇÃO ===
+  const metaSat=mieGet(ano,mieEq,'satisfacao','_','meta',0);
+  let satRows='';
+  const satLbl={performance:'Satisfação Performance',conjunto_dados:'Satisfação Conjunto de Dados',relatorios:'Satisfação Relatório'};
+  subs.forEach(sb=>{
+    satRows+=`<tr><td class="rot" colspan="2">${esc(satLbl[sb])}</td>${meses.map(m=>`<td>${mieInp(ano,mieEq,'satisfacao',sb,'valor',m,'pct')}</td>`).join('')}</tr>`;
+  });
+  satRows+=`<tr class="total"><td class="rot" colspan="2">SATISFAÇÃO PCR (média)</td>${meses.map(m=>{const vals=subs.map(sb=>mieGet(ano,mieEq,'satisfacao',sb,'valor',m)).filter(x=>x!=null);const v=vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;return `<td class="calc">${mieDashOrPct(v)}</td>`;}).join('')}</tr>`;
+  // === RESPOSTA POR ATENDIMENTO ===
+  const rMetas={performance:mieGet(ano,mieEq,'resposta','performance','meta',0),conjunto_dados:mieGet(ano,mieEq,'resposta','conjunto_dados','meta',0),relatorios:mieGet(ano,mieEq,'resposta','relatorios','meta',0)};
+  const rLbl={performance:'Realizado Performance',conjunto_dados:'Realizado Conjunto de Dados',relatorios:'Realizado Relatórios'};
+  let respRows='';
+  subs.forEach(sb=>{
+    const metaCell=`<span style="font-size:11px;color:var(--ink-soft)">Meta:</span> <input type="number" step="0.01" style="width:56px;margin-left:4px" data-mk="${mieKey(ano,mieEq,'resposta',sb,'meta',0)}" value="${rMetas[sb]!=null?rMetas[sb]:''}" onblur="mieSalvar(this)">%`;
+    respRows+=`<tr class="grupo"><td class="rot" colspan="2">${esc(MIE_SUBS_LABEL[sb])} — ${metaCell}</td>${meses.map(_=>'<td></td>').join('')}</tr>`;
+    respRows+=`<tr><td class="rot"></td><td class="sub">${esc(rLbl[sb])}</td>${meses.map(m=>`<td>${mieInp(ano,mieEq,'resposta',sb,'realizado',m,'pct')}</td>`).join('')}</tr>`;
+  });
+  const metasValidas=Object.values(rMetas).filter(v=>v!=null);
+  const mediaMeta=metasValidas.length?metasValidas.reduce((a,b)=>a+b,0)/metasValidas.length:null;
+  respRows+=`<tr class="total"><td class="rot" colspan="2">Média Meta: ${mediaMeta!=null?mediaMeta.toFixed(0)+'%':'—'} · Realizado (média)</td>${meses.map(m=>{const vals=subs.map(sb=>mieGet(ano,mieEq,'resposta',sb,'realizado',m)).filter(x=>x!=null);const v=vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;return `<td class="calc">${mieDashOrPct(v)}</td>`;}).join('')}</tr>`;
+  return `
+    <div class="mie-section">
+      <div class="mie-section-head"><span>Produtividade / Absorção</span></div>
+      <div class="mie-scroll"><table class="mie">${th}<tbody>${prodRows}</tbody></table></div>
+    </div>
+    <div class="mie-section">
+      <div class="mie-section-head"><span>Satisfação</span><div class="mie-meta-input">Meta anual: <input type="number" step="0.01" data-mk="${mieKey(ano,mieEq,'satisfacao','_','meta',0)}" value="${metaSat!=null?metaSat:''}" onblur="mieSalvar(this)">%</div></div>
+      <div class="mie-scroll"><table class="mie">${th}<tbody>${satRows}</tbody></table></div>
+    </div>
+    <div class="mie-section">
+      <div class="mie-section-head"><span>Resposta por Atendimento</span></div>
+      <div class="mie-scroll"><table class="mie">${th}<tbody>${respRows}</tbody></table></div>
+    </div>`;
+}
+
+async function mieSalvar(el){
+  const k=el.getAttribute('data-mk');if(!k)return;
+  const raw=el.value.replace(',','.').trim();
+  const val=raw===''?null:parseFloat(raw);
+  if(raw!==''&&isNaN(val)){el.style.background='#f5d9d9';return;}
+  el.style.background='';
+  const [ano,eq,bl,sb,me,ms]=k.split('|');
+  const{error}=await db.from('metas_indices').upsert({ano:+ano,equipe:eq,bloco:bl,sub_bloco:sb,metrica:me,mes:+ms,valor:val,atualizado_em:new Date().toISOString(),atualizado_por:currentEmail},{onConflict:'ano,equipe,bloco,sub_bloco,metrica,mes'});
+  if(error){el.style.background='#f5d9d9';alert('Erro: '+error.message);return;}
+  mieDados[k]=val;
+  // Rerender só os cálculos (mais simples: rerender tudo, é rápido)
+  await renderMie();
+}
 
 // ===== Calendário de Ausências (matriz dia x colaborador) =====
 let amDados={folgas:[],ferias:[],atestados:[],ocorrencias:[]};
