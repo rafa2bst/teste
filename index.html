@@ -1457,6 +1457,36 @@
     </div>
   </div>
 
+  <!-- MODAL: metas por período (mês a mês) -->
+  <div id="mtp-modal-bg" class="modal-bg" style="display:none" onclick="if(event.target===this)fecharMtpModal()">
+    <div class="modal-card" style="max-width:520px" onclick="event.stopPropagation()">
+      <div style="font-size:17px;font-weight:600;margin-bottom:6px">📅 Meta por mês</div>
+      <div id="mtp-info" style="font-size:12px;color:var(--ink-soft);margin-bottom:12px"></div>
+
+      <div class="row2" style="margin-bottom:12px">
+        <div><label>Ano</label><select id="mtp-ano" onchange="renderMtpTabela()"></select></div>
+        <div></div>
+      </div>
+
+      <div style="background:#f7f5ee;border:1px solid var(--line);border-radius:6px;padding:10px 12px;margin-bottom:12px">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);font-weight:700;margin-bottom:6px">Aplicar em vários meses de uma vez</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:end">
+          <div><label style="font-size:10.5px">Valor</label><input type="number" step="0.01" id="mtp-bulk-val" placeholder="3" style="width:70px"></div>
+          <div><label style="font-size:10.5px">De</label><select id="mtp-bulk-ini" style="width:100px"></select></div>
+          <div><label style="font-size:10.5px">Até</label><select id="mtp-bulk-fim" style="width:100px"></select></div>
+          <button class="btn-primary" onclick="aplicarMtpBulk()" style="font-size:12px;padding:6px 12px">Aplicar</button>
+        </div>
+      </div>
+
+      <div id="mtp-tabela"></div>
+
+      <div style="display:flex;justify-content:space-between;gap:8px;margin-top:14px">
+        <button class="btn-del" onclick="limparMtpAno()" style="font-size:11px">🗑 Limpar tudo do ano</button>
+        <button class="btn-edit" onclick="fecharMtpModal()">Fechar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL: editar nota em célula do calendário -->
   <div id="am-edit-bg" class="modal-bg" style="display:none" onclick="if(event.target===this)fecharEditAm()">
     <div class="modal-card" style="max-width:460px" onclick="event.stopPropagation()">
@@ -2053,7 +2083,7 @@ const SUPA_URL='https://jvfewdukhgmtdieufpaf.supabase.co';
 const SUPA_KEY='sb_publishable_O2rf2zCnJTZ1YE5q4eJeeA_AVdukzUg';
 const db=supabase.createClient(SUPA_URL,SUPA_KEY);
 // APP_VERSION: aparece no canto superior direito. Bump a cada deploy.
-const APP_VERSION='v91';
+const APP_VERSION='v92';
 document.addEventListener('DOMContentLoaded',()=>{
   const set=(id)=>{const el=document.getElementById(id);if(el)el.textContent=APP_VERSION;};
   set('app-version');set('version-fixed');
@@ -5353,7 +5383,7 @@ async function apagarNotaAm(){
 $('nav-metas').onclick=()=>showView('metas');
 $('nav-dashmetas').onclick=()=>showView('dashmetas');
 $('nav-insatadm').onclick=()=>showView('insatadm');
-let metTipos=[],metAtrib=[],metLancs=[],metSubAtual='tipos';
+let metTipos=[],metAtrib=[],metLancs=[],metPeriodo=[],metSubAtual='tipos';
 const MET_SQL_ERR='⚠ As tabelas de Metas ainda não existem no Supabase.\n\nRode o SQL "criar_metas_sistema.sql" no Supabase e recarregue a página.';
 function metErrHandle(err){if(err&&(err.code==='PGRST205'||/schema cache|does not exist/i.test(err.message||''))){alert(MET_SQL_ERR);return true;}return false;}
 
@@ -5363,6 +5393,7 @@ async function openMetas(){
   metTipos=r1.data||[];
   const r2=await db.from('metas_atribuicao').select('*');metAtrib=r2.data||[];
   const r3=await db.from('metas_lancamentos').select('*');metLancs=r3.data||[];
+  const r4=await db.from('metas_tipos_periodo').select('*');metPeriodo=r4.error?[]:(r4.data||[]);
   metasSubtab(metSubAtual);
 }
 function metasSubtab(sub){
@@ -5387,7 +5418,7 @@ function renderMetTipos(){
       <td><input type="number" step="0.01" value="${esc(t.valor_alvo)}" onchange="atualTipoMeta('${t.id}','valor_alvo',this.value)"> ${esc(t.unidade)}</td>
       <td><input type="number" value="${esc(t.ordem||0)}" onchange="atualTipoMeta('${t.id}','ordem',this.value)" style="width:50px"></td>
       <td style="text-align:center"><input type="checkbox" ${t.ativo?'checked':''} onchange="atualTipoMeta('${t.id}','ativo',this.checked)"></td>
-      <td><button class="btn-del" onclick="apagarTipoMeta('${t.id}','${esc(t.nome)}')" style="font-size:11px;padding:4px 10px">🗑</button></td>
+      <td><button class="btn-del" onclick="apagarTipoMeta('${t.id}','${esc(t.nome)}')" style="font-size:11px;padding:4px 10px" title="Apagar tipo">🗑</button> <button class="btn-edit" onclick="abrirMtpModal('${t.id}')" style="font-size:11px;padding:4px 10px" title="Meta variável por mês">📅</button></td>
     </tr>`;
   });
   h+='</tbody></table>';
@@ -5414,6 +5445,88 @@ async function apagarTipoMeta(id,nome){
   const{error}=await db.from('metas_tipos').delete().eq('id',id);
   if(error){alert('Erro: '+error.message);return;}
   toast('✓ Apagado');await openMetas();
+}
+
+// --- Meta efetiva (considera overrides por mês) ---
+function metaEfetiva(tipoId,ano,mes){
+  const p=metPeriodo.find(x=>x.tipo_id===tipoId&&x.ano===ano&&x.mes===mes);
+  if(p)return parseFloat(p.valor_alvo);
+  const t=metTipos.find(x=>x.id===tipoId);
+  return t?parseFloat(t.valor_alvo):0;
+}
+
+// --- Modal: metas por período ---
+let mtpTipoAtual=null;
+function abrirMtpModal(tipoId){
+  const t=metTipos.find(x=>x.id===tipoId);if(!t)return;
+  mtpTipoAtual=tipoId;
+  $('mtp-info').innerHTML=`Tipo: <b>${esc(t.nome)}</b> · Padrão: <b>${t.valor_alvo}${esc(t.unidade)}</b> — os meses configurados aqui sobrescrevem o padrão.`;
+  const hoje=new Date(),anos=[];for(let a=hoje.getFullYear()-1;a<=hoje.getFullYear()+2;a++)anos.push(a);
+  const selA=$('mtp-ano'),curA=selA.value||hoje.getFullYear();
+  selA.innerHTML=anos.map(a=>`<option ${a==curA?'selected':''}>${a}</option>`).join('');
+  const selI=$('mtp-bulk-ini'),selF=$('mtp-bulk-fim');
+  selI.innerHTML=MESES.map((m,i)=>`<option value="${i+1}">${m}</option>`).join('');
+  selF.innerHTML=MESES.map((m,i)=>`<option value="${i+1}" ${i===11?'selected':''}>${m}</option>`).join('');
+  $('mtp-bulk-val').value='';
+  $('mtp-modal-bg').style.display='flex';
+  renderMtpTabela();
+}
+function fecharMtpModal(){$('mtp-modal-bg').style.display='none';mtpTipoAtual=null;}
+function renderMtpTabela(){
+  if(!mtpTipoAtual)return;
+  const t=metTipos.find(x=>x.id===mtpTipoAtual);if(!t)return;
+  const ano=parseInt($('mtp-ano').value);
+  const porMes={};metPeriodo.filter(p=>p.tipo_id===mtpTipoAtual&&p.ano===ano).forEach(p=>{porMes[p.mes]=parseFloat(p.valor_alvo);});
+  let h='<table class="met-tbl" style="width:100%"><thead><tr><th>Mês</th><th style="text-align:right">Meta desse mês</th><th style="text-align:center">Estado</th></tr></thead><tbody>';
+  for(let m=1;m<=12;m++){
+    const cur=porMes[m];
+    const isCustom=cur!=null;
+    h+=`<tr><td style="font-weight:500">${MESES[m-1]}</td>
+      <td style="text-align:right"><input type="number" step="0.01" value="${isCustom?cur:''}" placeholder="${t.valor_alvo}" onblur="salvarMtpMes(${ano},${m},this.value)" style="width:80px;text-align:right"> ${esc(t.unidade)}</td>
+      <td style="text-align:center;font-size:11px;color:${isCustom?'#1f6f5c':'var(--ink-soft)'}">${isCustom?'✓ personalizado':'padrão ('+t.valor_alvo+esc(t.unidade)+')'}</td></tr>`;
+  }
+  h+='</tbody></table>';
+  $('mtp-tabela').innerHTML=h;
+}
+async function salvarMtpMes(ano,mes,valor){
+  if(!mtpTipoAtual)return;
+  const v=valor===''?null:parseFloat(valor);
+  if(valor!==''&&isNaN(v)){alert('Valor inválido');return;}
+  if(v==null){
+    // vazio = apaga o override, volta pra padrão
+    const{error}=await db.from('metas_tipos_periodo').delete().eq('tipo_id',mtpTipoAtual).eq('ano',ano).eq('mes',mes);
+    if(error){alert('Erro: '+error.message);return;}
+    metPeriodo=metPeriodo.filter(p=>!(p.tipo_id===mtpTipoAtual&&p.ano===ano&&p.mes===mes));
+  }else{
+    const{error}=await db.from('metas_tipos_periodo').upsert({tipo_id:mtpTipoAtual,ano,mes,valor_alvo:v,atualizado_em:new Date().toISOString(),atualizado_por:currentEmail},{onConflict:'tipo_id,ano,mes'});
+    if(error){alert('Erro: '+error.message);return;}
+    const ex=metPeriodo.find(p=>p.tipo_id===mtpTipoAtual&&p.ano===ano&&p.mes===mes);
+    if(ex)ex.valor_alvo=v;else metPeriodo.push({tipo_id:mtpTipoAtual,ano,mes,valor_alvo:v});
+  }
+  renderMtpTabela();
+}
+async function aplicarMtpBulk(){
+  if(!mtpTipoAtual)return;
+  const val=parseFloat($('mtp-bulk-val').value);if(isNaN(val)){alert('Digite um valor numérico');return;}
+  const ano=parseInt($('mtp-ano').value);
+  const ini=parseInt($('mtp-bulk-ini').value),fim=parseInt($('mtp-bulk-fim').value);
+  if(fim<ini){alert('Mês final deve ser >= mês inicial');return;}
+  const rows=[];for(let m=ini;m<=fim;m++)rows.push({tipo_id:mtpTipoAtual,ano,mes:m,valor_alvo:val,atualizado_em:new Date().toISOString(),atualizado_por:currentEmail});
+  const{error}=await db.from('metas_tipos_periodo').upsert(rows,{onConflict:'tipo_id,ano,mes'});
+  if(error){alert('Erro: '+error.message);return;}
+  rows.forEach(r=>{const ex=metPeriodo.find(p=>p.tipo_id===r.tipo_id&&p.ano===r.ano&&p.mes===r.mes);if(ex)ex.valor_alvo=r.valor_alvo;else metPeriodo.push(r);});
+  toast(`✓ ${val} aplicado em ${fim-ini+1} mês(es)`);
+  renderMtpTabela();
+}
+async function limparMtpAno(){
+  if(!mtpTipoAtual)return;
+  const ano=parseInt($('mtp-ano').value);
+  if(!confirm(`Remover TODOS os overrides de ${ano} pra esse tipo? Vai voltar tudo pra o padrão.`))return;
+  const{error}=await db.from('metas_tipos_periodo').delete().eq('tipo_id',mtpTipoAtual).eq('ano',ano);
+  if(error){alert('Erro: '+error.message);return;}
+  metPeriodo=metPeriodo.filter(p=>!(p.tipo_id===mtpTipoAtual&&p.ano===ano));
+  toast('✓ Limpo');
+  renderMtpTabela();
 }
 
 // --- Sub: Atribuição ---
@@ -5469,7 +5582,7 @@ function renderMetasLanc(){
   if(!colabsComMeta.length){$('ml-tabela').innerHTML='<div class="empty">Nenhum colaborador tem meta atribuída. Vá em "Atribuição por colab" pra marcar.</div>';return;}
   const lancMap={};metLancs.forEach(l=>{lancMap[l.colaborador+'|'+l.tipo_id+'|'+l.ano+'|'+l.mes]=l.valor_realizado;});
   let h='<table class="met-tbl"><thead><tr><th style="min-width:200px;position:sticky;left:0;background:#faf8f2;z-index:1">Colaborador</th>';
-  tiposAtivos.forEach(t=>h+=`<th style="text-align:center;min-width:130px">${esc(t.nome)}<br><span style="font-size:9.5px;color:#5f5e5a;font-weight:400;text-transform:none">meta ${t.valor_alvo}${t.unidade}</span></th>`);
+  tiposAtivos.forEach(t=>h+=`<th style="text-align:center;min-width:130px">${esc(t.nome)}<br><span style="font-size:9.5px;color:#5f5e5a;font-weight:400;text-transform:none">meta ${metaEfetiva(t.id,ano,mes)}${t.unidade}</span></th>`);
   h+='</tr></thead><tbody>';
   colabsComMeta.forEach(e=>{
     const cn=e.nome_completo||e.nome_curto||'';
@@ -5478,7 +5591,8 @@ function renderMetasLanc(){
       const tem=atribByColab[cn]&&atribByColab[cn].has(t.id);
       if(!tem){h+='<td class="celvazia">—</td>';return;}
       const val=lancMap[cn+'|'+t.id+'|'+ano+'|'+mes];
-      const bateu=val!=null&&parseFloat(val)>=parseFloat(t.valor_alvo);
+      const meta=metaEfetiva(t.id,ano,mes);
+      const bateu=val!=null&&parseFloat(val)>=meta;
       h+=`<td style="text-align:center"><input type="number" step="0.01" value="${val!=null?esc(val):''}" onblur="salvarLancMeta('${esc(cn)}','${t.id}',${ano},${mes},this.value)" style="width:80px;text-align:right${bateu?';background:#dfebe0;color:#175547;font-weight:600':''}"> ${esc(t.unidade)}</td>`;
     });
     h+='</tr>';
@@ -5505,6 +5619,7 @@ async function openDashMetas(){
   metTipos=r1.data||[];
   const r2=await db.from('metas_atribuicao').select('*');metAtrib=r2.data||[];
   const r3=await db.from('metas_lancamentos').select('*');metLancs=r3.data||[];
+  const r4=await db.from('metas_tipos_periodo').select('*');metPeriodo=r4.error?[]:(r4.data||[]);
   // Popula selects
   const hoje=new Date(),anos=[];for(let a=hoje.getFullYear()-1;a<=hoje.getFullYear()+1;a++)anos.push(a);
   const selA=$('dm-ano'),curA=selA.value||hoje.getFullYear();
@@ -5522,7 +5637,7 @@ function renderDashMetas(){
   // KPIs
   const colabsAtiv=new Set(metAtrib.filter(a=>!tipoFiltro||a.tipo_id===tipoFiltro).map(a=>a.colaborador));
   let bateram=0,total=0,soma=0;
-  lancsUsar.forEach(l=>{const t=tiposUsar.find(x=>x.id===l.tipo_id);if(!t)return;total++;soma+=parseFloat(l.valor_realizado);if(parseFloat(l.valor_realizado)>=parseFloat(t.valor_alvo))bateram++;});
+  lancsUsar.forEach(l=>{const t=tiposUsar.find(x=>x.id===l.tipo_id);if(!t)return;total++;soma+=parseFloat(l.valor_realizado);if(parseFloat(l.valor_realizado)>=metaEfetiva(t.id,ano,mes))bateram++;});
   const mediaGeral=total?(soma/total).toFixed(1):0;
   $('dm-kpis').innerHTML=[
     ['Colabs com meta',colabsAtiv.size,''],
@@ -5540,11 +5655,11 @@ function renderDashMetas(){
 function renderDMChartMes(ano,mes,tipos,lancs){
   if(dmCharts.mes)dmCharts.mes.destroy();
   if(!lancs.length){$('dm-chart-mes').getContext('2d').clearRect(0,0,999,999);return;}
-  const porColab={};lancs.forEach(l=>{const t=tipos.find(x=>x.id===l.tipo_id);if(!t)return;(porColab[l.colaborador]=porColab[l.colaborador]||[]).push({tipo:t.nome,realizado:parseFloat(l.valor_realizado),meta:parseFloat(t.valor_alvo)});});
+  const porColab={};lancs.forEach(l=>{const t=tipos.find(x=>x.id===l.tipo_id);if(!t)return;(porColab[l.colaborador]=porColab[l.colaborador]||[]).push({tipo:t.nome,realizado:parseFloat(l.valor_realizado),meta:metaEfetiva(t.id,ano,mes)});});
   const labels=Object.keys(porColab).sort();
   // Se tem só 1 tipo, barras diretas. Senão, média por colab
   const data=labels.map(c=>{const arr=porColab[c];return arr.reduce((s,x)=>s+x.realizado,0)/arr.length;});
-  const metaMedia=tipos.reduce((s,t)=>s+parseFloat(t.valor_alvo),0)/tipos.length;
+  const metaMedia=tipos.reduce((s,t)=>s+metaEfetiva(t.id,ano,mes),0)/tipos.length;
   const cores=data.map(v=>v>=metaMedia?'#1f6f5c':(v>=metaMedia*0.9?'#c97e2f':'#a64141'));
   dmCharts.mes=new Chart($('dm-chart-mes').getContext('2d'),{type:'bar',data:{labels:labels.map(l=>{const p=l.split(' ');return p[0]+' '+(p[1]?p[1].slice(0,3):'')}),datasets:[{label:'Realizado',data,backgroundColor:cores,borderRadius:4}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},annotation:{}},scales:{x:{beginAtZero:true,max:100}}}});
 }
@@ -5560,7 +5675,7 @@ function renderDMChartAno(ano,tipos){
 }
 function renderDMRanking(ano,mes,tipos,lancs){
   if(!lancs.length){$('dm-ranking').innerHTML='<div class="empty">Sem lançamentos pra o mês selecionado.</div>';return;}
-  const linhas=lancs.map(l=>{const t=tipos.find(x=>x.id===l.tipo_id);if(!t)return null;const r=parseFloat(l.valor_realizado),m=parseFloat(t.valor_alvo);return{colab:l.colaborador,tipo:t.nome,unid:t.unidade,realizado:r,meta:m,delta:r-m,pct:m?(r/m*100):0};}).filter(Boolean).sort((a,b)=>b.pct-a.pct);
+  const linhas=lancs.map(l=>{const t=tipos.find(x=>x.id===l.tipo_id);if(!t)return null;const r=parseFloat(l.valor_realizado),m=metaEfetiva(t.id,ano,mes);return{colab:l.colaborador,tipo:t.nome,unid:t.unidade,realizado:r,meta:m,delta:r-m,pct:m?(r/m*100):0};}).filter(Boolean).sort((a,b)=>b.pct-a.pct);
   let h='<table class="met-tbl"><thead><tr><th>#</th><th>Colaborador</th><th>Tipo</th><th style="text-align:right">Meta</th><th style="text-align:right">Realizado</th><th style="text-align:right">Δ</th><th style="text-align:right">% da meta</th></tr></thead><tbody>';
   linhas.forEach((l,i)=>{
     const cor=l.pct>=100?'#1f6f5c':(l.pct>=90?'#c97e2f':'#a64141');
