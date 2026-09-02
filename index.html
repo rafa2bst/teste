@@ -1572,7 +1572,9 @@
       <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px;align-items:end">
         <div><label>Ano</label><select id="dm-ano" onchange="renderDashMetas()" style="min-width:100px"></select></div>
         <div><label>Mês</label><select id="dm-mes" onchange="renderDashMetas()" style="min-width:130px"></select></div>
-        <div><label>Tipo de meta</label><select id="dm-tipo" onchange="renderDashMetas()" style="min-width:220px"><option value="">Todos os tipos</option></select></div>
+        <div><label>Tipo de meta</label><select id="dm-tipo" onchange="renderDashMetas()" style="min-width:200px"><option value="">Todos os tipos</option></select></div>
+        <div><label>Colaborador</label><select id="dm-colab1" onchange="renderDashMetas()" style="min-width:200px"><option value="">Todos os colaboradores</option></select></div>
+        <div><label>Comparar com</label><select id="dm-colab2" onchange="renderDashMetas()" style="min-width:200px"><option value="">— (sem comparação)</option></select></div>
         <div style="flex:1"></div>
         <button class="link" onclick="showView('metas')" style="background:transparent;border:none;color:#1f6f5c;text-decoration:underline;font-size:12px;cursor:pointer">← Voltar pra Metas</button>
       </div>
@@ -2110,7 +2112,7 @@ const SUPA_URL='https://jvfewdukhgmtdieufpaf.supabase.co';
 const SUPA_KEY='sb_publishable_O2rf2zCnJTZ1YE5q4eJeeA_AVdukzUg';
 const db=supabase.createClient(SUPA_URL,SUPA_KEY);
 // APP_VERSION: aparece no canto superior direito. Bump a cada deploy.
-const APP_VERSION='v93';
+const APP_VERSION='v94';
 document.addEventListener('DOMContentLoaded',()=>{
   const set=(id)=>{const el=document.getElementById(id);if(el)el.textContent=APP_VERSION;};
   set('app-version');set('version-fixed');
@@ -5437,12 +5439,14 @@ function metasSubtab(sub){
 // --- Sub: Tipos ---
 function renderMetTipos(){
   if(!metTipos.length){$('mt-tabela').innerHTML='<div class="empty">Nenhum tipo cadastrado. Clique "+ Novo tipo" pra começar.</div>';return;}
-  let h='<table class="met-tbl"><thead><tr><th>Nome</th><th>Unidade</th><th>Meta (valor-alvo)</th><th>Ordem</th><th>Ativo</th><th>Ações</th></tr></thead><tbody>';
+  let h='<table class="met-tbl"><thead><tr><th>Nome</th><th>Unidade</th><th>Meta</th><th>Sentido</th><th>Ordem</th><th>Ativo</th><th>Ações</th></tr></thead><tbody>';
   metTipos.forEach(t=>{
+    const sent=t.sentido||'maior_melhor';
     h+=`<tr>
       <td><input type="text" value="${esc(t.nome)}" onchange="atualTipoMeta('${t.id}','nome',this.value)"></td>
       <td><select onchange="atualTipoMeta('${t.id}','unidade',this.value)" style="padding:3px 6px;font-size:12px"><option ${t.unidade==='%'?'selected':''}>%</option><option ${t.unidade==='min'?'selected':''}>min</option><option ${t.unidade==='qtd'?'selected':''}>qtd</option></select></td>
       <td><input type="number" step="0.01" value="${esc(t.valor_alvo)}" onchange="atualTipoMeta('${t.id}','valor_alvo',this.value)"> ${esc(t.unidade)}</td>
+      <td><select onchange="atualTipoMeta('${t.id}','sentido',this.value)" style="padding:3px 6px;font-size:12px;min-width:150px" title="Direção que indica sucesso"><option value="maior_melhor" ${sent==='maior_melhor'?'selected':''}>↗ Maior é melhor</option><option value="menor_melhor" ${sent==='menor_melhor'?'selected':''}>↘ Menor é melhor</option></select></td>
       <td><input type="number" value="${esc(t.ordem||0)}" onchange="atualTipoMeta('${t.id}','ordem',this.value)" style="width:50px"></td>
       <td style="text-align:center"><input type="checkbox" ${t.ativo?'checked':''} onchange="atualTipoMeta('${t.id}','ativo',this.checked)"></td>
       <td><button class="btn-del" onclick="apagarTipoMeta('${t.id}','${esc(t.nome)}')" style="font-size:11px;padding:4px 10px" title="Apagar tipo">🗑</button> <button class="btn-edit" onclick="abrirMtpModal('${t.id}')" style="font-size:11px;padding:4px 10px" title="Meta variável por mês">📅</button></td>
@@ -5619,7 +5623,7 @@ function renderMetasLanc(){
       if(!tem){h+='<td class="celvazia">—</td>';return;}
       const val=lancMap[cn+'|'+t.id+'|'+ano+'|'+mes];
       const meta=metaEfetiva(t.id,ano,mes);
-      const bateu=val!=null&&parseFloat(val)>=meta;
+      const bateu=val!=null&&_dmBateuMeta(t,parseFloat(val),meta);
       h+=`<td style="text-align:center"><input type="number" step="0.01" value="${val!=null?esc(val):''}" onblur="salvarLancMeta('${esc(cn)}','${t.id}',${ano},${mes},this.value)" style="width:80px;text-align:right${bateu?';background:#dfebe0;color:#175547;font-weight:600':''}"> ${esc(t.unidade)}</td>`;
     });
     h+='</tr>';
@@ -5655,17 +5659,28 @@ async function openDashMetas(){
   selM.innerHTML=MESES.map((m,i)=>`<option value="${i+1}" ${(i+1)==curM?'selected':''}>${m}</option>`).join('');
   const selT=$('dm-tipo'),curT=selT.value;
   selT.innerHTML='<option value="">Todos os tipos</option>'+metTipos.map(t=>`<option value="${t.id}" ${t.id===curT?'selected':''}>${esc(t.nome)}</option>`).join('');
+  // Popula dropdown de colaboradores com os que têm alguma atribuição
+  const colabsAtr=[...new Set(metAtrib.map(a=>a.colaborador))].sort();
+  ['dm-colab1','dm-colab2'].forEach((id,idx)=>{
+    const sel=$(id),cur=sel.value;
+    const placeholder=idx===0?'Todos os colaboradores':'— (sem comparação)';
+    sel.innerHTML=`<option value="">${placeholder}</option>`+colabsAtr.map(c=>`<option value="${esc(c)}" ${c===cur?'selected':''}>${esc(c)}</option>`).join('');
+  });
   renderDashMetas();
 }
 function renderDashMetas(){
   const ano=parseInt($('dm-ano').value),mes=parseInt($('dm-mes').value),tipoFiltro=$('dm-tipo').value;
+  const colab1=$('dm-colab1').value,colab2=$('dm-colab2').value;
+  // Se colab1 e/ou colab2 tem valor, filtra pra só esses colabs
+  const colabFiltro=[colab1,colab2].filter(Boolean);
+  const colabFn=l=>colabFiltro.length===0||colabFiltro.includes(l.colaborador);
   const tiposUsar=tipoFiltro?metTipos.filter(t=>t.id===tipoFiltro):metTipos;
-  const lancsMes=metLancs.filter(l=>l.ano===ano&&l.mes===mes&&(!tipoFiltro||l.tipo_id===tipoFiltro)&&l.valor_realizado!=null);
-  const lancsAno=metLancs.filter(l=>l.ano===ano&&(!tipoFiltro||l.tipo_id===tipoFiltro)&&l.valor_realizado!=null);
+  const lancsMes=metLancs.filter(l=>l.ano===ano&&l.mes===mes&&(!tipoFiltro||l.tipo_id===tipoFiltro)&&l.valor_realizado!=null&&colabFn(l));
+  const lancsAno=metLancs.filter(l=>l.ano===ano&&(!tipoFiltro||l.tipo_id===tipoFiltro)&&l.valor_realizado!=null&&colabFn(l));
   // ===== KPIs =====
   const colabsAtiv=new Set(metAtrib.filter(a=>!tipoFiltro||a.tipo_id===tipoFiltro).map(a=>a.colaborador));
   let bateram=0,total=0,soma=0;
-  lancsMes.forEach(l=>{const t=tiposUsar.find(x=>x.id===l.tipo_id);if(!t)return;total++;const meta=metaEfetiva(t.id,ano,mes);soma+=parseFloat(l.valor_realizado)/(meta||1)*100;if(parseFloat(l.valor_realizado)>=meta)bateram++;});
+  lancsMes.forEach(l=>{const t=tiposUsar.find(x=>x.id===l.tipo_id);if(!t)return;total++;const meta=metaEfetiva(t.id,ano,mes);const real=parseFloat(l.valor_realizado);soma+=meta?(t.sentido==='menor_melhor'?meta/real*100:real/meta*100):0;if(_dmBateuMeta(t,real,meta))bateram++;});
   const mediaPct=total?(soma/total).toFixed(1):0;
   $('dm-kpis').innerHTML=[
     ['Colabs com meta',colabsAtiv.size,''],
@@ -5674,7 +5689,7 @@ function renderDashMetas(){
     ['Eficiência média',mediaPct+'%',mediaPct>=100?'s-uso':(mediaPct>=90?'s-manut':'s-desc')]
   ].map(k=>`<div class="stat ${k[2]}"><b>${k[1]}</b><span>${esc(k[0])}</span></div>`).join('');
   // ===== Destaques =====
-  renderDMDestaques(ano,mes,tipoFiltro);
+  renderDMDestaques(ano,mes,tipoFiltro,colabFiltro);
   // ===== Charts =====
   renderDMChartMes(ano,mes,tiposUsar,lancsMes);
   renderDMChartAno(ano,tiposUsar);
@@ -5684,11 +5699,26 @@ function renderDashMetas(){
   renderDMRankingAno(ano,tiposUsar,lancsAno);
 }
 
-function _dmScoreLanc(l){const meta=metaEfetiva(l.tipo_id,l.ano,l.mes);return meta?(parseFloat(l.valor_realizado)/meta*100):0;}
+function _dmScoreLanc(l){
+  const t=metTipos.find(x=>x.id===l.tipo_id);
+  const meta=metaEfetiva(l.tipo_id,l.ano,l.mes);
+  if(!meta)return 0;
+  const real=parseFloat(l.valor_realizado);
+  // sentido: 'menor_melhor' inverte a fórmula (meta/real em vez de real/meta)
+  if(t&&t.sentido==='menor_melhor'){
+    return real>0?(meta/real*100):0;
+  }
+  return real/meta*100;
+}
+function _dmBateuMeta(t,real,meta){
+  if(!t||meta==null)return false;
+  return t.sentido==='menor_melhor'?real<=meta:real>=meta;
+}
 
-function renderDMDestaques(ano,mes,tipoFiltro){
+function renderDMDestaques(ano,mes,tipoFiltro,colabFiltro){
+  const colabOK=l=>!colabFiltro||colabFiltro.length===0||colabFiltro.includes(l.colaborador);
   // Destaques do mês
-  const lancsMes=metLancs.filter(l=>l.ano===ano&&l.mes===mes&&l.valor_realizado!=null&&(!tipoFiltro||l.tipo_id===tipoFiltro));
+  const lancsMes=metLancs.filter(l=>l.ano===ano&&l.mes===mes&&l.valor_realizado!=null&&(!tipoFiltro||l.tipo_id===tipoFiltro)&&colabOK(l));
   const scoredMes=lancsMes.map(l=>{const t=metTipos.find(x=>x.id===l.tipo_id);if(!t)return null;return{colab:l.colaborador,tipo:t.nome,val:parseFloat(l.valor_realizado),meta:metaEfetiva(t.id,ano,mes),pct:_dmScoreLanc(l),unid:t.unidade};}).filter(Boolean).sort((a,b)=>b.pct-a.pct);
   const melhorM=scoredMes[0],piorM=scoredMes[scoredMes.length-1];
   const destaqueMesHTML=(l,titulo,cor,icone)=>l?`<div style="background:${cor.bg};border-left:4px solid ${cor.bd};padding:10px 14px;border-radius:0 8px 8px 0;margin-bottom:8px">
@@ -5701,7 +5731,7 @@ function renderDMDestaques(ano,mes,tipoFiltro){
     destaqueMesHTML(piorM,'Pior do mês',{bg:'#f5dcdc',bd:'#a64141',tx:'#801c1c'},'🔻');
 
   // Destaques do ano
-  const lancsAno=metLancs.filter(l=>l.ano===ano&&l.valor_realizado!=null&&(!tipoFiltro||l.tipo_id===tipoFiltro));
+  const lancsAno=metLancs.filter(l=>l.ano===ano&&l.valor_realizado!=null&&(!tipoFiltro||l.tipo_id===tipoFiltro)&&colabOK(l));
   const porColabAno={};
   lancsAno.forEach(l=>{const s=_dmScoreLanc(l);if(!s)return;(porColabAno[l.colaborador]=porColabAno[l.colaborador]||[]).push(s);});
   const anoRank=Object.entries(porColabAno).filter(([_,arr])=>arr.length>=1).map(([colab,arr])=>({colab,pct:arr.reduce((s,v)=>s+v,0)/arr.length,n:arr.length})).sort((a,b)=>b.pct-a.pct);
@@ -5723,11 +5753,11 @@ function renderDMChartMes(ano,mes,tipos,lancs){
   const ctx=$('dm-chart-mes').getContext('2d');
   ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
   if(!lancs.length)return;
-  const porColab={};lancs.forEach(l=>{const t=tipos.find(x=>x.id===l.tipo_id);if(!t)return;(porColab[l.colaborador]=porColab[l.colaborador]||[]).push({real:parseFloat(l.valor_realizado),meta:metaEfetiva(t.id,ano,mes)});});
+  const porColab={};lancs.forEach(l=>{const t=tipos.find(x=>x.id===l.tipo_id);if(!t)return;(porColab[l.colaborador]=porColab[l.colaborador]||[]).push({real:parseFloat(l.valor_realizado),meta:metaEfetiva(t.id,ano,mes),sentido:t.sentido||'maior_melhor'});});
   const labels=Object.keys(porColab).sort();
   const realizados=labels.map(c=>{const a=porColab[c];return a.reduce((s,x)=>s+x.real,0)/a.length;});
   const metas=labels.map(c=>{const a=porColab[c];return a.reduce((s,x)=>s+x.meta,0)/a.length;});
-  const cores=realizados.map((v,i)=>{const m=metas[i];return v>=m?'#1f6f5c':(v>=m*0.9?'#c97e2f':'#a64141');});
+  const cores=realizados.map((v,i)=>{const m=metas[i],sent=porColab[labels[i]][0].sentido;if(sent==='menor_melhor'){return v<=m?'#1f6f5c':(v<=m*1.1?'#c97e2f':'#a64141');}return v>=m?'#1f6f5c':(v>=m*0.9?'#c97e2f':'#a64141');});
   dmCharts.mes=new Chart(ctx,{type:'bar',data:{labels:labels.map(_dmShortName),datasets:[{label:'Realizado',data:realizados,backgroundColor:cores,borderRadius:4},{label:'Meta',data:metas,type:'line',borderColor:'#5a5548',borderDash:[5,5],pointRadius:3,pointBackgroundColor:'#5a5548',fill:false,tension:0}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:11}}}},scales:{x:{beginAtZero:true}}}});
 }
 
@@ -5759,12 +5789,13 @@ function renderDMChartAnual(ano,tipos,lancsAno){
 
 function renderDMRankingMes(ano,mes,tipos,lancs){
   if(!lancs.length){$('dm-ranking-mes').innerHTML='<div class="empty">Sem lançamentos.</div>';return;}
-  const linhas=lancs.map(l=>{const t=tipos.find(x=>x.id===l.tipo_id);if(!t)return null;const r=parseFloat(l.valor_realizado),m=metaEfetiva(t.id,ano,mes);return{colab:l.colaborador,tipo:t.nome,unid:t.unidade,realizado:r,meta:m,delta:r-m,pct:m?(r/m*100):0};}).filter(Boolean).sort((a,b)=>b.pct-a.pct);
+  const linhas=lancs.map(l=>{const t=tipos.find(x=>x.id===l.tipo_id);if(!t)return null;const r=parseFloat(l.valor_realizado),m=metaEfetiva(t.id,ano,mes);const pct=_dmScoreLanc(l);return{colab:l.colaborador,tipo:t.nome,unid:t.unidade,realizado:r,meta:m,pct,sent:t.sentido||'maior_melhor'};}).filter(Boolean).sort((a,b)=>b.pct-a.pct);
   let h='<table class="met-tbl"><thead><tr><th>#</th><th>Colaborador</th><th>Tipo</th><th style="text-align:right">Meta</th><th style="text-align:right">Realizado</th><th style="text-align:right">% meta</th></tr></thead><tbody>';
   linhas.forEach((l,i)=>{
     const cor=l.pct>=100?'#1f6f5c':(l.pct>=90?'#c97e2f':'#a64141');
     const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1);
-    h+=`<tr><td>${medal}</td><td style="font-weight:500">${esc(l.colab)}</td><td style="font-size:11px;color:var(--ink-soft)">${esc(l.tipo)}</td><td style="text-align:right">${l.meta}${esc(l.unid)}</td><td style="text-align:right;font-weight:600">${l.realizado.toFixed(2)}${esc(l.unid)}</td><td style="text-align:right;color:${cor};font-weight:700">${l.pct.toFixed(1)}%</td></tr>`;
+    const seta=l.sent==='menor_melhor'?'↘':'';
+    h+=`<tr><td>${medal}</td><td style="font-weight:500">${esc(l.colab)}</td><td style="font-size:11px;color:var(--ink-soft)">${esc(l.tipo)} ${seta}</td><td style="text-align:right">${l.meta}${esc(l.unid)}</td><td style="text-align:right;font-weight:600">${l.realizado.toFixed(2)}${esc(l.unid)}</td><td style="text-align:right;color:${cor};font-weight:700">${l.pct.toFixed(1)}%</td></tr>`;
   });
   h+='</tbody></table>';
   $('dm-ranking-mes').innerHTML=h;
