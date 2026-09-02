@@ -38,10 +38,14 @@
   .nav button{background:transparent;border:1px solid var(--line);color:var(--ink-soft);border-radius:10px;padding:11px 14px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;text-align:left;width:100%}
   .nav button.active{background:var(--ink);color:#fff;border-color:var(--ink)}
   .nav-group{position:relative;width:100%}
-  .nav-group .group-label{width:100%;display:block;border:none;background:transparent !important;color:var(--ink-soft) !important;text-align:left;padding:16px 4px 6px;font-size:11px;text-transform:uppercase;font-weight:700;letter-spacing:.08em;cursor:default;pointer-events:none}
-  .nav-group .group-label::after{display:none}
-  .nav-group .group-items{display:flex;flex-direction:column;gap:4px;width:100%}
+  .nav-group .group-label{width:100%;display:flex;align-items:center;justify-content:space-between;border:none;background:transparent !important;color:var(--ink) !important;text-align:left;padding:12px 8px;font-size:12px;text-transform:uppercase;font-weight:700;letter-spacing:.06em;cursor:pointer;font-family:inherit;border-radius:6px;transition:background .15s}
+  .nav-group .group-label:hover{background:rgba(0,0,0,.04) !important}
+  .nav-group .group-label::after{content:'▾';display:inline-block;font-size:11px;color:var(--ink-soft);opacity:.6;transition:transform .18s;transform:rotate(-90deg)}
+  .nav-group.open .group-label::after{transform:rotate(0deg);opacity:.9}
+  .nav-group .group-items{display:none;flex-direction:column;gap:4px;width:100%;padding:2px 0 8px 8px}
+  .nav-group.open .group-items{display:flex}
   .nav-group .group-items button:hover{background:rgba(0,0,0,.04)}
+  .nav-group.has-active .group-label{color:#1f6f5c !important}
   .nav-close{position:absolute;top:14px;right:14px;background:transparent;border:none;font-size:24px;cursor:pointer;color:var(--ink-soft);line-height:1;padding:6px 10px;border-radius:8px}
   .nav-close:hover{background:rgba(0,0,0,.06)}
   .hamburger{display:inline-flex;background:transparent;border:1px solid var(--line);border-radius:10px;width:42px;height:42px;font-size:20px;cursor:pointer;align-items:center;justify-content:center;color:var(--ink);flex-shrink:0}
@@ -2049,7 +2053,7 @@ const SUPA_URL='https://jvfewdukhgmtdieufpaf.supabase.co';
 const SUPA_KEY='sb_publishable_O2rf2zCnJTZ1YE5q4eJeeA_AVdukzUg';
 const db=supabase.createClient(SUPA_URL,SUPA_KEY);
 // APP_VERSION: aparece no canto superior direito. Bump a cada deploy.
-const APP_VERSION='v90';
+const APP_VERSION='v91';
 document.addEventListener('DOMContentLoaded',()=>{
   const set=(id)=>{const el=document.getElementById(id);if(el)el.textContent=APP_VERSION;};
   set('app-version');set('version-fixed');
@@ -2143,6 +2147,32 @@ function setupNavMenu(){
     b.addEventListener('click',()=>closeDrawer());
   });
   document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDrawer();});
+
+  // ===== Accordion: click no label expande/colapsa. Sort alfabético dos grupos. =====
+  const groups=Array.from(nav.querySelectorAll('.nav-group'));
+  // Ordena por texto do label (ignora emoji e espaços à esquerda)
+  groups.sort((a,b)=>{
+    const na=a.querySelector('.group-label').textContent.replace(/^[^A-Za-zÀ-ÿ]+/,'').trim();
+    const nb=b.querySelector('.group-label').textContent.replace(/^[^A-Za-zÀ-ÿ]+/,'').trim();
+    return na.localeCompare(nb,'pt-BR');
+  });
+  groups.forEach(g=>nav.appendChild(g));
+  // Wire toggle
+  nav.querySelectorAll('.group-label').forEach(lbl=>{
+    lbl.addEventListener('click',(e)=>{
+      e.stopPropagation();
+      const g=lbl.parentElement;
+      g.classList.toggle('open');
+      salvaNavAberto();
+    });
+  });
+  carregaNavAberto();
+}
+function salvaNavAberto(){
+  try{const abertos=Array.from(document.querySelectorAll('.nav-group.open')).map(g=>g.dataset.group);localStorage.setItem('navAbertos',JSON.stringify(abertos));}catch(e){}
+}
+function carregaNavAberto(){
+  try{const abertos=JSON.parse(localStorage.getItem('navAbertos')||'[]');document.querySelectorAll('.nav-group').forEach(g=>{g.classList.toggle('open',abertos.includes(g.dataset.group));});}catch(e){}
 }
 setupNavMenu();
 function setAuthMode(m){authMode=m;$('login-error').style.display='none';$('signup-extra').style.display=m==='signup'?'block':'none';$('btn-auth').textContent=m==='signup'?'Criar conta':'Entrar';$('auth-sub').textContent=m==='signup'?'Crie seu login com e-mail e senha.':'Acesso restrito. Entre com seu e-mail e senha.';$('auth-toggle').textContent=m==='signup'?'Já tenho conta — entrar':'Criar login';}
@@ -2367,6 +2397,8 @@ function showView(v){
   // Sincroniza marcação visual do grupo (rótulo destacado quando um botão dentro está ativo)
   document.querySelectorAll('.nav-group').forEach(g=>{
     g.classList.toggle('has-active',!!g.querySelector('.group-items > button.active'));
+    // Se um grupo tem item ativo, garante que fica aberto pra o usuário ver
+    if(g.querySelector('.group-items > button.active'))g.classList.add('open');
   });
   if(v==='relatorios')renderRelatorios();
   if(v==='ferias')openFerias();
