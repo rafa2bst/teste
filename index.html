@@ -1458,7 +1458,7 @@
       <div id="am-edit-info" style="background:#f7f5ee;border:1px solid var(--line);border-radius:6px;padding:10px 12px;font-size:12px;margin-bottom:12px;color:#5a5548"></div>
       <label style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);font-weight:700">Texto da célula</label>
       <input type="text" id="am-edit-nota" placeholder='Ex.: "Consulta 15 às 18hrs"' style="margin-top:4px;font-size:14px">
-      <p class="hint" style="font-size:11px;margin-top:6px">O texto digitado substitui o padrão da célula (Consulta, Férias, Folga, etc). A cor continua a mesma do tipo de ausência. Deixe vazio pra voltar ao padrão automático.</p>
+      <p class="hint" style="font-size:11px;margin-top:6px">O texto digitado substitui o padrão da célula (Consulta, Férias, Folga, etc). A cor continua a mesma do tipo de ausência. Deixe vazio pra voltar ao padrão automático.<br><b>As notas são compartilhadas</b> entre Rafael, Maria e Tiago.</p>
       <div style="display:flex;justify-content:space-between;gap:8px;margin-top:14px">
         <button class="btn-del" onclick="apagarNotaAm()" id="am-edit-del" style="font-size:12px">↺ Voltar ao padrão</button>
         <div style="display:flex;gap:8px">
@@ -1958,7 +1958,7 @@ const SUPA_URL='https://jvfewdukhgmtdieufpaf.supabase.co';
 const SUPA_KEY='sb_publishable_O2rf2zCnJTZ1YE5q4eJeeA_AVdukzUg';
 const db=supabase.createClient(SUPA_URL,SUPA_KEY);
 // APP_VERSION: aparece no canto superior direito. Bump a cada deploy.
-const APP_VERSION='v87';
+const APP_VERSION='v89';
 document.addEventListener('DOMContentLoaded',()=>{
   const set=(id)=>{const el=document.getElementById(id);if(el)el.textContent=APP_VERSION;};
   set('app-version');set('version-fixed');
@@ -5009,6 +5009,12 @@ async function renderAusMes(){
     db.from('calendario_notas').select('*').gte('data',dataIni).lte('data',dataFim)
   ]);
   amDados.folgas=fol.data||[];amDados.ferias=fer.data||[];amDados.atestados=ate.data||[];amDados.ocorrencias=oc.data||[];
+  // Se der erro de schema cache, avisa pra rodar o SQL — mas segue renderizando o resto
+  if(notas.error&&(notas.error.code==='PGRST205'||/schema cache|does not exist/i.test(notas.error.message||''))){
+    amTabelaFaltando=true;
+  }else{
+    amTabelaFaltando=false;
+  }
   const notasList=notas.error?[]:(notas.data||[]);
   // Monta matriz: por colab, por dia = {tipo, label, cor}
   const ativos=equipe.filter(e=>!e.desligado).sort((a,b)=>(a.nome_curto||a.nome_completo||'').localeCompare(b.nome_curto||b.nome_completo||''));
@@ -5159,26 +5165,31 @@ async function renderAusMes(){
   });
 }
 
-// ===== Edição de nota em célula do calendário =====
-let amEditCtx={colab:null,data:null};
+// ===== Edição de nota em célula do calendário (Supabase — compartilhado) =====
+let amEditCtx={colab:null,data:null},amTabelaFaltando=false;
+const AM_SQL_INSTRUCAO=`⚠ A tabela "calendario_notas" ainda não existe no Supabase.\n\nPra criar (2 minutos):\n\n1. Abra: https://supabase.com/dashboard/project/jvfewdukhgmtdieufpaf/sql/new\n2. Cole o SQL do arquivo "criar_calendario_notas.sql"\n3. Aperte Run\n4. Recarregue esta página (Ctrl+F5)\n\nO IMPORTANTE: o SQL agora inclui um "notify pgrst" que força o Supabase a reconhecer a tabela imediatamente. Sem isso a tabela é criada mas o site continua não achando ela.`;
+function amAvisaFaltando(){alert(AM_SQL_INSTRUCAO);}
+
 async function abrirEditAm(colab,dataISO,nomeCurto){
+  if(amTabelaFaltando){amAvisaFaltando();return;}
   amEditCtx={colab,data:dataISO};
   const [y,m,d]=dataISO.split('-');
   const dt=new Date(dataISO+'T12:00');
   const dow=AM_DIAS_SEMANA[dt.getDay()];
   $('am-edit-info').innerHTML=`<b>${esc(nomeCurto||colab)}</b> · ${d}/${m}/${y} · ${dow}<br><span style="font-size:11px;color:var(--ink-soft)">Colaborador: ${esc(colab)}</span>`;
-  // Busca nota atual
-  const{data:atual}=await db.from('calendario_notas').select('nota').eq('colaborador',colab).eq('data',dataISO).maybeSingle();
-  // Se já tem nota, mostra ela pra editar. Senão, pré-preenche com a label padrão da célula
-  // (assim ela pode partir da "Consulta 17:00" e alterar pra "Consulta 15 às 18hrs")
+  const{data:atual,error:eGet}=await db.from('calendario_notas').select('nota,atualizado_por,atualizado_em').eq('colaborador',colab).eq('data',dataISO).maybeSingle();
+  if(eGet&&(eGet.code==='PGRST205'||/schema cache|does not exist/i.test(eGet.message||''))){amTabelaFaltando=true;amAvisaFaltando();return;}
   let valorInicial=(atual&&atual.nota)||'';
   if(!valorInicial){
-    // Tenta pegar o texto atual da célula (o TD renderizado)
     const td=$('am-tabela').querySelector(`td[data-am-c="${colab.replace(/"/g,'\\"')}"][data-am-d="${dataISO}"]`);
     if(td)valorInicial=(td.textContent||'').trim();
   }
   $('am-edit-nota').value=valorInicial;
   $('am-edit-del').style.display=(atual&&atual.nota)?'':'none';
+  // Se tem quem editou por último, mostra
+  if(atual&&atual.atualizado_por){
+    $('am-edit-info').innerHTML+=`<div style="font-size:10.5px;color:var(--ink-soft);margin-top:4px">✏️ Última edição por <b>${esc(atual.atualizado_por)}</b></div>`;
+  }
   $('am-edit-bg').style.display='flex';
   setTimeout(()=>{const el=$('am-edit-nota');el.focus();el.select();},50);
 }
@@ -5188,16 +5199,22 @@ async function salvarNotaAm(){
   const nota=$('am-edit-nota').value.trim();
   if(!nota){await apagarNotaAm();return;}
   const{error}=await db.from('calendario_notas').upsert({colaborador:colab,data,nota,atualizado_em:new Date().toISOString(),atualizado_por:currentEmail},{onConflict:'colaborador,data'});
-  if(error){alert('Erro: '+error.message);return;}
-  toast('✓ Nota salva');
+  if(error){
+    if(error.code==='PGRST205'||/schema cache|does not exist/i.test(error.message||'')){amTabelaFaltando=true;amAvisaFaltando();return;}
+    alert('Erro: '+error.message);return;
+  }
+  toast('✓ Nota salva (visível pra Rafael, Maria e Tiago)');
   fecharEditAm();
   await renderAusMes();
 }
 async function apagarNotaAm(){
   const {colab,data}=amEditCtx;if(!colab||!data)return;
   const{error}=await db.from('calendario_notas').delete().eq('colaborador',colab).eq('data',data);
-  if(error){alert('Erro: '+error.message);return;}
-  toast('✓ Nota apagada');
+  if(error){
+    if(error.code==='PGRST205'||/schema cache|does not exist/i.test(error.message||'')){amTabelaFaltando=true;amAvisaFaltando();return;}
+    alert('Erro: '+error.message);return;
+  }
+  toast('✓ Nota removida');
   fecharEditAm();
   await renderAusMes();
 }
