@@ -243,6 +243,8 @@
         <button id="nav-exp2b">Exportar Ausências → 2B</button>
         <button id="nav-ausmes">Calendário de Ausências</button>
         <button id="nav-mie">Metas &amp; Índice de Eficiência</button>
+        <button id="nav-metas">Metas (Sat SGD Fone/Web/Chat)</button>
+        <button id="nav-dashmetas">Dashboard de Metas</button>
       </div>
     </div>
 
@@ -1469,6 +1471,95 @@
     </div>
   </div>
 
+  <!-- VIEW: METAS (com sub-abas) -->
+  <div id="view-metas" style="display:none">
+    <style>
+      body.metas-view .wrap{max-width:1400px !important}
+      #view-metas .form-card,#view-dashmetas .form-card{max-width:none}
+      .met-sub{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+      .met-sub button{background:#f4f1ea;color:#5a5548;border:1px solid var(--line);padding:8px 14px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit}
+      .met-sub button.on{background:#1f6f5c;color:#fff;border-color:#175547}
+      .met-sub button.link{background:transparent;border:none;color:#1f6f5c;text-decoration:underline;font-size:12px;padding:8px 4px}
+      .met-tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:12.5px;background:#fff}
+      .met-tbl th,.met-tbl td{padding:6px 8px;border-bottom:1px solid #eee;text-align:left}
+      .met-tbl th{background:#faf8f2;font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;font-weight:600;white-space:nowrap}
+      .met-tbl input[type=number]{width:70px;padding:3px 6px;font-size:12px;border:1px solid var(--line);border-radius:4px;text-align:right}
+      .met-tbl input[type=text]{width:100%;padding:3px 6px;font-size:12px;border:1px solid var(--line);border-radius:4px}
+      .met-tbl .celvazia{background:#f0f0f0;color:#aaa;text-align:center;font-style:italic;font-size:10.5px}
+    </style>
+    <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
+      <h2>Metas</h2>
+      <p class="hint">Cadastre os tipos de meta, defina quais se aplicam a cada colaborador, e lance os valores mensais.</p>
+    </div>
+    <div class="form-card">
+      <div class="met-sub">
+        <button id="metsub-tipos" class="on" onclick="metasSubtab('tipos')">📋 Tipos de Meta</button>
+        <button id="metsub-atrib" onclick="metasSubtab('atrib')">👥 Atribuição por colab</button>
+        <button id="metsub-lanc" onclick="metasSubtab('lanc')">📅 Lançamentos mensais</button>
+        <div style="flex:1"></div>
+        <button class="link" onclick="showView('metcol')">→ Metas Colaborador (aba antiga)</button>
+        <button class="link" onclick="showView('dashmetas')">→ Dashboard Metas</button>
+      </div>
+
+      <!-- SUB-ABA: Tipos -->
+      <div id="metsec-tipos">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="font-size:13px;color:var(--ink-soft)">Cada tipo tem uma meta única aplicada a todos os colaboradores que o recebem.</div>
+          <button class="btn-primary" onclick="novoTipoMeta()" style="font-size:12px;padding:6px 12px">+ Novo tipo</button>
+        </div>
+        <div id="mt-tabela" style="overflow-x:auto"></div>
+      </div>
+
+      <!-- SUB-ABA: Atribuição -->
+      <div id="metsec-atrib" style="display:none">
+        <p class="hint" style="margin-bottom:12px">Marque o checkbox de cada colaborador nas metas que ele tem. Salva automaticamente ao marcar/desmarcar.</p>
+        <div id="ma-tabela" style="overflow-x:auto;max-height:70vh"></div>
+      </div>
+
+      <!-- SUB-ABA: Lançamentos -->
+      <div id="metsec-lanc" style="display:none">
+        <div class="row2" style="margin-bottom:12px">
+          <div><label>Ano</label><select id="ml-ano" onchange="renderMetasLanc()"></select></div>
+          <div><label>Mês</label><select id="ml-mes" onchange="renderMetasLanc()"></select></div>
+        </div>
+        <p class="hint" style="margin-bottom:10px">Só aparecem os colaboradores que têm alguma meta atribuída. Células cinzas = colaborador não tem aquela meta. Digite o valor e saia do campo (Tab) pra salvar.</p>
+        <div id="ml-tabela" style="overflow-x:auto"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIEW: DASHBOARD DE METAS -->
+  <div id="view-dashmetas" style="display:none">
+    <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
+      <h2>Dashboard de Metas</h2>
+      <p class="hint">Visualize o desempenho dos colaboradores por tipo de meta ao longo do ano.</p>
+    </div>
+    <div class="form-card">
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px;align-items:end">
+        <div><label>Ano</label><select id="dm-ano" onchange="renderDashMetas()" style="min-width:100px"></select></div>
+        <div><label>Mês</label><select id="dm-mes" onchange="renderDashMetas()" style="min-width:130px"></select></div>
+        <div><label>Tipo de meta</label><select id="dm-tipo" onchange="renderDashMetas()" style="min-width:220px"><option value="">Todos os tipos</option></select></div>
+        <div style="flex:1"></div>
+        <button class="link" onclick="showView('metas')" style="background:transparent;border:none;color:#1f6f5c;text-decoration:underline;font-size:12px;cursor:pointer">← Voltar pra Metas</button>
+      </div>
+      <div id="dm-kpis" class="kpis"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px" id="dm-grid">
+        <div class="form-card" style="padding:14px;background:#fff">
+          <h3 style="margin:0 0 10px;font-size:14px">Realizado × Meta (mês selecionado)</h3>
+          <canvas id="dm-chart-mes" height="240"></canvas>
+        </div>
+        <div class="form-card" style="padding:14px;background:#fff">
+          <h3 style="margin:0 0 10px;font-size:14px">Evolução ao longo do ano</h3>
+          <canvas id="dm-chart-ano" height="240"></canvas>
+        </div>
+      </div>
+      <div class="form-card" style="padding:14px;background:#fff;margin-top:16px">
+        <h3 style="margin:0 0 10px;font-size:14px">Ranking por eficiência (mês selecionado)</h3>
+        <div id="dm-ranking" style="overflow-x:auto"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- VIEW: KANBAN PERFORMANCE -->
   <div id="view-perf" style="display:none">
     <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
@@ -1958,7 +2049,7 @@ const SUPA_URL='https://jvfewdukhgmtdieufpaf.supabase.co';
 const SUPA_KEY='sb_publishable_O2rf2zCnJTZ1YE5q4eJeeA_AVdukzUg';
 const db=supabase.createClient(SUPA_URL,SUPA_KEY);
 // APP_VERSION: aparece no canto superior direito. Bump a cada deploy.
-const APP_VERSION='v89';
+const APP_VERSION='v90';
 document.addEventListener('DOMContentLoaded',()=>{
   const set=(id)=>{const el=document.getElementById(id);if(el)el.textContent=APP_VERSION;};
   set('app-version');set('version-fixed');
@@ -2006,6 +2097,8 @@ async function showApp(user){
   ['nav-soladm','nav-feradm','nav-atadm','nav-ocadm','nav-mtadm'].forEach(id=>$(id).style.display=isRafael?'':'none');
   // Metas colaborador + Comparativo anual + Plan. Estratégico: EXCLUSIVO do Rafael
   $('nav-metcol').style.display=isRafael?'':'none';
+  $('nav-metas').style.display=isRafael?'':'none';
+  $('nav-dashmetas').style.display=isRafael?'':'none';
   $('nav-compano').style.display=isRafael?'':'none';
   $('nav-plantel').style.display=isRafael?'':'none';
   $('nav-mie').style.display=isRafael?'':'none';
@@ -2167,7 +2260,7 @@ async function registrarManutencao(patr){
 
 // ===== Views =====
 function showView(v){
-  const adminViews=['cadastro','relatorios','eq','us','ferias','folgas','ho','aloc','met','metcol','compano','plantel','exp2b','ausmes','mie','perf','dperf','atestados','aniv','ocor','prob','trein','anom','fat','dash','insatadm','soladm','feradm','atadm','ocadm','mtadm','tar','rot','onb'];
+  const adminViews=['cadastro','relatorios','eq','us','ferias','folgas','ho','aloc','met','metcol','compano','plantel','exp2b','ausmes','mie','metas','dashmetas','perf','dperf','atestados','aniv','ocor','prob','trein','anom','fat','dash','insatadm','soladm','feradm','atadm','ocadm','mtadm','tar','rot','onb'];
   if(adminViews.includes(v)&&!isAdminUser)v='solfolga';
   $('view-cadastro').style.display=v==='cadastro'?'block':'none';
   $('view-relatorios').style.display=v==='relatorios'?'block':'none';
@@ -2207,6 +2300,9 @@ function showView(v){
   $('view-exp2b').style.display=v==='exp2b'?'block':'none';
   $('view-ausmes').style.display=v==='ausmes'?'block':'none';
   $('view-mie').style.display=v==='mie'?'block':'none';
+  $('view-metas').style.display=v==='metas'?'block':'none';
+  $('view-dashmetas').style.display=v==='dashmetas'?'block':'none';
+  document.body.classList.toggle('metas-view',v==='metas'||v==='dashmetas');
   document.body.classList.toggle('compano-view',v==='compano'||v==='plantel'||v==='exp2b');
   document.body.classList.toggle('ausmes-view',v==='ausmes');
   document.body.classList.toggle('mie-view',v==='mie');
@@ -2308,6 +2404,8 @@ function showView(v){
   if(v==='exp2b')openExp2B();
   if(v==='ausmes')openAusMes();
   if(v==='mie')openMie();
+  if(v==='metas')openMetas();
+  if(v==='dashmetas')openDashMetas();
   if(v==='insatadm')openInsatAdm();
   if(v==='meusinsat')openMeusInsat();
   if(v==='fin-novo')openFinNovo();
@@ -5218,7 +5316,228 @@ async function apagarNotaAm(){
   fecharEditAm();
   await renderAusMes();
 }
+
+// ===== Sistema de Metas: Tipos, Atribuição, Lançamentos =====
+$('nav-metas').onclick=()=>showView('metas');
+$('nav-dashmetas').onclick=()=>showView('dashmetas');
 $('nav-insatadm').onclick=()=>showView('insatadm');
+let metTipos=[],metAtrib=[],metLancs=[],metSubAtual='tipos';
+const MET_SQL_ERR='⚠ As tabelas de Metas ainda não existem no Supabase.\n\nRode o SQL "criar_metas_sistema.sql" no Supabase e recarregue a página.';
+function metErrHandle(err){if(err&&(err.code==='PGRST205'||/schema cache|does not exist/i.test(err.message||''))){alert(MET_SQL_ERR);return true;}return false;}
+
+async function openMetas(){
+  const r1=await db.from('metas_tipos').select('*').order('ordem');
+  if(metErrHandle(r1.error))return;
+  metTipos=r1.data||[];
+  const r2=await db.from('metas_atribuicao').select('*');metAtrib=r2.data||[];
+  const r3=await db.from('metas_lancamentos').select('*');metLancs=r3.data||[];
+  metasSubtab(metSubAtual);
+}
+function metasSubtab(sub){
+  metSubAtual=sub;
+  ['tipos','atrib','lanc'].forEach(s=>{
+    $('metsub-'+s).classList.toggle('on',s===sub);
+    $('metsec-'+s).style.display=s===sub?'block':'none';
+  });
+  if(sub==='tipos')renderMetTipos();
+  if(sub==='atrib')renderMetAtrib();
+  if(sub==='lanc'){popMLPeriodo();renderMetasLanc();}
+}
+
+// --- Sub: Tipos ---
+function renderMetTipos(){
+  if(!metTipos.length){$('mt-tabela').innerHTML='<div class="empty">Nenhum tipo cadastrado. Clique "+ Novo tipo" pra começar.</div>';return;}
+  let h='<table class="met-tbl"><thead><tr><th>Nome</th><th>Unidade</th><th>Meta (valor-alvo)</th><th>Ordem</th><th>Ativo</th><th>Ações</th></tr></thead><tbody>';
+  metTipos.forEach(t=>{
+    h+=`<tr>
+      <td><input type="text" value="${esc(t.nome)}" onchange="atualTipoMeta('${t.id}','nome',this.value)"></td>
+      <td><select onchange="atualTipoMeta('${t.id}','unidade',this.value)" style="padding:3px 6px;font-size:12px"><option ${t.unidade==='%'?'selected':''}>%</option><option ${t.unidade==='min'?'selected':''}>min</option><option ${t.unidade==='qtd'?'selected':''}>qtd</option></select></td>
+      <td><input type="number" step="0.01" value="${esc(t.valor_alvo)}" onchange="atualTipoMeta('${t.id}','valor_alvo',this.value)"> ${esc(t.unidade)}</td>
+      <td><input type="number" value="${esc(t.ordem||0)}" onchange="atualTipoMeta('${t.id}','ordem',this.value)" style="width:50px"></td>
+      <td style="text-align:center"><input type="checkbox" ${t.ativo?'checked':''} onchange="atualTipoMeta('${t.id}','ativo',this.checked)"></td>
+      <td><button class="btn-del" onclick="apagarTipoMeta('${t.id}','${esc(t.nome)}')" style="font-size:11px;padding:4px 10px">🗑</button></td>
+    </tr>`;
+  });
+  h+='</tbody></table>';
+  $('mt-tabela').innerHTML=h;
+}
+async function novoTipoMeta(){
+  const nome=prompt('Nome do novo tipo de meta:');if(!nome||!nome.trim())return;
+  const valor=parseFloat(prompt('Valor-alvo (meta) numérica:','96'));if(isNaN(valor))return;
+  const{data,error}=await db.from('metas_tipos').insert({nome:nome.trim(),unidade:'%',valor_alvo:valor,ordem:metTipos.length+1}).select().single();
+  if(metErrHandle(error))return;
+  if(error){alert('Erro: '+error.message);return;}
+  metTipos.push(data);renderMetTipos();toast('✓ Tipo criado');
+}
+async function atualTipoMeta(id,campo,valor){
+  const t=metTipos.find(x=>x.id===id);if(!t)return;
+  if(campo==='valor_alvo'||campo==='ordem')valor=parseFloat(valor)||0;
+  t[campo]=valor;
+  const{error}=await db.from('metas_tipos').update({[campo]:valor}).eq('id',id);
+  if(error){alert('Erro: '+error.message);await openMetas();return;}
+  toast('✓ Salvo');
+}
+async function apagarTipoMeta(id,nome){
+  if(!confirm(`Apagar tipo "${nome}"?\n\nIsso REMOVE também todas as atribuições e lançamentos vinculados. Ação irreversível.`))return;
+  const{error}=await db.from('metas_tipos').delete().eq('id',id);
+  if(error){alert('Erro: '+error.message);return;}
+  toast('✓ Apagado');await openMetas();
+}
+
+// --- Sub: Atribuição ---
+function renderMetAtrib(){
+  const ativos=equipe.filter(e=>!e.desligado).sort((a,b)=>(a.nome_curto||a.nome_completo||'').localeCompare(b.nome_curto||b.nome_completo||''));
+  if(!ativos.length||!metTipos.filter(t=>t.ativo).length){$('ma-tabela').innerHTML='<div class="empty">Precisa ter colaboradores ativos na Equipe e pelo menos 1 tipo de meta ativo.</div>';return;}
+  const tiposAtivos=metTipos.filter(t=>t.ativo);
+  const key=(c,tid)=>c+'|'+tid;
+  const atribSet=new Set(metAtrib.map(a=>key(a.colaborador,a.tipo_id)));
+  let h='<table class="met-tbl"><thead><tr><th style="min-width:200px;position:sticky;left:0;background:#faf8f2;z-index:1">Colaborador</th>';
+  tiposAtivos.forEach(t=>h+=`<th style="text-align:center;min-width:110px" title="${esc(t.nome)} (meta ${t.valor_alvo}${t.unidade})">${esc(t.nome)}<br><span style="font-size:9.5px;color:#5f5e5a;font-weight:400;text-transform:none">meta ${t.valor_alvo}${t.unidade}</span></th>`);
+  h+='</tr></thead><tbody>';
+  ativos.forEach(e=>{
+    const cn=e.nome_completo||e.nome_curto||'';
+    h+=`<tr><td style="position:sticky;left:0;background:#fff;font-weight:500">${esc(e.nome_curto||cn)}<br><span style="font-size:10.5px;color:var(--ink-soft);font-weight:400">${esc(cn)}</span></td>`;
+    tiposAtivos.forEach(t=>{
+      const has=atribSet.has(key(cn,t.id));
+      h+=`<td style="text-align:center"><input type="checkbox" ${has?'checked':''} onchange="toggleAtribMeta('${esc(cn)}','${t.id}',this.checked)" style="width:18px;height:18px;cursor:pointer"></td>`;
+    });
+    h+='</tr>';
+  });
+  h+='</tbody></table>';
+  $('ma-tabela').innerHTML=h;
+}
+async function toggleAtribMeta(colab,tipoId,marcar){
+  if(marcar){
+    const{error}=await db.from('metas_atribuicao').insert({colaborador:colab,tipo_id:tipoId});
+    if(error){if(error.code!=='23505'){alert('Erro: '+error.message);return;}}
+    metAtrib.push({colaborador:colab,tipo_id:tipoId});
+  }else{
+    const{error}=await db.from('metas_atribuicao').delete().eq('colaborador',colab).eq('tipo_id',tipoId);
+    if(error){alert('Erro: '+error.message);return;}
+    metAtrib=metAtrib.filter(a=>!(a.colaborador===colab&&a.tipo_id===tipoId));
+  }
+  toast(marcar?'✓ Atribuído':'✓ Removido');
+}
+
+// --- Sub: Lançamentos ---
+function popMLPeriodo(){
+  const hoje=new Date(),anos=[];for(let a=hoje.getFullYear()-1;a<=hoje.getFullYear()+1;a++)anos.push(a);
+  const selA=$('ml-ano'),curA=selA.value||hoje.getFullYear();
+  selA.innerHTML=anos.map(a=>`<option ${a==curA?'selected':''}>${a}</option>`).join('');
+  const selM=$('ml-mes'),curM=selM.value||(hoje.getMonth()+1);
+  selM.innerHTML=MESES.map((m,i)=>`<option value="${i+1}" ${(i+1)==curM?'selected':''}>${m}</option>`).join('');
+}
+function renderMetasLanc(){
+  const ano=parseInt($('ml-ano').value),mes=parseInt($('ml-mes').value);
+  const ativos=equipe.filter(e=>!e.desligado).sort((a,b)=>(a.nome_curto||a.nome_completo||'').localeCompare(b.nome_curto||b.nome_completo||''));
+  const tiposAtivos=metTipos.filter(t=>t.ativo);
+  const atribByColab={};metAtrib.forEach(a=>{(atribByColab[a.colaborador]=atribByColab[a.colaborador]||new Set()).add(a.tipo_id);});
+  // Só linhas com pelo menos 1 atribuição
+  const colabsComMeta=ativos.filter(e=>{const cn=e.nome_completo||e.nome_curto||'';return atribByColab[cn]&&atribByColab[cn].size>0;});
+  if(!colabsComMeta.length){$('ml-tabela').innerHTML='<div class="empty">Nenhum colaborador tem meta atribuída. Vá em "Atribuição por colab" pra marcar.</div>';return;}
+  const lancMap={};metLancs.forEach(l=>{lancMap[l.colaborador+'|'+l.tipo_id+'|'+l.ano+'|'+l.mes]=l.valor_realizado;});
+  let h='<table class="met-tbl"><thead><tr><th style="min-width:200px;position:sticky;left:0;background:#faf8f2;z-index:1">Colaborador</th>';
+  tiposAtivos.forEach(t=>h+=`<th style="text-align:center;min-width:130px">${esc(t.nome)}<br><span style="font-size:9.5px;color:#5f5e5a;font-weight:400;text-transform:none">meta ${t.valor_alvo}${t.unidade}</span></th>`);
+  h+='</tr></thead><tbody>';
+  colabsComMeta.forEach(e=>{
+    const cn=e.nome_completo||e.nome_curto||'';
+    h+=`<tr><td style="position:sticky;left:0;background:#fff;font-weight:500">${esc(e.nome_curto||cn)}</td>`;
+    tiposAtivos.forEach(t=>{
+      const tem=atribByColab[cn]&&atribByColab[cn].has(t.id);
+      if(!tem){h+='<td class="celvazia">—</td>';return;}
+      const val=lancMap[cn+'|'+t.id+'|'+ano+'|'+mes];
+      const bateu=val!=null&&parseFloat(val)>=parseFloat(t.valor_alvo);
+      h+=`<td style="text-align:center"><input type="number" step="0.01" value="${val!=null?esc(val):''}" onblur="salvarLancMeta('${esc(cn)}','${t.id}',${ano},${mes},this.value)" style="width:80px;text-align:right${bateu?';background:#dfebe0;color:#175547;font-weight:600':''}"> ${esc(t.unidade)}</td>`;
+    });
+    h+='</tr>';
+  });
+  h+='</tbody></table>';
+  $('ml-tabela').innerHTML=h;
+}
+async function salvarLancMeta(colab,tipoId,ano,mes,valor){
+  const v=valor===''?null:parseFloat(valor);
+  if(valor!==''&&isNaN(v)){alert('Valor inválido');return;}
+  const existing=metLancs.find(l=>l.colaborador===colab&&l.tipo_id===tipoId&&l.ano===ano&&l.mes===mes);
+  const{error}=await db.from('metas_lancamentos').upsert({colaborador:colab,tipo_id:tipoId,ano,mes,valor_realizado:v,atualizado_em:new Date().toISOString(),atualizado_por:currentEmail},{onConflict:'colaborador,tipo_id,ano,mes'});
+  if(error){alert('Erro: '+error.message);return;}
+  if(existing)existing.valor_realizado=v;
+  else metLancs.push({colaborador:colab,tipo_id:tipoId,ano,mes,valor_realizado:v});
+  renderMetasLanc();
+}
+
+// ===== Dashboard de Metas =====
+let dmCharts={};
+async function openDashMetas(){
+  const r1=await db.from('metas_tipos').select('*').eq('ativo',true).order('ordem');
+  if(metErrHandle(r1.error))return;
+  metTipos=r1.data||[];
+  const r2=await db.from('metas_atribuicao').select('*');metAtrib=r2.data||[];
+  const r3=await db.from('metas_lancamentos').select('*');metLancs=r3.data||[];
+  // Popula selects
+  const hoje=new Date(),anos=[];for(let a=hoje.getFullYear()-1;a<=hoje.getFullYear()+1;a++)anos.push(a);
+  const selA=$('dm-ano'),curA=selA.value||hoje.getFullYear();
+  selA.innerHTML=anos.map(a=>`<option ${a==curA?'selected':''}>${a}</option>`).join('');
+  const selM=$('dm-mes'),curM=selM.value||(hoje.getMonth()+1);
+  selM.innerHTML=MESES.map((m,i)=>`<option value="${i+1}" ${(i+1)==curM?'selected':''}>${m}</option>`).join('');
+  const selT=$('dm-tipo'),curT=selT.value;
+  selT.innerHTML='<option value="">Todos os tipos</option>'+metTipos.map(t=>`<option value="${t.id}" ${t.id===curT?'selected':''}>${esc(t.nome)}</option>`).join('');
+  renderDashMetas();
+}
+function renderDashMetas(){
+  const ano=parseInt($('dm-ano').value),mes=parseInt($('dm-mes').value),tipoFiltro=$('dm-tipo').value;
+  const tiposUsar=tipoFiltro?metTipos.filter(t=>t.id===tipoFiltro):metTipos;
+  const lancsUsar=metLancs.filter(l=>l.ano===ano&&l.mes===mes&&(!tipoFiltro||l.tipo_id===tipoFiltro)&&l.valor_realizado!=null);
+  // KPIs
+  const colabsAtiv=new Set(metAtrib.filter(a=>!tipoFiltro||a.tipo_id===tipoFiltro).map(a=>a.colaborador));
+  let bateram=0,total=0,soma=0;
+  lancsUsar.forEach(l=>{const t=tiposUsar.find(x=>x.id===l.tipo_id);if(!t)return;total++;soma+=parseFloat(l.valor_realizado);if(parseFloat(l.valor_realizado)>=parseFloat(t.valor_alvo))bateram++;});
+  const mediaGeral=total?(soma/total).toFixed(1):0;
+  $('dm-kpis').innerHTML=[
+    ['Colabs com meta',colabsAtiv.size,''],
+    ['Lançamentos no mês',total,''],
+    ['Bateram a meta',bateram+' de '+total,bateram===total&&total>0?'s-uso':(bateram>0?'s-manut':'s-desc')],
+    ['Média realizado',mediaGeral+'%','']
+  ].map(k=>`<div class="stat ${k[2]}"><b>${k[1]}</b><span>${esc(k[0])}</span></div>`).join('');
+  // Chart 1: barras por colaborador (mês selecionado)
+  renderDMChartMes(ano,mes,tiposUsar,lancsUsar);
+  // Chart 2: linha por mês (ano inteiro)
+  renderDMChartAno(ano,tiposUsar);
+  // Ranking
+  renderDMRanking(ano,mes,tiposUsar,lancsUsar);
+}
+function renderDMChartMes(ano,mes,tipos,lancs){
+  if(dmCharts.mes)dmCharts.mes.destroy();
+  if(!lancs.length){$('dm-chart-mes').getContext('2d').clearRect(0,0,999,999);return;}
+  const porColab={};lancs.forEach(l=>{const t=tipos.find(x=>x.id===l.tipo_id);if(!t)return;(porColab[l.colaborador]=porColab[l.colaborador]||[]).push({tipo:t.nome,realizado:parseFloat(l.valor_realizado),meta:parseFloat(t.valor_alvo)});});
+  const labels=Object.keys(porColab).sort();
+  // Se tem só 1 tipo, barras diretas. Senão, média por colab
+  const data=labels.map(c=>{const arr=porColab[c];return arr.reduce((s,x)=>s+x.realizado,0)/arr.length;});
+  const metaMedia=tipos.reduce((s,t)=>s+parseFloat(t.valor_alvo),0)/tipos.length;
+  const cores=data.map(v=>v>=metaMedia?'#1f6f5c':(v>=metaMedia*0.9?'#c97e2f':'#a64141'));
+  dmCharts.mes=new Chart($('dm-chart-mes').getContext('2d'),{type:'bar',data:{labels:labels.map(l=>{const p=l.split(' ');return p[0]+' '+(p[1]?p[1].slice(0,3):'')}),datasets:[{label:'Realizado',data,backgroundColor:cores,borderRadius:4}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},annotation:{}},scales:{x:{beginAtZero:true,max:100}}}});
+}
+function renderDMChartAno(ano,tipos){
+  if(dmCharts.ano)dmCharts.ano.destroy();
+  const meses=[1,2,3,4,5,6,7,8,9,10,11,12];
+  const datasets=tipos.map((t,i)=>{
+    const cores=['#1f6f5c','#c97e2f','#4a5a8c','#801c1c','#7a4a8c'];
+    const data=meses.map(m=>{const arr=metLancs.filter(l=>l.ano===ano&&l.mes===m&&l.tipo_id===t.id&&l.valor_realizado!=null);if(!arr.length)return null;return arr.reduce((s,x)=>s+parseFloat(x.valor_realizado),0)/arr.length;});
+    return{label:t.nome,data,borderColor:cores[i%cores.length],backgroundColor:cores[i%cores.length]+'22',tension:.3,spanGaps:true};
+  });
+  dmCharts.ano=new Chart($('dm-chart-ano').getContext('2d'),{type:'line',data:{labels:MESES.map(m=>m.slice(0,3)),datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10}}}},scales:{y:{beginAtZero:false}}}});
+}
+function renderDMRanking(ano,mes,tipos,lancs){
+  if(!lancs.length){$('dm-ranking').innerHTML='<div class="empty">Sem lançamentos pra o mês selecionado.</div>';return;}
+  const linhas=lancs.map(l=>{const t=tipos.find(x=>x.id===l.tipo_id);if(!t)return null;const r=parseFloat(l.valor_realizado),m=parseFloat(t.valor_alvo);return{colab:l.colaborador,tipo:t.nome,unid:t.unidade,realizado:r,meta:m,delta:r-m,pct:m?(r/m*100):0};}).filter(Boolean).sort((a,b)=>b.pct-a.pct);
+  let h='<table class="met-tbl"><thead><tr><th>#</th><th>Colaborador</th><th>Tipo</th><th style="text-align:right">Meta</th><th style="text-align:right">Realizado</th><th style="text-align:right">Δ</th><th style="text-align:right">% da meta</th></tr></thead><tbody>';
+  linhas.forEach((l,i)=>{
+    const cor=l.pct>=100?'#1f6f5c':(l.pct>=90?'#c97e2f':'#a64141');
+    const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1);
+    h+=`<tr><td>${medal}</td><td style="font-weight:500">${esc(l.colab)}</td><td style="font-size:11px;color:var(--ink-soft)">${esc(l.tipo)}</td><td style="text-align:right">${l.meta}${esc(l.unid)}</td><td style="text-align:right;font-weight:600">${l.realizado.toFixed(2)}${esc(l.unid)}</td><td style="text-align:right;color:${cor};font-weight:600">${l.delta>=0?'+':''}${l.delta.toFixed(2)}</td><td style="text-align:right;color:${cor};font-weight:700">${l.pct.toFixed(1)}%</td></tr>`;
+  });
+  h+='</tbody></table>';
+  $('dm-ranking').innerHTML=h;
+}
 $('nav-meusinsat').onclick=()=>showView('meusinsat');
 
 // ===== Insatisfeitos: state + helpers =====
