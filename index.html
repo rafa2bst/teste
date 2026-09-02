@@ -1577,19 +1577,46 @@
         <button class="link" onclick="showView('metas')" style="background:transparent;border:none;color:#1f6f5c;text-decoration:underline;font-size:12px;cursor:pointer">← Voltar pra Metas</button>
       </div>
       <div id="dm-kpis" class="kpis"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px" id="dm-grid">
+
+      <!-- Destaques -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
         <div class="form-card" style="padding:14px;background:#fff">
-          <h3 style="margin:0 0 10px;font-size:14px">Realizado × Meta (mês selecionado)</h3>
-          <canvas id="dm-chart-mes" height="240"></canvas>
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);font-weight:700;margin-bottom:10px">🏅 Destaques do mês</div>
+          <div id="dm-destaques-mes"></div>
         </div>
         <div class="form-card" style="padding:14px;background:#fff">
-          <h3 style="margin:0 0 10px;font-size:14px">Evolução ao longo do ano</h3>
-          <canvas id="dm-chart-ano" height="240"></canvas>
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);font-weight:700;margin-bottom:10px">🏆 Destaques do ano</div>
+          <div id="dm-destaques-ano"></div>
         </div>
       </div>
+
+      <!-- Gráficos -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+        <div class="form-card" style="padding:14px;background:#fff">
+          <h3 style="margin:0 0 10px;font-size:14px">Realizado × Meta (mês selecionado)</h3>
+          <div style="position:relative;height:320px;width:100%"><canvas id="dm-chart-mes"></canvas></div>
+        </div>
+        <div class="form-card" style="padding:14px;background:#fff">
+          <h3 style="margin:0 0 10px;font-size:14px">Evolução mensal (ano inteiro)</h3>
+          <div style="position:relative;height:320px;width:100%"><canvas id="dm-chart-ano"></canvas></div>
+        </div>
+      </div>
+
       <div class="form-card" style="padding:14px;background:#fff;margin-top:16px">
-        <h3 style="margin:0 0 10px;font-size:14px">Ranking por eficiência (mês selecionado)</h3>
-        <div id="dm-ranking" style="overflow-x:auto"></div>
+        <h3 style="margin:0 0 10px;font-size:14px">Ranking anual — média de eficiência por colaborador</h3>
+        <div style="position:relative;height:360px;width:100%"><canvas id="dm-chart-anual"></canvas></div>
+      </div>
+
+      <!-- Tabelas -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+        <div class="form-card" style="padding:14px;background:#fff">
+          <h3 style="margin:0 0 10px;font-size:14px">Ranking do mês</h3>
+          <div id="dm-ranking-mes" style="overflow-x:auto;max-height:400px;overflow-y:auto"></div>
+        </div>
+        <div class="form-card" style="padding:14px;background:#fff">
+          <h3 style="margin:0 0 10px;font-size:14px">Ranking do ano (média)</h3>
+          <div id="dm-ranking-ano" style="overflow-x:auto;max-height:400px;overflow-y:auto"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -2083,7 +2110,7 @@ const SUPA_URL='https://jvfewdukhgmtdieufpaf.supabase.co';
 const SUPA_KEY='sb_publishable_O2rf2zCnJTZ1YE5q4eJeeA_AVdukzUg';
 const db=supabase.createClient(SUPA_URL,SUPA_KEY);
 // APP_VERSION: aparece no canto superior direito. Bump a cada deploy.
-const APP_VERSION='v92';
+const APP_VERSION='v93';
 document.addEventListener('DOMContentLoaded',()=>{
   const set=(id)=>{const el=document.getElementById(id);if(el)el.textContent=APP_VERSION;};
   set('app-version');set('version-fixed');
@@ -5633,57 +5660,129 @@ async function openDashMetas(){
 function renderDashMetas(){
   const ano=parseInt($('dm-ano').value),mes=parseInt($('dm-mes').value),tipoFiltro=$('dm-tipo').value;
   const tiposUsar=tipoFiltro?metTipos.filter(t=>t.id===tipoFiltro):metTipos;
-  const lancsUsar=metLancs.filter(l=>l.ano===ano&&l.mes===mes&&(!tipoFiltro||l.tipo_id===tipoFiltro)&&l.valor_realizado!=null);
-  // KPIs
+  const lancsMes=metLancs.filter(l=>l.ano===ano&&l.mes===mes&&(!tipoFiltro||l.tipo_id===tipoFiltro)&&l.valor_realizado!=null);
+  const lancsAno=metLancs.filter(l=>l.ano===ano&&(!tipoFiltro||l.tipo_id===tipoFiltro)&&l.valor_realizado!=null);
+  // ===== KPIs =====
   const colabsAtiv=new Set(metAtrib.filter(a=>!tipoFiltro||a.tipo_id===tipoFiltro).map(a=>a.colaborador));
   let bateram=0,total=0,soma=0;
-  lancsUsar.forEach(l=>{const t=tiposUsar.find(x=>x.id===l.tipo_id);if(!t)return;total++;soma+=parseFloat(l.valor_realizado);if(parseFloat(l.valor_realizado)>=metaEfetiva(t.id,ano,mes))bateram++;});
-  const mediaGeral=total?(soma/total).toFixed(1):0;
+  lancsMes.forEach(l=>{const t=tiposUsar.find(x=>x.id===l.tipo_id);if(!t)return;total++;const meta=metaEfetiva(t.id,ano,mes);soma+=parseFloat(l.valor_realizado)/(meta||1)*100;if(parseFloat(l.valor_realizado)>=meta)bateram++;});
+  const mediaPct=total?(soma/total).toFixed(1):0;
   $('dm-kpis').innerHTML=[
     ['Colabs com meta',colabsAtiv.size,''],
     ['Lançamentos no mês',total,''],
-    ['Bateram a meta',bateram+' de '+total,bateram===total&&total>0?'s-uso':(bateram>0?'s-manut':'s-desc')],
-    ['Média realizado',mediaGeral+'%','']
+    ['Bateram a meta',bateram+'/'+total,bateram===total&&total>0?'s-uso':(bateram>0?'s-manut':'s-desc')],
+    ['Eficiência média',mediaPct+'%',mediaPct>=100?'s-uso':(mediaPct>=90?'s-manut':'s-desc')]
   ].map(k=>`<div class="stat ${k[2]}"><b>${k[1]}</b><span>${esc(k[0])}</span></div>`).join('');
-  // Chart 1: barras por colaborador (mês selecionado)
-  renderDMChartMes(ano,mes,tiposUsar,lancsUsar);
-  // Chart 2: linha por mês (ano inteiro)
+  // ===== Destaques =====
+  renderDMDestaques(ano,mes,tipoFiltro);
+  // ===== Charts =====
+  renderDMChartMes(ano,mes,tiposUsar,lancsMes);
   renderDMChartAno(ano,tiposUsar);
-  // Ranking
-  renderDMRanking(ano,mes,tiposUsar,lancsUsar);
+  renderDMChartAnual(ano,tiposUsar,lancsAno);
+  // ===== Tabelas =====
+  renderDMRankingMes(ano,mes,tiposUsar,lancsMes);
+  renderDMRankingAno(ano,tiposUsar,lancsAno);
 }
+
+function _dmScoreLanc(l){const meta=metaEfetiva(l.tipo_id,l.ano,l.mes);return meta?(parseFloat(l.valor_realizado)/meta*100):0;}
+
+function renderDMDestaques(ano,mes,tipoFiltro){
+  // Destaques do mês
+  const lancsMes=metLancs.filter(l=>l.ano===ano&&l.mes===mes&&l.valor_realizado!=null&&(!tipoFiltro||l.tipo_id===tipoFiltro));
+  const scoredMes=lancsMes.map(l=>{const t=metTipos.find(x=>x.id===l.tipo_id);if(!t)return null;return{colab:l.colaborador,tipo:t.nome,val:parseFloat(l.valor_realizado),meta:metaEfetiva(t.id,ano,mes),pct:_dmScoreLanc(l),unid:t.unidade};}).filter(Boolean).sort((a,b)=>b.pct-a.pct);
+  const melhorM=scoredMes[0],piorM=scoredMes[scoredMes.length-1];
+  const destaqueMesHTML=(l,titulo,cor,icone)=>l?`<div style="background:${cor.bg};border-left:4px solid ${cor.bd};padding:10px 14px;border-radius:0 8px 8px 0;margin-bottom:8px">
+    <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:${cor.tx};font-weight:700">${icone} ${titulo}</div>
+    <div style="font-family:var(--display);font-size:18px;font-weight:600;color:${cor.tx};margin-top:2px">${esc(l.colab)}</div>
+    <div style="font-size:12px;color:${cor.tx};opacity:.85">${esc(l.tipo)} · <b>${l.val.toFixed(2)}${esc(l.unid)}</b> (meta ${l.meta}${esc(l.unid)}) · <b>${l.pct.toFixed(1)}%</b> da meta</div>
+  </div>`:`<div style="font-size:12px;color:var(--ink-soft);font-style:italic;padding:10px 0">— sem dados —</div>`;
+  $('dm-destaques-mes').innerHTML=
+    destaqueMesHTML(melhorM,'Melhor do mês',{bg:'#eef4ee',bd:'#1f6f5c',tx:'#175547'},'🥇')+
+    destaqueMesHTML(piorM,'Pior do mês',{bg:'#f5dcdc',bd:'#a64141',tx:'#801c1c'},'🔻');
+
+  // Destaques do ano
+  const lancsAno=metLancs.filter(l=>l.ano===ano&&l.valor_realizado!=null&&(!tipoFiltro||l.tipo_id===tipoFiltro));
+  const porColabAno={};
+  lancsAno.forEach(l=>{const s=_dmScoreLanc(l);if(!s)return;(porColabAno[l.colaborador]=porColabAno[l.colaborador]||[]).push(s);});
+  const anoRank=Object.entries(porColabAno).filter(([_,arr])=>arr.length>=1).map(([colab,arr])=>({colab,pct:arr.reduce((s,v)=>s+v,0)/arr.length,n:arr.length})).sort((a,b)=>b.pct-a.pct);
+  const melhorA=anoRank[0],piorA=anoRank[anoRank.length-1];
+  const destaqueAnoHTML=(x,titulo,cor,icone)=>x?`<div style="background:${cor.bg};border-left:4px solid ${cor.bd};padding:10px 14px;border-radius:0 8px 8px 0;margin-bottom:8px">
+    <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:${cor.tx};font-weight:700">${icone} ${titulo}</div>
+    <div style="font-family:var(--display);font-size:18px;font-weight:600;color:${cor.tx};margin-top:2px">${esc(x.colab)}</div>
+    <div style="font-size:12px;color:${cor.tx};opacity:.85">Média do ano: <b>${x.pct.toFixed(1)}%</b> da meta · ${x.n} lançamento${x.n>1?'s':''}</div>
+  </div>`:`<div style="font-size:12px;color:var(--ink-soft);font-style:italic;padding:10px 0">— sem dados —</div>`;
+  $('dm-destaques-ano').innerHTML=
+    destaqueAnoHTML(melhorA,'Melhor do ano',{bg:'#eef4ee',bd:'#1f6f5c',tx:'#175547'},'🏆')+
+    destaqueAnoHTML(piorA,'Pior do ano',{bg:'#f5dcdc',bd:'#a64141',tx:'#801c1c'},'📉');
+}
+
+function _dmShortName(nome){const p=(nome||'').trim().split(' ');return p.length>1?p[0]+' '+p[1].slice(0,3)+'.':(nome||'');}
+
 function renderDMChartMes(ano,mes,tipos,lancs){
   if(dmCharts.mes)dmCharts.mes.destroy();
-  if(!lancs.length){$('dm-chart-mes').getContext('2d').clearRect(0,0,999,999);return;}
-  const porColab={};lancs.forEach(l=>{const t=tipos.find(x=>x.id===l.tipo_id);if(!t)return;(porColab[l.colaborador]=porColab[l.colaborador]||[]).push({tipo:t.nome,realizado:parseFloat(l.valor_realizado),meta:metaEfetiva(t.id,ano,mes)});});
+  const ctx=$('dm-chart-mes').getContext('2d');
+  ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
+  if(!lancs.length)return;
+  const porColab={};lancs.forEach(l=>{const t=tipos.find(x=>x.id===l.tipo_id);if(!t)return;(porColab[l.colaborador]=porColab[l.colaborador]||[]).push({real:parseFloat(l.valor_realizado),meta:metaEfetiva(t.id,ano,mes)});});
   const labels=Object.keys(porColab).sort();
-  // Se tem só 1 tipo, barras diretas. Senão, média por colab
-  const data=labels.map(c=>{const arr=porColab[c];return arr.reduce((s,x)=>s+x.realizado,0)/arr.length;});
-  const metaMedia=tipos.reduce((s,t)=>s+metaEfetiva(t.id,ano,mes),0)/tipos.length;
-  const cores=data.map(v=>v>=metaMedia?'#1f6f5c':(v>=metaMedia*0.9?'#c97e2f':'#a64141'));
-  dmCharts.mes=new Chart($('dm-chart-mes').getContext('2d'),{type:'bar',data:{labels:labels.map(l=>{const p=l.split(' ');return p[0]+' '+(p[1]?p[1].slice(0,3):'')}),datasets:[{label:'Realizado',data,backgroundColor:cores,borderRadius:4}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},annotation:{}},scales:{x:{beginAtZero:true,max:100}}}});
+  const realizados=labels.map(c=>{const a=porColab[c];return a.reduce((s,x)=>s+x.real,0)/a.length;});
+  const metas=labels.map(c=>{const a=porColab[c];return a.reduce((s,x)=>s+x.meta,0)/a.length;});
+  const cores=realizados.map((v,i)=>{const m=metas[i];return v>=m?'#1f6f5c':(v>=m*0.9?'#c97e2f':'#a64141');});
+  dmCharts.mes=new Chart(ctx,{type:'bar',data:{labels:labels.map(_dmShortName),datasets:[{label:'Realizado',data:realizados,backgroundColor:cores,borderRadius:4},{label:'Meta',data:metas,type:'line',borderColor:'#5a5548',borderDash:[5,5],pointRadius:3,pointBackgroundColor:'#5a5548',fill:false,tension:0}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:11}}}},scales:{x:{beginAtZero:true}}}});
 }
+
 function renderDMChartAno(ano,tipos){
   if(dmCharts.ano)dmCharts.ano.destroy();
+  const ctx=$('dm-chart-ano').getContext('2d');
+  ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
   const meses=[1,2,3,4,5,6,7,8,9,10,11,12];
+  const cores=['#1f6f5c','#c97e2f','#4a5a8c','#801c1c','#7a4a8c','#2c7a5e','#a67326','#3c5578'];
   const datasets=tipos.map((t,i)=>{
-    const cores=['#1f6f5c','#c97e2f','#4a5a8c','#801c1c','#7a4a8c'];
     const data=meses.map(m=>{const arr=metLancs.filter(l=>l.ano===ano&&l.mes===m&&l.tipo_id===t.id&&l.valor_realizado!=null);if(!arr.length)return null;return arr.reduce((s,x)=>s+parseFloat(x.valor_realizado),0)/arr.length;});
-    return{label:t.nome,data,borderColor:cores[i%cores.length],backgroundColor:cores[i%cores.length]+'22',tension:.3,spanGaps:true};
+    return{label:t.nome,data,borderColor:cores[i%cores.length],backgroundColor:cores[i%cores.length]+'22',tension:.3,spanGaps:true,pointRadius:4};
   });
-  dmCharts.ano=new Chart($('dm-chart-ano').getContext('2d'),{type:'line',data:{labels:MESES.map(m=>m.slice(0,3)),datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10}}}},scales:{y:{beginAtZero:false}}}});
+  dmCharts.ano=new Chart(ctx,{type:'line',data:{labels:MESES.map(m=>m.slice(0,3)),datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10}}}},scales:{y:{beginAtZero:false}}}});
 }
-function renderDMRanking(ano,mes,tipos,lancs){
-  if(!lancs.length){$('dm-ranking').innerHTML='<div class="empty">Sem lançamentos pra o mês selecionado.</div>';return;}
+
+function renderDMChartAnual(ano,tipos,lancsAno){
+  if(dmCharts.anual)dmCharts.anual.destroy();
+  const ctx=$('dm-chart-anual').getContext('2d');
+  ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
+  if(!lancsAno.length)return;
+  const porColab={};lancsAno.forEach(l=>{const s=_dmScoreLanc(l);if(!s)return;(porColab[l.colaborador]=porColab[l.colaborador]||[]).push(s);});
+  const entries=Object.entries(porColab).map(([c,a])=>({c,m:a.reduce((s,v)=>s+v,0)/a.length,n:a.length})).sort((a,b)=>b.m-a.m);
+  const labels=entries.map(e=>_dmShortName(e.c));
+  const data=entries.map(e=>parseFloat(e.m.toFixed(1)));
+  const cores=data.map(v=>v>=100?'#1f6f5c':(v>=90?'#c97e2f':'#a64141'));
+  dmCharts.anual=new Chart(ctx,{type:'bar',data:{labels,datasets:[{label:'Média % da meta',data,backgroundColor:cores,borderRadius:4}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},annotation:{}},scales:{x:{beginAtZero:true,ticks:{callback:v=>v+'%'}}}}});
+}
+
+function renderDMRankingMes(ano,mes,tipos,lancs){
+  if(!lancs.length){$('dm-ranking-mes').innerHTML='<div class="empty">Sem lançamentos.</div>';return;}
   const linhas=lancs.map(l=>{const t=tipos.find(x=>x.id===l.tipo_id);if(!t)return null;const r=parseFloat(l.valor_realizado),m=metaEfetiva(t.id,ano,mes);return{colab:l.colaborador,tipo:t.nome,unid:t.unidade,realizado:r,meta:m,delta:r-m,pct:m?(r/m*100):0};}).filter(Boolean).sort((a,b)=>b.pct-a.pct);
-  let h='<table class="met-tbl"><thead><tr><th>#</th><th>Colaborador</th><th>Tipo</th><th style="text-align:right">Meta</th><th style="text-align:right">Realizado</th><th style="text-align:right">Δ</th><th style="text-align:right">% da meta</th></tr></thead><tbody>';
+  let h='<table class="met-tbl"><thead><tr><th>#</th><th>Colaborador</th><th>Tipo</th><th style="text-align:right">Meta</th><th style="text-align:right">Realizado</th><th style="text-align:right">% meta</th></tr></thead><tbody>';
   linhas.forEach((l,i)=>{
     const cor=l.pct>=100?'#1f6f5c':(l.pct>=90?'#c97e2f':'#a64141');
     const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1);
-    h+=`<tr><td>${medal}</td><td style="font-weight:500">${esc(l.colab)}</td><td style="font-size:11px;color:var(--ink-soft)">${esc(l.tipo)}</td><td style="text-align:right">${l.meta}${esc(l.unid)}</td><td style="text-align:right;font-weight:600">${l.realizado.toFixed(2)}${esc(l.unid)}</td><td style="text-align:right;color:${cor};font-weight:600">${l.delta>=0?'+':''}${l.delta.toFixed(2)}</td><td style="text-align:right;color:${cor};font-weight:700">${l.pct.toFixed(1)}%</td></tr>`;
+    h+=`<tr><td>${medal}</td><td style="font-weight:500">${esc(l.colab)}</td><td style="font-size:11px;color:var(--ink-soft)">${esc(l.tipo)}</td><td style="text-align:right">${l.meta}${esc(l.unid)}</td><td style="text-align:right;font-weight:600">${l.realizado.toFixed(2)}${esc(l.unid)}</td><td style="text-align:right;color:${cor};font-weight:700">${l.pct.toFixed(1)}%</td></tr>`;
   });
   h+='</tbody></table>';
-  $('dm-ranking').innerHTML=h;
+  $('dm-ranking-mes').innerHTML=h;
+}
+
+function renderDMRankingAno(ano,tipos,lancsAno){
+  if(!lancsAno.length){$('dm-ranking-ano').innerHTML='<div class="empty">Sem lançamentos.</div>';return;}
+  const porColab={};
+  lancsAno.forEach(l=>{const s=_dmScoreLanc(l);if(!s)return;(porColab[l.colaborador]=porColab[l.colaborador]||[]).push(s);});
+  const linhas=Object.entries(porColab).map(([c,a])=>({colab:c,pct:a.reduce((s,v)=>s+v,0)/a.length,n:a.length,melhor:Math.max(...a),pior:Math.min(...a)})).sort((a,b)=>b.pct-a.pct);
+  let h='<table class="met-tbl"><thead><tr><th>#</th><th>Colaborador</th><th style="text-align:right">Média %</th><th style="text-align:right">Melhor</th><th style="text-align:right">Pior</th><th style="text-align:right">Meses</th></tr></thead><tbody>';
+  linhas.forEach((l,i)=>{
+    const cor=l.pct>=100?'#1f6f5c':(l.pct>=90?'#c97e2f':'#a64141');
+    const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1);
+    h+=`<tr><td>${medal}</td><td style="font-weight:500">${esc(l.colab)}</td><td style="text-align:right;color:${cor};font-weight:700">${l.pct.toFixed(1)}%</td><td style="text-align:right;color:#175547">${l.melhor.toFixed(1)}%</td><td style="text-align:right;color:#801c1c">${l.pior.toFixed(1)}%</td><td style="text-align:right;color:var(--ink-soft);font-size:11px">${l.n}</td></tr>`;
+  });
+  h+='</tbody></table>';
+  $('dm-ranking-ano').innerHTML=h;
 }
 $('nav-meusinsat').onclick=()=>showView('meusinsat');
 
