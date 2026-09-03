@@ -249,6 +249,7 @@
         <button id="nav-mie">Metas &amp; Índice de Eficiência</button>
         <button id="nav-metas">Metas (Sat SGD Fone/Web/Chat)</button>
         <button id="nav-dashmetas">Dashboard de Metas</button>
+        <button id="nav-atend">Atendimentos por técnico</button>
       </div>
     </div>
 
@@ -1604,11 +1605,6 @@
         </div>
       </div>
 
-      <div class="form-card" style="padding:14px;background:#fff;margin-top:16px">
-        <h3 style="margin:0 0 10px;font-size:14px">Ranking anual — média de eficiência por colaborador</h3>
-        <div style="position:relative;height:360px;width:100%"><canvas id="dm-chart-anual"></canvas></div>
-      </div>
-
       <!-- Tabelas -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
         <div class="form-card" style="padding:14px;background:#fff">
@@ -1618,6 +1614,53 @@
         <div class="form-card" style="padding:14px;background:#fff">
           <h3 style="margin:0 0 10px;font-size:14px">Ranking do ano (média)</h3>
           <div id="dm-ranking-ano" style="overflow-x:auto;max-height:400px;overflow-y:auto"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIEW: ATENDIMENTOS POR TÉCNICO -->
+  <div id="view-atend" style="display:none">
+    <div class="form-card" style="background:transparent;border:none;box-shadow:none;padding:0;margin-bottom:14px">
+      <h2>Atendimentos por técnico</h2>
+      <p class="hint">Registro mensal de solicitações recebidas, concluídas, votadas e insatisfeitos por técnico. Alimenta o resumo/dashboard.</p>
+    </div>
+    <div class="form-card">
+      <div class="met-sub">
+        <button id="atsub-lanc" class="on" onclick="atendSubtab('lanc')">📅 Lançar valores do mês</button>
+        <button id="atsub-res" onclick="atendSubtab('res')">📊 Resumo / soma</button>
+      </div>
+
+      <!-- SUB: Lançar -->
+      <div id="atsec-lanc">
+        <div class="row2" style="margin-bottom:12px">
+          <div><label>Ano</label><select id="at-ano" onchange="renderAtendLanc()"></select></div>
+          <div><label>Mês</label><select id="at-mes" onchange="renderAtendLanc()"></select></div>
+        </div>
+        <p class="hint" style="margin-bottom:10px">Digite os valores por técnico e o mês selecionado. Cada célula salva ao sair do campo (Tab).</p>
+        <div id="at-tabela" style="overflow-x:auto"></div>
+      </div>
+
+      <!-- SUB: Resumo -->
+      <div id="atsec-res" style="display:none">
+        <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px;align-items:end">
+          <div><label>Ano</label><select id="atres-ano" onchange="renderAtendRes()" style="min-width:100px"></select></div>
+          <div><label>Mês</label><select id="atres-mes" onchange="renderAtendRes()" style="min-width:170px"><option value="">Ano inteiro</option></select></div>
+        </div>
+        <div id="atres-kpis" class="kpis"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+          <div class="form-card" style="padding:14px;background:#fff">
+            <h3 style="margin:0 0 10px;font-size:14px">Insatisfeitos por técnico</h3>
+            <div style="position:relative;height:320px;width:100%"><canvas id="atres-chart-insat"></canvas></div>
+          </div>
+          <div class="form-card" style="padding:14px;background:#fff">
+            <h3 style="margin:0 0 10px;font-size:14px">Solicitações recebidas × concluídas</h3>
+            <div style="position:relative;height:320px;width:100%"><canvas id="atres-chart-atd"></canvas></div>
+          </div>
+        </div>
+        <div class="form-card" style="padding:14px;background:#fff;margin-top:16px">
+          <h3 style="margin:0 0 10px;font-size:14px">Detalhamento por técnico</h3>
+          <div id="atres-tabela" style="overflow-x:auto;max-height:500px;overflow-y:auto"></div>
         </div>
       </div>
     </div>
@@ -2112,7 +2155,7 @@ const SUPA_URL='https://jvfewdukhgmtdieufpaf.supabase.co';
 const SUPA_KEY='sb_publishable_O2rf2zCnJTZ1YE5q4eJeeA_AVdukzUg';
 const db=supabase.createClient(SUPA_URL,SUPA_KEY);
 // APP_VERSION: aparece no canto superior direito. Bump a cada deploy.
-const APP_VERSION='v95';
+const APP_VERSION='v96';
 document.addEventListener('DOMContentLoaded',()=>{
   const set=(id)=>{const el=document.getElementById(id);if(el)el.textContent=APP_VERSION;};
   set('app-version');set('version-fixed');
@@ -2162,6 +2205,7 @@ async function showApp(user){
   $('nav-metcol').style.display=isRafael?'':'none';
   $('nav-metas').style.display=isRafael?'':'none';
   $('nav-dashmetas').style.display=isRafael?'':'none';
+  $('nav-atend').style.display=isRafael?'':'none';
   $('nav-compano').style.display=isRafael?'':'none';
   $('nav-plantel').style.display=isRafael?'':'none';
   $('nav-mie').style.display=isRafael?'':'none';
@@ -2349,7 +2393,7 @@ async function registrarManutencao(patr){
 
 // ===== Views =====
 function showView(v){
-  const adminViews=['cadastro','relatorios','eq','us','ferias','folgas','ho','aloc','met','metcol','compano','plantel','exp2b','ausmes','mie','metas','dashmetas','perf','dperf','atestados','aniv','ocor','prob','trein','anom','fat','dash','insatadm','soladm','feradm','atadm','ocadm','mtadm','tar','rot','onb'];
+  const adminViews=['cadastro','relatorios','eq','us','ferias','folgas','ho','aloc','met','metcol','compano','plantel','exp2b','ausmes','mie','metas','dashmetas','atend','perf','dperf','atestados','aniv','ocor','prob','trein','anom','fat','dash','insatadm','soladm','feradm','atadm','ocadm','mtadm','tar','rot','onb'];
   if(adminViews.includes(v)&&!isAdminUser)v='solfolga';
   $('view-cadastro').style.display=v==='cadastro'?'block':'none';
   $('view-relatorios').style.display=v==='relatorios'?'block':'none';
@@ -2391,7 +2435,8 @@ function showView(v){
   $('view-mie').style.display=v==='mie'?'block':'none';
   $('view-metas').style.display=v==='metas'?'block':'none';
   $('view-dashmetas').style.display=v==='dashmetas'?'block':'none';
-  document.body.classList.toggle('metas-view',v==='metas'||v==='dashmetas');
+  $('view-atend').style.display=v==='atend'?'block':'none';
+  document.body.classList.toggle('metas-view',v==='metas'||v==='dashmetas'||v==='atend');
   document.body.classList.toggle('compano-view',v==='compano'||v==='plantel'||v==='exp2b');
   document.body.classList.toggle('ausmes-view',v==='ausmes');
   document.body.classList.toggle('mie-view',v==='mie');
@@ -2497,6 +2542,7 @@ function showView(v){
   if(v==='mie')openMie();
   if(v==='metas')openMetas();
   if(v==='dashmetas')openDashMetas();
+  if(v==='atend')openAtend();
   if(v==='insatadm')openInsatAdm();
   if(v==='meusinsat')openMeusInsat();
   if(v==='fin-novo')openFinNovo();
@@ -5411,6 +5457,37 @@ async function apagarNotaAm(){
 // ===== Sistema de Metas: Tipos, Atribuição, Lançamentos =====
 $('nav-metas').onclick=()=>showView('metas');
 $('nav-dashmetas').onclick=()=>showView('dashmetas');
+$('nav-atend').onclick=()=>showView('atend');
+
+// Plugin inline: desenha o valor em cima de cada barra/ponto do gráfico
+const chartDataLabels={
+  id:'chartDataLabels',
+  afterDatasetsDraw(chart){
+    const{ctx}=chart;
+    chart.data.datasets.forEach((ds,di)=>{
+      const meta=chart.getDatasetMeta(di);
+      if(meta.hidden)return;
+      meta.data.forEach((el,i)=>{
+        const v=ds.data[i];
+        if(v==null||v===0)return;
+        ctx.save();
+        ctx.fillStyle='#2c2a24';
+        ctx.font='600 10.5px system-ui,sans-serif';
+        ctx.textAlign='center';
+        ctx.textBaseline='bottom';
+        const txt=Number(v).toLocaleString('pt-BR',{maximumFractionDigits:1});
+        // Barra vertical: acima. Barra horizontal: à direita. Linha: acima do ponto.
+        if(chart.config.type==='bar'&&(chart.options.indexAxis||'x')==='y'){
+          ctx.textAlign='left';ctx.textBaseline='middle';
+          ctx.fillText(txt,el.x+6,el.y);
+        }else{
+          ctx.fillText(txt,el.x,el.y-4);
+        }
+        ctx.restore();
+      });
+    });
+  }
+};
 $('nav-insatadm').onclick=()=>showView('insatadm');
 let metTipos=[],metAtrib=[],metLancs=[],metPeriodo=[],metSubAtual='tipos';
 const MET_SQL_ERR='⚠ As tabelas de Metas ainda não existem no Supabase.\n\nRode o SQL "criar_metas_sistema.sql" no Supabase e recarregue a página.';
@@ -5693,7 +5770,6 @@ function renderDashMetas(){
   // ===== Charts =====
   renderDMChartMes(ano,mes,tiposUsar,lancsMes);
   renderDMChartAno(ano,tiposUsar);
-  renderDMChartAnual(ano,tiposUsar,lancsAno);
   // ===== Tabelas =====
   renderDMRankingMes(ano,mes,tiposUsar,lancsMes);
   renderDMRankingAno(ano,tiposUsar,lancsAno);
@@ -5760,25 +5836,12 @@ function renderDMChartMes(ano,mes,tipos,lancs){
   const cores=realizados.map((v,i)=>{const m=metas[i],sent=porColab[labels[i]][0].sentido;if(sent==='menor_melhor'){return v<=m?'#1f6f5c':(v<=m*1.1?'#c97e2f':'#a64141');}return v>=m?'#1f6f5c':(v>=m*0.9?'#c97e2f':'#a64141');});
   dmCharts.mes=new Chart(ctx,{
     type:'bar',
-    data:{
-      labels:labels.map(_dmShortName),
-      datasets:[
-        {label:'Realizado',data:realizados,backgroundColor:cores,borderRadius:4,order:2},
-        {label:'Meta',data:metas,type:'line',borderColor:'#3a3a3a',backgroundColor:'transparent',borderDash:[6,4],borderWidth:2,pointRadius:0,pointHoverRadius:4,fill:false,tension:0,order:1}
-      ]
-    },
-    options:{
-      responsive:true,
-      maintainAspectRatio:false,
-      plugins:{
-        legend:{position:'top',labels:{font:{size:11}}},
-        tooltip:{callbacks:{label:c=>c.dataset.label+': '+c.parsed.y.toFixed(2)}}
-      },
-      scales:{
-        y:{beginAtZero:true,ticks:{font:{size:10}}},
-        x:{ticks:{font:{size:10},maxRotation:35,minRotation:0}}
-      }
-    }
+    data:{labels:labels.map(_dmShortName),datasets:[
+      {label:'Realizado',data:realizados,backgroundColor:cores,borderRadius:4,order:2},
+      {label:'Meta',data:metas,type:'line',borderColor:'#3a3a3a',backgroundColor:'transparent',borderDash:[6,4],borderWidth:2,pointRadius:0,pointHoverRadius:4,fill:false,tension:0,order:1}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:11}}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+c.parsed.y.toFixed(2)}}},scales:{y:{beginAtZero:true,ticks:{font:{size:10}}},x:{ticks:{font:{size:10},maxRotation:35,minRotation:0}}}},
+    plugins:[chartDataLabels]
   });
 }
 
@@ -5792,20 +5855,7 @@ function renderDMChartAno(ano,tipos){
     const data=meses.map(m=>{const arr=metLancs.filter(l=>l.ano===ano&&l.mes===m&&l.tipo_id===t.id&&l.valor_realizado!=null);if(!arr.length)return null;return arr.reduce((s,x)=>s+parseFloat(x.valor_realizado),0)/arr.length;});
     return{label:t.nome,data,borderColor:cores[i%cores.length],backgroundColor:cores[i%cores.length]+'22',tension:.3,spanGaps:true,pointRadius:4};
   });
-  dmCharts.ano=new Chart(ctx,{type:'line',data:{labels:MESES.map(m=>m.slice(0,3)),datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10}}}},scales:{y:{beginAtZero:false}}}});
-}
-
-function renderDMChartAnual(ano,tipos,lancsAno){
-  if(dmCharts.anual)dmCharts.anual.destroy();
-  const ctx=$('dm-chart-anual').getContext('2d');
-  ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
-  if(!lancsAno.length)return;
-  const porColab={};lancsAno.forEach(l=>{const s=_dmScoreLanc(l);if(!s)return;(porColab[l.colaborador]=porColab[l.colaborador]||[]).push(s);});
-  const entries=Object.entries(porColab).map(([c,a])=>({c,m:a.reduce((s,v)=>s+v,0)/a.length,n:a.length})).sort((a,b)=>b.m-a.m);
-  const labels=entries.map(e=>_dmShortName(e.c));
-  const data=entries.map(e=>parseFloat(e.m.toFixed(1)));
-  const cores=data.map(v=>v>=100?'#1f6f5c':(v>=90?'#c97e2f':'#a64141'));
-  dmCharts.anual=new Chart(ctx,{type:'bar',data:{labels,datasets:[{label:'Média % da meta',data,backgroundColor:cores,borderRadius:4}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},annotation:{}},scales:{x:{beginAtZero:true,ticks:{callback:v=>v+'%'}}}}});
+  dmCharts.ano=new Chart(ctx,{type:'line',data:{labels:MESES.map(m=>m.slice(0,3)),datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10}}}},scales:{y:{beginAtZero:false}}},plugins:[chartDataLabels]});
 }
 
 function renderDMRankingMes(ano,mes,tipos,lancs){
@@ -5835,6 +5885,118 @@ function renderDMRankingAno(ano,tipos,lancsAno){
   });
   h+='</tbody></table>';
   $('dm-ranking-ano').innerHTML=h;
+}
+
+// ===== Atendimentos por técnico =====
+let atendData=[],atendSubAtual='lanc',atendCharts={};
+const ATEND_SQL_ERR='⚠ A tabela "atendimentos_mensais" ainda não existe no Supabase.\n\nRode o SQL "criar_atendimentos.sql" e recarregue.';
+
+async function openAtend(){
+  const r=await db.from('atendimentos_mensais').select('*');
+  if(r.error&&(r.error.code==='PGRST205'||/schema cache|does not exist/i.test(r.error.message||''))){alert(ATEND_SQL_ERR);return;}
+  atendData=r.data||[];
+  // popula selectores dos 2 sub-abas
+  const hoje=new Date(),anos=[];for(let a=hoje.getFullYear()-1;a<=hoje.getFullYear()+1;a++)anos.push(a);
+  ['at-ano','atres-ano'].forEach(id=>{const s=$(id),cur=s.value||hoje.getFullYear();s.innerHTML=anos.map(a=>`<option ${a==cur?'selected':''}>${a}</option>`).join('');});
+  const selM=$('at-mes'),curM=selM.value||(hoje.getMonth()+1);
+  selM.innerHTML=MESES.map((m,i)=>`<option value="${i+1}" ${(i+1)==curM?'selected':''}>${m}</option>`).join('');
+  const selRM=$('atres-mes'),curRM=selRM.value;
+  selRM.innerHTML='<option value="">Ano inteiro</option>'+MESES.map((m,i)=>`<option value="${i+1}" ${(i+1)==curRM?'selected':''}>${m}</option>`).join('');
+  atendSubtab(atendSubAtual);
+}
+function atendSubtab(sub){
+  atendSubAtual=sub;
+  ['lanc','res'].forEach(s=>{
+    $('atsub-'+s).classList.toggle('on',s===sub);
+    $('atsec-'+s).style.display=s===sub?'block':'none';
+  });
+  if(sub==='lanc')renderAtendLanc();
+  if(sub==='res')renderAtendRes();
+}
+
+function renderAtendLanc(){
+  const ano=parseInt($('at-ano').value),mes=parseInt($('at-mes').value);
+  const ativos=equipe.filter(e=>!e.desligado).sort((a,b)=>(a.nome_curto||a.nome_completo||'').localeCompare(b.nome_curto||b.nome_completo||''));
+  if(!ativos.length){$('at-tabela').innerHTML='<div class="empty">Nenhum colaborador ativo.</div>';return;}
+  const dataMap={};atendData.forEach(d=>{dataMap[d.colaborador+'|'+d.ano+'|'+d.mes]=d;});
+  let h='<table class="met-tbl"><thead><tr><th style="min-width:180px;position:sticky;left:0;background:#faf8f2;z-index:1">Colaborador</th><th style="text-align:right">Recebidas</th><th style="text-align:right">Concluídas</th><th style="text-align:right">Votadas</th><th style="text-align:right">Insatisfeitos</th></tr></thead><tbody>';
+  ativos.forEach(e=>{
+    const cn=e.nome_completo||e.nome_curto||'';
+    const r=dataMap[cn+'|'+ano+'|'+mes]||{};
+    const nomeShort=e.nome_curto||cn;
+    const mkIn=(campo,v)=>`<input type="number" min="0" step="1" value="${v==null?'':v}" onblur="salvarAtend('${esc(cn)}',${ano},${mes},'${campo}',this.value)" style="width:70px;text-align:right;padding:3px 6px;font-size:12px;border:1px solid var(--line);border-radius:4px">`;
+    h+=`<tr><td style="position:sticky;left:0;background:#fff;font-weight:500">${esc(nomeShort)}</td>
+      <td style="text-align:right">${mkIn('solicitacoes_recebidas',r.solicitacoes_recebidas)}</td>
+      <td style="text-align:right">${mkIn('solicitacoes_concluidas',r.solicitacoes_concluidas)}</td>
+      <td style="text-align:right">${mkIn('votadas',r.votadas)}</td>
+      <td style="text-align:right">${mkIn('insatisfeitos',r.insatisfeitos)}</td>
+    </tr>`;
+  });
+  h+='</tbody></table>';
+  $('at-tabela').innerHTML=h;
+}
+async function salvarAtend(colab,ano,mes,campo,valor){
+  const v=valor===''?0:parseInt(valor);
+  if(valor!==''&&isNaN(v)){alert('Valor inválido');return;}
+  const existing=atendData.find(d=>d.colaborador===colab&&d.ano===ano&&d.mes===mes);
+  const payload=existing?{...existing,[campo]:v,atualizado_em:new Date().toISOString(),atualizado_por:currentEmail}:{colaborador:colab,ano,mes,solicitacoes_recebidas:0,solicitacoes_concluidas:0,votadas:0,insatisfeitos:0,[campo]:v,atualizado_em:new Date().toISOString(),atualizado_por:currentEmail};
+  const{data,error}=await db.from('atendimentos_mensais').upsert(payload,{onConflict:'colaborador,ano,mes'}).select().single();
+  if(error){alert('Erro: '+error.message);return;}
+  if(existing){Object.assign(existing,data);}else{atendData.push(data);}
+  toast('✓ Salvo');
+}
+
+function renderAtendRes(){
+  const ano=parseInt($('atres-ano').value),mesFiltro=$('atres-mes').value;
+  const arr=atendData.filter(d=>d.ano===ano&&(!mesFiltro||d.mes===parseInt(mesFiltro)));
+  // Totais gerais
+  const tot={rec:0,conc:0,vot:0,insat:0};
+  arr.forEach(d=>{tot.rec+=d.solicitacoes_recebidas||0;tot.conc+=d.solicitacoes_concluidas||0;tot.vot+=d.votadas||0;tot.insat+=d.insatisfeitos||0;});
+  const pctConc=tot.rec>0?(tot.conc/tot.rec*100).toFixed(1):0;
+  const pctVot=tot.conc>0?(tot.vot/tot.conc*100).toFixed(1):0;
+  const pctInsat=tot.vot>0?(tot.insat/tot.vot*100).toFixed(1):0;
+  $('atres-kpis').innerHTML=[
+    ['Solicitações recebidas',tot.rec.toLocaleString('pt-BR'),''],
+    ['Concluídas',tot.conc.toLocaleString('pt-BR')+' ('+pctConc+'%)',pctConc>=90?'s-uso':(pctConc>=70?'s-manut':'s-desc')],
+    ['Votadas',tot.vot.toLocaleString('pt-BR')+' ('+pctVot+'% das concluídas)',''],
+    ['Insatisfeitos',tot.insat.toLocaleString('pt-BR')+' ('+pctInsat+'% das votadas)',tot.insat===0?'s-uso':(pctInsat<=5?'s-manut':'s-desc')]
+  ].map(k=>`<div class="stat ${k[2]}"><b>${k[1]}</b><span>${esc(k[0])}</span></div>`).join('');
+  // Agrupa por colab
+  const porColab={};arr.forEach(d=>{const c=porColab[d.colaborador]=porColab[d.colaborador]||{rec:0,conc:0,vot:0,insat:0};c.rec+=d.solicitacoes_recebidas||0;c.conc+=d.solicitacoes_concluidas||0;c.vot+=d.votadas||0;c.insat+=d.insatisfeitos||0;});
+  const linhas=Object.entries(porColab).map(([c,v])=>({colab:c,...v})).sort((a,b)=>b.insat-a.insat);
+  // Gráfico 1: insatisfeitos por técnico
+  renderAtendChartInsat(linhas);
+  // Gráfico 2: recebidas vs concluídas
+  renderAtendChartAtd(linhas);
+  // Tabela detalhada
+  let h='<table class="met-tbl"><thead><tr><th>Colaborador</th><th style="text-align:right">Recebidas</th><th style="text-align:right">Concluídas</th><th style="text-align:right">% conc.</th><th style="text-align:right">Votadas</th><th style="text-align:right">Insatisfeitos</th><th style="text-align:right">% insat.</th></tr></thead><tbody>';
+  linhas.forEach(l=>{
+    const pc=l.rec>0?(l.conc/l.rec*100):0;
+    const pi=l.vot>0?(l.insat/l.vot*100):0;
+    const corI=l.insat===0?'#175547':(pi<=5?'#c97e2f':'#801c1c');
+    h+=`<tr><td style="font-weight:500">${esc(l.colab)}</td><td style="text-align:right">${l.rec.toLocaleString('pt-BR')}</td><td style="text-align:right">${l.conc.toLocaleString('pt-BR')}</td><td style="text-align:right;color:var(--ink-soft)">${pc.toFixed(1)}%</td><td style="text-align:right">${l.vot.toLocaleString('pt-BR')}</td><td style="text-align:right;color:${corI};font-weight:700">${l.insat.toLocaleString('pt-BR')}</td><td style="text-align:right;color:${corI};font-weight:600">${pi.toFixed(1)}%</td></tr>`;
+  });
+  h+='</tbody></table>';
+  $('atres-tabela').innerHTML=h;
+}
+
+function renderAtendChartInsat(linhas){
+  if(atendCharts.insat)atendCharts.insat.destroy();
+  const ctx=$('atres-chart-insat').getContext('2d');
+  ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
+  if(!linhas.length)return;
+  const labels=linhas.map(l=>_dmShortName(l.colab));
+  const data=linhas.map(l=>l.insat);
+  const cores=data.map(v=>v===0?'#1f6f5c':(v<=3?'#c97e2f':'#a64141'));
+  atendCharts.insat=new Chart(ctx,{type:'bar',data:{labels,datasets:[{label:'Insatisfeitos',data,backgroundColor:cores,borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y+' insatisfeitos'}}},scales:{y:{beginAtZero:true,ticks:{stepSize:1,font:{size:10}}},x:{ticks:{font:{size:10},maxRotation:35}}}},plugins:[chartDataLabels]});
+}
+function renderAtendChartAtd(linhas){
+  if(atendCharts.atd)atendCharts.atd.destroy();
+  const ctx=$('atres-chart-atd').getContext('2d');
+  ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
+  if(!linhas.length)return;
+  const labels=linhas.map(l=>_dmShortName(l.colab));
+  atendCharts.atd=new Chart(ctx,{type:'bar',data:{labels,datasets:[{label:'Recebidas',data:linhas.map(l=>l.rec),backgroundColor:'#4a5a8c',borderRadius:4},{label:'Concluídas',data:linhas.map(l=>l.conc),backgroundColor:'#1f6f5c',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:11}}}},scales:{y:{beginAtZero:true,ticks:{font:{size:10}}},x:{ticks:{font:{size:10},maxRotation:35}}}},plugins:[chartDataLabels]});
 }
 $('nav-meusinsat').onclick=()=>showView('meusinsat');
 
